@@ -1,0 +1,165 @@
+#!/usr/bin/perl -w
+use List::Util qw(first max maxstr min minstr reduce shuffle sum);
+use Statistics::Regression;
+
+my ($file) = @ARGV;
+print "$file\n";
+
+my $ENS = "/home/longy/cnda/ensembl/mm10.ensemblv95.nopsuedo.gtf";
+open ENS,"awk '(\$3 == \"three_prime_utr\")' $ENS |" ;
+my %pas_plus;
+my %pas_minus;
+while(<ENS>){
+	chomp;
+	my ($chr,$source,$type,$start,$end,undef,$srd,undef,undef,$gene_id) = split;
+	$gene_id =~ s/\"|\;//g;
+	if($srd eq "+"){
+		my $head = $end-100;
+		my $tail = $end+75;   ######This becasue the bug in scanGenome file;
+		$pas_plus{"$chr:$head-$tail"} = 'ENS;';
+	}
+	else{
+		my $head = $start-75;
+		my $tail = $start+100;
+		$pas_minus{"$chr:$head-$tail"} = 'ENS;';
+	}
+}
+
+my $DB = "/home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.tianbin.txt";
+open FILE,"$DB";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$end,$srd) = split;
+	my ($gene_id) = split /\./,$pas_id;
+	if($srd eq "+"){
+		my $head = $end-100;
+		my $tail = $end+75;
+		$pas_plus{"$chr:$head-$tail"} .= 'DB;';
+	}
+	else{
+		my $head = $end-75;
+		my $tail = $end+100;
+		$pas_minus{"$chr:$head-$tail"} .= 'DB;';
+	}
+}
+
+my $PAS = "/home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.zhangbin.fibroblast.txt";
+open FILE,"$PAS";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$end,$srd) = split;
+	my ($gene_id) = split /\./,$pas_id;
+	if($srd eq "+"){
+		my $head = $end-100;
+		my $tail = $end+75;
+		$pas_plus{"$chr:$head-$tail"} .= 'ZB;';
+	}
+	else{
+		my $head = $end-75;
+		my $tail = $end+100;
+		$pas_minus{"$chr:$head-$tail"} .= 'ZB;';
+	}
+}
+
+my ($key) = keys %pas_minus;
+
+#my $file = "data/bl6.pAs.scanGenome.step1.str1.MERGE.chr2.Trimmed10.txt";
+open FILE,"$file";
+my $header = <FILE>;
+$file =~ s/data/train_data/;
+open OUT,">$file";
+print OUT "$header";
+while(<FILE>){
+	chomp;
+	my @data = split /\t/;
+	my $pas_id = $data[0];
+	if ($file =~ /str1/){
+		if(exists $pas_minus{$pas_id} && &Filter(@data)){
+			my $val = $pas_minus{$pas_id};
+			$_ =~ s/None/$val/;
+			print OUT "$_\n";
+		}
+	}
+	elsif ($file =~ /str2/){
+		if(exists $pas_plus{$pas_id} && &Filter(@data)){
+			my $val = $pas_plus{$pas_id};
+			$_ =~ s/None/$val/;
+			print OUT "$_\n";
+		}
+	}
+}
+
+sub Filter{
+	my @data = @_;
+	my $motif = $data[1];
+	my $pass = 1;
+	my @up_coverage = @data[8..108];
+	my @down_coverage = @data[109..$#data];
+	my $max_up = &max(@up_coverage);
+	my $max_down = &max(@down_coverage);
+	for(my$i=1;$i<@up_coverage;$i++){
+		if($up_coverage[$i]-$up_coverage[$i-1]>0.5*$max_up){
+			@up_coverage = @up_coverage[$i..$#up_coverage];
+			last;
+		}
+	}
+	for(my$i=1;$i<@down_coverage;$i++){
+		if($down_coverage[$i]-$down_coverage[$i-1]>10 && $down_coverage[$i]-$down_coverage[$i-1]> 0.5*$max_down){
+			@down_coverage = @down_coverage[0..$i-1];
+			last;
+		}
+	}
+
+	my $up_ave = &sum(@up_coverage)/@up_coverage;
+	my $down_ave = &sum(@down_coverage)/@down_coverage;
+	if($up_ave <= $down_ave){
+		$pass=0;
+	}
+	my $right_trend=0;
+	for(my$i=1;$i<@up_coverage;$i++){
+		if($up_coverage[$i]<$up_coverage[$i-1]){
+			$right_trend++;
+		}
+	}
+	$pass = 0 if $right_trend<50;
+	my ($up_theta,$up_rsq) = &Regression(@up_coverage);
+	my ($down_theta,$down_rsq) = &Regression(@down_coverage);
+	if($motif eq "motif=0"){
+		if($up_rsq<=0.9 || $up_theta>=-0.8 || $down_theta<=-0.25 || $down_theta>=0.25){
+			$pass =0;
+		}
+	}
+	else{
+		if($up_rsq<=0.7 || $up_theta>=-0.5 || $down_theta<=-0.5 || $down_theta>=0.5){
+			$pass =0;
+		}
+	}
+	return $pass;
+}
+
+
+sub Regression{
+	my @coverage = @_;
+	$max = &max(@coverage);
+	$min = &min(@coverage);
+	my $range = ($max-$min)/100;
+	if($range ==0){
+		return (0,1);
+	}
+	else{
+		if($max>100){
+			for(my$i=0;$i<@coverage;$i++){
+				$coverage[$i] = ($coverage[$i]-$min)/$range;
+			}
+		}
+		my $reg = Statistics::Regression->new( "sample regression", [ "const", "someX" ] );
+		for(my$i=0;$i<@coverage;$i++){
+			$reg->include( $coverage[$i], [ 1.0, $i ] );
+		}
+		my @theta  = $reg->theta();
+		my $rsq    = $reg->rsq();
+		return ($theta[1],$rsq);
+	}
+}

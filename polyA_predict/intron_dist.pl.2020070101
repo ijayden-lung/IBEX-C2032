@@ -1,0 +1,49 @@
+#!/usr/bin/perl -w
+#
+#
+
+my ($inp,$out) = @ARGV;
+
+my %exon;
+open FILE,"awk '(\$3 == \"exon\")' /home/longy/cnda/ensembl/mm10v95_ensembl.gtf |";
+while(<FILE>){
+	chomp;
+	my ($str,$end,$gene_id) = (split)[3,4,9];
+	$gene_id =~ s/\"|\;//g;
+	$exon{$gene_id}->{"$str\t$end"} = '' ;
+}
+
+my %pas;
+open FILE,$inp;
+<FILE>;
+open OUT,">$out";
+print OUT "pas_id\tpos\tstr\tend\tdistance\tusage\n";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$srd,$symbol,$usage) = split;
+	my ($gene_id) = split /\.|\:/,$pas_id;
+	#next if $usage < 0.3;
+	if(exists $exon{$gene_id}){
+		my $val = $exon{$gene_id};
+		my $distance = 1e9;
+		my $exon;
+		foreach my $key (keys %$val){
+			my ($str,$end) = split /\t/,$key;
+			if($srd eq "+"){
+				my $dist = $str-$pos;
+				$exon = "$str\t$end" if $dist>0 && $dist<$distance;
+				$distance = $dist if $dist>0 && $dist<$distance;
+			}
+			else{
+				my $dist = $pos-$end;
+				$exon = "$str\t$end" if $dist>0 && $dist<$distance;;
+				$distance = $dist if $dist>0 && $dist<$distance;
+			}
+		}
+		print  OUT "$pas_id\t$pos\t$exon\t$distance\t$usage\n" if $distance < 1e9;;
+	}
+	else{
+		print "$gene_id\n";
+	}
+}
+

@@ -1,0 +1,108 @@
+#!/usr/bin/perl -w
+
+my %p_gene;
+open FILE,"bl6.pAs.subset.predict.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif,$ave_diff,$biotype,$distance,$map_id)  = split;
+	$p_gene{$symbol}++;
+}
+
+my %t_gene;
+open FILE,"bl6.pAs.subset.tianbin.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol)  = split;
+	$t_gene{$symbol}++;
+}
+
+my %sVs;
+my %sVm;
+my %mVs;
+my %mVm;
+while(my ($key,$val) = each %p_gene){
+	my $val2 = $t_gene{$key};
+	if($val>1){
+		if($val2 > 1){
+			$mVm{$key} = '';
+		}
+		else{
+			$mVs{$key} = '';
+		}
+	}
+	else{
+		if($val2 > 1){
+			$sVm{$key} = '';
+		}
+		else{
+			$sVs{$key} = '';
+		}
+	
+	}
+}
+
+my $sVs = keys %sVs;
+my $sVm = keys %sVm;
+my $mVs = keys %mVs;
+my $mVm = keys %mVm;
+print "sVs:$sVs\tsVm:$sVm\tmVs:$mVs\tmVm:$mVm\n";
+
+
+my @dir = qw/sVs sVm mVs mVm/;
+foreach my $dir (@dir){
+	if(! (-e $dir )){
+			mkdir( $dir ) or die "无法创建 $dir 目录, $!";
+	}
+}
+
+open OUT1,">sVs/bl6.pAs.subset.predict.txt";
+open OUT2,">sVm/bl6.pAs.subset.predict.txt";
+open OUT3,">mVs/bl6.pAs.subset.predict.txt";
+open OUT4,">mVm/bl6.pAs.subset.predict.txt";
+
+open FILE,"bl6.pAs.subset.predict.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif,$ave_diff,$biotype,$distance,$map_id)  = split;
+	if(exists $sVs{$symbol}){
+		print OUT1 "$_\n";
+	}
+	if(exists $sVm{$symbol}){
+		print OUT2 "$_\n";
+	}
+	if(exists $mVs{$symbol}){
+		print OUT3 "$_\n";
+	}
+	if(exists $mVm{$symbol}){
+		print OUT4 "$_\n";
+	}
+}
+
+
+
+open OUT1,">sVs/bl6.pAs.subset.tianbin.txt";
+open OUT2,">sVm/bl6.pAs.subset.tianbin.txt";
+open OUT3,">mVs/bl6.pAs.subset.tianbin.txt";
+open OUT4,">mVm/bl6.pAs.subset.tianbin.txt";
+
+open FILE,"bl6.pAs.subset.tianbin.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol)  = split;
+	if(exists $sVs{$symbol}){
+		print OUT1 "$_\n";
+	}
+	if(exists $sVm{$symbol}){
+		print OUT2 "$_\n";
+	}
+	if(exists $mVs{$symbol}){
+		print OUT3 "$_\n";
+	}
+	if(exists $mVm{$symbol}){
+		print OUT4 "$_\n";
+	}
+}

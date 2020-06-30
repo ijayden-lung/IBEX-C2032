@@ -1,0 +1,23 @@
+#!/usr/bin/perl -w
+
+my ($file,$file2) = @ARGV;
+
+open FILE,"$file";
+<FILE>;
+
+my @pas;
+while(<FILE>){
+	chomp;
+	my ($pas_id) = split;
+	push @pas,$pas_id;
+}
+
+open FILE,"$file2";
+my ($out) = (split /\//,$file2)[1];
+open OUT,">predict2/$out";
+while(<FILE>){
+	chomp;
+	my ($pas_id) = split;
+	$_ =~ s/$pas_id/$pas[$.-1]/;
+	print OUT "$_\n";
+}

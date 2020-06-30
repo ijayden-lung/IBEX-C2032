@@ -1,0 +1,94 @@
+#!/usr/bin/perl -w
+
+my @rep1_for;
+my %rep1_for;
+open FILE,"data/bl6.pAs.scanGenome.step1.str2.REP1.Trimmed10.txt";
+my $header = <FILE>;
+while(<FILE>){
+	chomp;
+	my @data = split;
+	if(!exists $rep1_for{$data[0]}){
+		push @rep1_for,$data[0];
+		$rep1_for{$data[0]} = \@data;
+	}
+}
+
+
+my %rep2_for;
+open FILE,"data/bl6.pAs.scanGenome.step1.str2.REP2.Trimmed10.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my @data = split;
+	$rep2_for{$data[0]} = \@data;
+}
+
+
+my %rep3_for;
+open FILE,"data/bl6.pAs.scanGenome.step1.str2.REP3.Trimmed10.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my @data = split;
+	$rep3_for{$data[0]} = \@data;
+}
+
+
+
+open OUT,">data/bl6.pAs.scanGenome.step1.realmerge.Trimmed10.txt";
+print OUT $header;
+foreach my $key  (@rep1_for){
+	my $val = $rep1_for{$key};
+	if(exists $rep2_for{$key} && exists $rep3_for{$key}){
+		for(my $i=8;$i<@$val;$i++){
+			$val->[$i] += $rep2_for{$key}->[$i]+$rep3_for{$key}->[$i]
+		}
+		print OUT join("\t",@$val),"\n";
+	}
+}
+undef @rep1_for;
+undef %rep1_for;
+undef %rep2_for;
+undef %rep3_for;
+
+my @rep1_rev;
+my %rep1_rev;
+open FILE,"data/bl6.pAs.scanGenome.step1.str1.Trimmed10.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my @data = split;
+	if(!exists $rep1_rev{$data[0]}){
+		push @rep1_rev,$data[0];
+		$rep1_rev{$data[0]} = \@data;
+	}
+}
+
+my %rep2_rev;
+open FILE,"data/bl6.pAs.scanGenome.step1.str1.REP2.Trimmed10.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my @data = split;
+	$rep2_rev{$data[0]} = \@data;
+}
+
+my %rep3_rev;
+open FILE,"data/bl6.pAs.scanGenome.step1.str1.REP3.Trimmed10.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my @data = split;
+	$rep3_rev{$data[0]} = \@data;
+}
+
+foreach my $key (@rep1_rev){
+	my $val = $rep1_rev{$key};
+	if(exists $rep2_rev{$key} && exists $rep3_rev{$key}){
+		for(my $i=8;$i<@$val;$i++){
+			$val->[$i] += $rep2_rev{$key}->[$i]+$rep3_rev{$key}->[$i]
+		}
+		print OUT join("\t",@$val),"\n";
+	}
+}
+

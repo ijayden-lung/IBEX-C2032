@@ -1,0 +1,70 @@
+#!/usr/bin/perl -w
+#
+
+#&printInfo("train_data/bl6.pAs.positive.REP1.comround0.txt","positive_round0");
+
+open OUT,">Stat/bl6.pAs.positive.compredict.ave_diff.txt";
+print OUT "pas_id\tbefore\tafter\tave_diff\ttype\n";
+
+open OUT2,">Stat/bl6.pAs.positive.compredict.motif.txt";
+print OUT2 "pas_id\tmotif%\n";
+&printInfo("train_data/bl6.pAs.abandon.REP1.comround1.txt","abandon_round0");
+&printInfo("train_data/bl6.pAs.abandon.REP1.comround2.txt","abandon_round1");
+&printInfo("train_data/bl6.pAs.abandon.REP1.comround3.txt","abandon_round2");
+&printInfo("train_data/bl6.pAs.abandon.REP1.comround4.txt","abandon_round3");
+
+
+=pod
+open OUT,">Stat/bl6.pAs.positive.compredict.ave_diff.txt";
+print OUT "pas_id\tbefore\tafter\tave_diff\ttype\n";
+
+open OUT2,">Stat/bl6.pAs.positive.compredict.motif.txt";
+print OUT2 "pas_id\tmotif%\n";
+&printInfo("train_data/bl6.pAs.predictFalsePositive.REP1.comround1.txt","predict_round0");
+&printInfo("train_data/bl6.pAs.predictFalsePositive.REP1.comround2.txt","predict_round1");
+&printInfo("train_data/bl6.pAs.predictFalsePositive.REP1.comround3.txt","predict_round2");
+&printInfo("train_data/bl6.pAs.predictFalsePositive.REP1.comround4.txt","predict_round3");
+=cut
+sub printInfo{
+	my ($COV,$info) = @_;
+	print "$COV\t$info\n";
+	open $COV,$COV;
+	<$COV>;
+	my $total=0;
+	my $motif=0;
+	while(<$COV>){
+		chomp;
+		my @data = split;
+		$total++;
+		if($data[1] ne "motif=0"){
+			$motif++;
+		}
+		my $before = 0;
+		my $after  = 0;
+		next if $data[0] =~ /pas/;
+		next if $data[5] ne "Origin" && $info =~ /pos/; ;
+		$before = &TrimmedMean(@data[8..108]);
+		$after = &TrimmedMean(@data[109..$#data]);
+		my $ave = ($before+$after)/2;
+		my $diff = $before-$after;
+		my $ave_diff = $diff/$ave;
+		print OUT "$data[0]\t$before\t$after\t$ave_diff\t$info\n";
+	}
+	my $percent = sprintf("%.3f",$motif/$total);
+	print OUT2 "$info\t$percent\n";
+}
+
+
+sub TrimmedMean{
+	my @data = @_;
+	my $sum = 0;
+	my $count = 0;
+	foreach my $ele (@data){
+		if($ele>0){
+			$sum += $ele;
+			$count++;
+		}
+	}
+	my $ave = $count>0 ? $sum/$count : 0;
+	return $ave;
+}

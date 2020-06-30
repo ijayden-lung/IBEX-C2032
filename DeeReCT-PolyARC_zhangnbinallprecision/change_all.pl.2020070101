@@ -1,0 +1,55 @@
+#!/usr/bin/perl -w
+use List::Util qw(first max maxstr min minstr reduce shuffle sum shuffle) ;
+
+my ($chr,$srd,$input,$negative,$out1,$out2,$out3,$scanGenome,$round) = @ARGV;
+open FILE,"$input";
+<FILE>;
+my %predict;
+my %falsePos_zb;
+my %falsePos_all;
+while(<FILE>){
+	chomp;
+	my ($pos,$id,$diff) = split;
+	#next if (abs($diff) < 100 && $id =~ /chr/);
+	my $end = sprintf("%.0f",$pos);
+	my $pas_id;
+	if($srd eq "+"){
+		my $head = $end-100;
+		my $tail = $end+75;
+		$pas_id = "$chr:$head-$tail";
+	}
+	else{
+		my $head = $end-75;
+		my $tail = $end+100;
+		$pas_id = "$chr:$head-$tail";
+	}
+	$predict{$pas_id}  = '';
+	if(abs($diff)<100){
+		if($id =~ /chr/){
+			$falsePos_zb{$pas_id} = '';
+		}
+		else{
+			$falsePos_all{$pas_id} = '';
+		}
+	}
+}
+
+open FILE,"$scanGenome";
+my $header  =<FILE>;
+open OUT1,">$out1";
+open OUT2,">$out2";
+open OUT3,">$out3";
+while(<FILE>){
+	chomp;
+	my @data = split;
+	if(exists $predict{$data[0]}){
+		$data[5] = $round;
+		print OUT1 join("\t",@data),"\n";
+		if(exists $falsePos_zb{$data[0]}){
+			print OUT2 join("\t",@data),"\n";
+		}
+		elsif(exists $falsePos_all{$data[0]}){
+			print OUT3 join("\t",@data),"\n";
+		}
+	}
+}

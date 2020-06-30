@@ -1,0 +1,3 @@
+#!/bin/bash
+
+./src/get_junction_counts.py -i /home/longy/workspace/polyA_predict/STAR/BL6_REP1/Aligned.sortedByCoord.out.bam -s fr-secondstrand -o ./junctions/BL6_REP1.bed

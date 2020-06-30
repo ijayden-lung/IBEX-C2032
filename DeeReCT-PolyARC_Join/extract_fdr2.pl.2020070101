@@ -1,0 +1,83 @@
+#!/usr/bin/perl -w
+
+#########NOTICE
+
+open OUT,">Stat/Distribution.bl6.merge.highThreshold.txt";
+print OUT "id\tprecision\trecall\tf1score\tfpr\tparameter\n";
+
+my %stat_pos;
+my %stat_neg;
+
+&openPosFile("bl6.merge.highThreshold");
+&openPosFile("bl6.merge.zhangbinSelect");
+&openPosFile("bl6.merge.smallThresholdBalance");
+&openPosFile("bl6.merge.smallThresholdBalancNorm");
+&openPosFile("bl6.merge.usage");
+&openPosFile("bl6.merge.random");
+sub openPosFile{
+	my $info = $_[0];
+	foreach my $file (glob "out/$info"."*.txt"){
+		&get_data_pos($file,$info);
+	}
+}
+sub openNegFile{
+	my $info = $_[0];
+	foreach my $file (glob "out/$info"."*.txt"){
+		&get_data_neg($file,$info);
+	}
+}
+
+
+while(my ($key,$val) = each %stat_pos){
+	
+	while(my($id,$val2) = each %$val){
+		my $para = $key;
+		print OUT "$id\t$val2\t0\t$para\n";
+		#if(exists $stat_neg{$key}->{$id}){
+		#print OUT "$id\t$val2\t$stat_neg{$key}->{$id}\t$para\n";
+			#}
+	}
+}
+
+sub get_data_pos{
+	my ($file,$para) = @_;
+	open $file,$file;
+	<$file>;
+	my %hash;
+	my $last_epoch = 0;
+	while(<$file>){
+		chomp;
+		my ($epoch,$tp,$fp,$tn,$fn) = (split)[0,3,4,5,6];
+		my $precision = $tp/($tp+$fp);
+		my $recall = $tp/($tp+$fn);
+		my $f1score = 2*$precision*$recall/($precision+$recall);
+		$hash{$epoch} = "$precision\t$recall\t$f1score";
+		$last_epoch = $epoch;
+	}
+
+	my ($distribute,$evaluate,$id) = (split /\./,$file)[-4,-3,-2];
+	#$para = "$distribute\_$evaluate";
+	$para = "$evaluate";
+	#$para="merge";
+	my $best_epoch = $last_epoch-20;
+	$stat_pos{$para}->{$id} = $hash{$best_epoch};
+	#print "$para\t$id\t$hash{$best_epoch}\n";
+}
+
+
+sub get_data_neg{
+	my ($file,$para) = @_;
+	open $file,$file;
+	<$file>;
+	my $line = <$file>;
+	if(!defined $line){
+		next;
+	}
+	my ($epoch,undef,$tp,$fp,$tn,$fn) = split /\t/,$line; 
+	my $fpr = $fp/($fp+$tn) ;
+	my ($distribute,$evaluate,$id) = (split /\./,$file)[-4,-3,-2];
+	$para = "$distribute\_$evaluate";
+	$stat_neg{$para}->{$id} = $fpr;
+}
+
+

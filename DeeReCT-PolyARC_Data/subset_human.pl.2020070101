@@ -1,0 +1,20 @@
+#!/usr/bin/perl -w
+
+my %filter;
+open FILE,"/home/longy/workspace/apa_predict/pas_dataset/human.pAs.brain.overlap.txt";
+while(<FILE>){
+	chomp;
+	my ($pas_id) = split;
+	$filter{$pas_id} = '';
+}
+
+open FILE,"data/human.pAs.brain.REP1.txt";
+my $header = <FILE>;
+open OUT,">data/human.pAs.brain.REP1.overlap.txt";
+while(<FILE>){
+	chomp;
+	my ($pas_id) = split;
+	if(exists $filter{$pas_id}){
+		print OUT "$_\n";
+	}
+}

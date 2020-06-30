@@ -1,0 +1,65 @@
+# This script is used to produce negative data
+# Juexiao
+# Data: 1769-09-30
+
+#!/usr/bin/env python3
+
+import numpy as np
+import os
+import sys
+import argparse
+def get_data(data_root, label):
+	'''
+	Process all files in the input directory to read sequences.
+	Sequences are encoded with one-hot.
+	data_root: input directory
+	label: the label (True or False) for the sequences in the input directory
+	'''
+	data1 = [] # seq
+	data2 = [] # coverage
+	data3 = [] # information
+
+	with open(data_root,'r') as f:
+		for line in f:
+			line=line.rstrip('\n').split('\t')
+			if (line[0]!='#pas_id')&(line[0]!='pas_id'):
+				SEQUENCE=list(line[7])
+				SEQUENCE=SEQUENCE[0:176]
+				ID=line[0]
+				data3.append(ID)
+				alphabet = np.array(['A', 'T', 'C', 'G'])
+				seq = np.array(SEQUENCE, dtype = '|U1').reshape(-1, 1)
+				seq_data = (seq == alphabet).astype(np.float32)
+				data1.append(seq_data)
+				COVERAGE=[int(float(x)) for x in line[8:184]]
+				COVERAGE=np.array(COVERAGE)/max(COVERAGE)
+				data2.append(COVERAGE)
+
+	data1 = np.stack(data1).reshape([-1, 176, 1, 4])
+	data2 = np.stack(data2).reshape([-1, 176, 1, 1])
+
+	if label:
+		labels = np.zeros(data1.shape[0])
+	else:
+		labels = np.ones(data1.shape[0])
+	return data1, data2, data3, labels
+
+
+if __name__ == '__main__':
+	parser = argparse.ArgumentParser()
+	parser.add_argument('negdata', help='Path to data npz files')
+	parser.add_argument('--out', default=None, help='Save model weights to (.npz file)')
+	opts = parser.parse_args()
+	neg_root=opts.negdata
+	outfile=opts.out
+
+	neg_data1, neg_data2, neg_data3, neg_labels = get_data(neg_root, True)
+
+	data = {}
+	data['test_dataset1'],data['test_dataset2'], data['test_dataset3'], data['test_labels'] = neg_data1, neg_data2, neg_data3, neg_labels
+
+	print('Read %d negative sequences from %s\n'%(neg_labels.shape[0], neg_root))
+
+	np.savez(outfile, **data)
+	print('Finish writing dataset to %s'%outfile)
+

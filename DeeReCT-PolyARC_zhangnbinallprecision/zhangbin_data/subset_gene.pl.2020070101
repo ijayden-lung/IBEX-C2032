@@ -1,0 +1,87 @@
+#!/usr/bin/perl -w
+#
+
+open FILE,"../polyA_seq/bl6.pAs.scanGenome.newround3.txt.bidirection.6.2.txt";
+my %zb_pas;
+while(<FILE>){
+	next if $_ =~ /predict/;
+	chomp;
+	my ($pos,$id,$diff,$chr,$strand,$gt_id,$gt_diff,$zb_id,$zb_diff,$ens_id,$ens_diff,$db_id,$db_diff) = split;
+	$pos = sprintf("%.0f",$pos);
+	$zb_pas{"$chr:$pos:$strand"} = "$zb_diff\t$zb_id";
+}
+
+my %predict;
+open FILE,"../polyA_seq/pAs_predictAll.info.cutoff";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol) = split;
+	$predict{$symbol} = '';
+}
+
+my %database;
+my %pas_type;
+open FILE,"bl6.pAs.motif.zhangbin.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,undef,undef,$motif) = split;
+	if(exists $predict{$symbol}){
+		$database{$symbol} = '';
+		if($pas_type eq "terminal" || $pas_type eq "tandemUTR"){ 
+			$pas_type = "tandemUTR";
+		}
+		else{
+			$pas_type = "Non_tandemUTR";
+		}
+		$pas_type{$pas_id} = "$pas_type\t$chr\t$pos\t$strand\t$symbol\t$motif";
+	}
+}
+
+
+open FILE,"../polyA_seq/pAs_predictAll.info.cutoff";
+$header = <FILE>;
+chomp $header;
+open OUT,">bl6.pAs.subset.predict.txt";
+print OUT "$header\tdistance\tmap_id\n";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol) = split;
+	if(exists $database{$symbol}){
+		my $distance = $zb_pas{"$chr:$pos:$strand"};
+		print OUT "$_\t$distance\n";
+	}
+}
+
+
+open FILE,"../polyA_seq/pAs_zhangbin.info";
+<FILE>;
+my %total;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$chr,$pos,$strand,$rep1,$rep2) = (split)[0,1,4,5,6,7];
+	my $ave = ($rep1+$rep2)/2;
+	next if $pas_id =~ /na/;
+	next if $pas_id =~ /NO/;
+	my ($gene_id) = split /\./,$pas_id;
+	$total{$gene_id} += $ave;
+}
+
+
+
+open FILE,"../polyA_seq/pAs_zhangbin.info";
+<FILE>;
+open OUT,">bl6.pAs.subset.tianbin.txt";
+print OUT "pas_id\tpas_type\tchr\tposition\tstrand\tsymbol\tmotif\tusage\treadCount\n";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$chr,$pos,$strand,$rep1,$rep2) = (split)[0,1,4,5,6,7];
+	my $ave = ($rep1+$rep2)/2;
+	my ($gene_id) = split /\./,$pas_id;
+	my $usage = $total{$gene_id}>0 ? $ave/$total{$gene_id} : 0;;
+	if(exists $pas_type{$pas_id}){
+		#my $motif = $filter{"$chr:$pos:$strand"};
+		print OUT "$pas_id\t$pas_type{$pas_id}\t$usage\t$ave\n";
+	}
+}

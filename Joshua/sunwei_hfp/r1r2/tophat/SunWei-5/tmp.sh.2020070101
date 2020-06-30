@@ -1,0 +1,12 @@
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J get1stbase_SunWei-5
+#SBATCH --output /home/zhouj0d/zhouj0d/sunwei_hfp/log/get1stbase_SunWei-5.out
+#SBATCH --mail-user=juexiao.zhou@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --time=72:00:00
+#SBATCH --mem=30G
+
+python /home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-5/tmp.py
+

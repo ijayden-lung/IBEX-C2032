@@ -1,0 +1,6 @@
+
+
+$hash{1} = [1,2,3];
+my $val = $hash{1};
+my ($a,$b,$c) = @$val;
+print "$a\t$b\n";

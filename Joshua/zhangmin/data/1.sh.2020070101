@@ -1,0 +1,20 @@
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J J005_CDC42_6HE
+#SBATCH --output /home/zhouj0d/zhouj0d/zhangmin/log/J005_CDC42_6HE.out
+#SBATCH --time=72:00:00
+#SBATCH --mem=30G
+
+module load cutadapt
+cd /home/zhouj0d/zhouj0d/zhangmin/data/J005
+
+file=/home/zhouj0d/zhouj0d/zhangmin/P101SC18110904-01-J005/1.rawdata/CDC_6HE_FKDL192534809-1a-AK1177/CDC_6HE_FKDL192534809-1a-AK1177_1.fq.gz
+out='PLASMID_CDC42_6HE'
+Ar1='CTCAAGCTTCGAATTCTGTGGATTCGTTAGTGCCGAACCAATGCTTTCTTGTGTCTCAACTCTTTGTATATGAATTCTTTTCAGATGTATTAAACAAACA'
+
+cutadapt -a ${Ar1} --cores=12 --discard-untrimmed -M 80 -m 26 -o ${out}.fastq ${file}
+
+
+
+

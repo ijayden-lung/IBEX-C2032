@@ -1,0 +1,14 @@
+#!/usr/bin/perl -w
+
+open FILE,"data/human.pAs.brain.REP1.filter.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($strand,$seq) = (split)[4,7];
+	next if $strand ne "+";
+	my $subseq = substr($seq,120,4);
+	if($subseq =~ /CA/){
+		print "$subseq\n";
+	}
+
+}

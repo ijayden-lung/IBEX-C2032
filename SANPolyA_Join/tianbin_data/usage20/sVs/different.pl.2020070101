@@ -1,0 +1,96 @@
+#!/usr/bin/perl -w
+
+my %hash;
+my %subset;
+open FILE,"bl6.pAs.subset.tianbin.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$motif,$usage,$readCount) = split;
+	$pas_id = "$chr:$pos:$strand";
+	$hash{"20"}->{$pas_id} = "$pas_type\t$motif\t$symbol";
+	$subset{"20"}->{$symbol} = '';
+}
+
+#while (my ($usage,$val) = each %hash){
+print "usage\t#gene\t#DB pAs\t#P pAs\t#TP pAs\trecall\tpresicion\tDB tandem%\tP tandm%\tDB motif%\tP motif%\tDB multi_pAs%\tP multi_pAs%\n";
+foreach my $usage (sort keys %hash){
+	my $val = $hash{$usage};
+	my $gene_ref = $subset{$usage};
+
+	open FILE,"bl6.pAs.subset.predict.txt";
+	my %zb_pas;
+	my %pr_pas;
+	my $database = 0;
+	my $ground_truth = 0;
+	my $predict=0;
+	my $p_motifNum = 0;
+	my $p_tandem = 0;
+	my %p_gene;
+	my $p_gene_num = 0;
+	my $p_multi=0;
+	while(<FILE>){
+		chomp;
+		my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif,$ave_diff,$biotype,$distance,$map_id)  = split;
+		next if !exists $gene_ref->{$symbol};
+		$predict++;
+		$p_gene{$symbol}++;
+		if($motif ne "motif=0"){
+			$p_motifNum++;
+		}
+		if($pas_type !~ /Non/){
+			$p_tandem++;
+		}
+		if(exists $val->{$map_id}){
+			if(abs($distance)<=25){
+				$zb_pas{$map_id} = '';
+				$pr_pas{"$chr:$pos:$strand"} = '';
+				$ground_truth++;
+			}
+		}
+	}
+	
+	my $motifNum = 0;
+	my $tandem = 0;
+	my %gene;
+	while(my ($pas_id,$val2) = each %$val){
+		$database++;
+		my ($pas_type,$motif,$symbol) = split /\t/,$val2;
+		$gene{$symbol}++;
+		if($motif ne "motif=0"){
+			$motifNum++;
+		}
+		if($pas_type !~ /Non/){
+			$tandem++;
+		}
+	}
+
+	my $gene_num = 0;
+	my $multi=0;
+	while(my ($key,$val) = each %gene){
+		$gene_num++;
+		if($val>1){
+			$multi++;
+		}
+	}
+
+	while(my ($key,$val) = each %p_gene){
+		$p_gene_num++;
+		if($val>1){
+			$p_multi++;
+		}
+	}
+
+	my $perpmotif = sprintf("%.3f",$p_motifNum/$predict);
+	my $perptandem = sprintf("%.3f",$p_tandem/$predict);
+	my $perpmulti = sprintf("%.3f",$p_multi/$p_gene_num);
+
+	my $permotif = sprintf("%.3f",$motifNum/$database);
+	my $pertandem = sprintf("%.3f",$tandem/$database);
+	my $permulti = sprintf("%.3f",$multi/$gene_num);
+	my $recall = sprintf("%.3f",$ground_truth/$database);
+	my $precision = sprintf("%.3f",$ground_truth/$predict);
+
+	print "usage$usage\t$gene_num\t$database\t$predict\t$ground_truth\t$recall\t$precision\t$permotif\t$perpmotif\t$pertandem\t$perptandem\t$permulti\t$perpmulti\n";
+	
+}

@@ -1,0 +1,111 @@
+#!/usr/bin/perl -w
+
+my %hash;
+my %subset;
+open FILE,"bl6.pAs.subset.tianbin.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$motif,$usage,$readCount) = split;
+	#next if $readCount < 10;
+	$pas_id = "$chr:$pos:$strand";
+	$hash{0}->{$pas_id} = "$motif\t$symbol";
+	$subset{0}->{$symbol} = '';
+	if($usage>0.1){
+		$hash{1}->{$pas_id} = "$motif\t$symbol";
+		$subset{1}->{$symbol} = '';
+	}
+	if($usage>0.2){
+		$subset{2}->{$symbol} = '';
+		$hash{2}->{$pas_id} = "$motif\t$symbol";
+	}
+	if($usage>0.3){
+		$subset{3}->{$symbol} = '';
+		$hash{3}->{$pas_id} = "$motif\t$symbol";
+	}
+	if($usage>0.4){
+		$subset{4}->{$symbol} = '';
+		$hash{4}->{$pas_id} = "$motif\t$symbol";
+	}
+	if($usage>0.5){
+		$subset{5}->{$symbol} = '';
+		$hash{5}->{$pas_id} = "$motif\t$symbol";
+	}
+}
+
+#while (my ($usage,$val) = each %hash){
+foreach my $usage (sort keys %hash){
+	my $val = $hash{$usage};
+
+	open FILE,"bl6.pAs.subset.predict.txt";
+	my %zb_pas;
+	my %pr_pas;
+	my $database = 0;
+	my $ground_truth = 0;
+	my $predict=0;
+	while(<FILE>){
+		chomp;
+		my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif,$ave_diff,$biotype,$distance,$map_id)  = split;
+		$predict++;
+		if(exists $val->{$map_id} && abs($distance)<=25){
+			$zb_pas{$map_id} = '';
+			$pr_pas{"$chr:$pos:$strand"} = '';
+			$ground_truth++;
+		}
+	}
+	
+	my $motifNum = 0;
+	my %gene;
+	while(my ($pas_id,$val2) = each %$val){
+		$database++;
+		my ($motif,$symbol) = split /\t/,$val2;
+		$gene{$symbol}++;
+		if($motif ne "motif=0"){
+			$motifNum++;
+		}
+	}
+
+	my $gene_num = 0;
+	my $multi=0;
+	while(my ($key,$val) = each %gene){
+		$gene_num++;
+		if($val>1){
+			$multi++;
+		}
+	}
+
+	my $permotif = sprintf("%.3f",$motifNum/$database);
+	my $permulti = sprintf("%.3f",$multi/$gene_num);
+	my $recall = sprintf("%.3f",$ground_truth/$database);
+	my $precision = sprintf("%.3f",$ground_truth/$predict);
+	print "usage$usage\t$gene_num\t$database\t$ground_truth\t$recall\t$precision\t$permotif\t$permulti\n";
+	
+	open FILE,"bl6.pAs.subset.predict.txt";
+	$header = <FILE>;
+	open OUT,">usage$usage/bl6.pAs.subset.fp.txt";
+	print OUT "$header";
+	open OUT2,">usage$usage/bl6.pAs.subset.tp.txt";
+	print OUT2 "$header";
+	while(<FILE>){
+		chomp;
+		my ($pas_id,$pas_type,$chr,$pos,$strand) = split;
+		if (exists $pr_pas{"$chr:$pos:$strand"}){
+			print OUT2 "$_\n";
+		}
+		else{
+			print OUT "$_\n";
+		}
+	}
+
+	open FILE,"bl6.pAs.subset.tianbin.txt";
+	$header = <FILE>;
+	open OUT,">usage$usage/bl6.pAs.subset.fn.txt";
+	print OUT "$header";
+	while(<FILE>){
+		chomp;
+		my ($pas_id,$pas_type,$chr,$pos,$strand) = split;
+		if (!exists $zb_pas{"$chr:$pos:$strand"}){
+			print OUT "$_\n";
+		}
+	}
+}

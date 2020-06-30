@@ -1,0 +1,71 @@
+#!/usr/bin/perl -w
+use List::Util qw/shuffle sum/;
+
+my %cov;
+&openCov("REP1");
+&openCov("REP2");
+&openCov("REP3");
+while(my ($key,$val) =each %cov){
+	my @cov = @$val;
+	my $trimmedmean = &TrimmedMean(@cov);
+	if($trimmedmean<1){
+		delete $cov{$key};
+	}
+}
+=pod
+open COV1,"/ibex/scratch/longy/workspace/apa_predict/Coverage_BL6_REP1.zhangbin.txt";
+<COV1>;
+while(<COV1>){
+	chomp;
+	my @data = split;
+	my @cov = @data[4..$#data];
+	@cov = reverse @cov if $data[2] eq "-";
+	my $trimmedmean = &TrimmedMean(@cov);
+	if($trimmedmean>5){
+		$cov{$data[0]} = \@cov;
+	}
+}
+=cut
+
+open FILE,"/ibex/scratch/longy/workspace/polyA_predict/bl6.pAs.zhangbin.fibroblast.txt";
+my $header = <FILE>;
+open OUT,">/ibex/scratch/longy/workspace/polyA_predict/data/bl6.pAs.zhangbin.fibroblast.txt";
+print OUT $header;
+while(<FILE>){
+	chomp;
+	my ($pas_id) = split; 
+	next if !exists $cov{$pas_id};
+	my $cov_ref = $cov{$pas_id};
+	print OUT join("\t",$_,@$cov_ref),"\n";
+}
+
+sub TrimmedMean{
+	my @sort = sort{$a<=>$b} @_;
+	my $len = @sort;
+	my $ltrim = int($len*0.2);
+	my $utrim = $len-$ltrim-1;
+	my $ave =  &sum(@sort[$ltrim..$utrim])/($utrim-$ltrim+1);
+	return $ave;
+}
+sub openCov{
+	my ($rep) = @_;
+	open COV1,"/ibex/scratch/longy/workspace/apa_predict/Coverage_BL6_$rep.zhangbin.txt";
+	<COV1>;
+	while(<COV1>){
+		chomp;
+		my @data = split;
+		my @cov = @data[4..$#data];
+		@cov = reverse @cov if $data[2] eq "-";
+		if(exists $cov{$data[0]}){
+			my @cov_all = @{$cov{$data[0]}};
+			for(my$i=0;$i<@cov;$i++){
+				$cov_all[$i] += $cov[$i];
+			}
+			$cov{$data[0]} = \@cov_all;
+		}
+		else{
+			$cov{$data[0]} = \@cov;
+		}
+	}
+	return \%cov;
+}

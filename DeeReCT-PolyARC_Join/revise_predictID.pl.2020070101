@@ -1,0 +1,39 @@
+#!/usr/bin/perl -w
+
+my ($Pas,$Trim,$Out,$window)  = @ARGV;
+$window--;
+#my $Pas = "/home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.zhangbin.fibroblast.txt";
+#my $Pas = "/home/longy/workspace/apa_predict/pas_dataset/human.pAs.brain.txt";
+my %real_pas;
+open FILE,$Pas;
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$chr,$pos,$srd) = (split)[0,2,3,4];
+	for(my$i=0;$i<=$window;$i++){
+		my $down = $i;
+		$down = $window-$i if $srd eq "-";
+		if(exists $real_pas{"$chr:$srd"}->{$pos-$i}){
+			$real_pas{"$chr:$srd"}->{$pos-$i} .= ",$pas_id-pos$down";
+		}
+		else{
+			$real_pas{"$chr:$srd"}->{$pos-$i} = "$pas_id-pos$down";
+		}
+	}
+}
+
+#my $Trim = "predict_bk/bl6.pAs.scanGenome.step1.str1.REP1.chr1.Trimmed10.txt";
+#my $Out = "predict3/bl6.pAs.scanGenome.step1.str1.REP1.chr1.Trimmed10.txt";
+
+open FILE,$Trim;
+open OUT,">$Out";
+while(<FILE>){
+	my ($pas_id,$predict) = split;
+	my $srd = "+";
+	$srd = "-" if $Trim =~ /str1/;
+	my ($chr,$str,$end) = split /\:|\-/,$pas_id;
+	if(exists $real_pas{"$chr:$srd"}->{$str}){
+		$pas_id = $real_pas{"$chr:$srd"}->{$str};
+	}
+	print OUT "$pas_id\t$predict\n";
+}

@@ -1,0 +1,56 @@
+import sys,os,re
+file=sys.argv[1]
+target=file.split('.')[0]
+DL={'AATCCG': ['PLASMID_IL4RA_12'],
+    'TTAACT': ['PLASMID_IL4RA_HEA_12'],
+    'CGGTTA': ['PLASMID_IL4RA_HEB_12'],
+   'GGCTGC': ['PLASMID_IGF12_12'],
+   'TACCTT': ['PLASMID_RBM12_12'],
+    'CCTAAG': ['PLASMID_VPS_12'],
+   'TCAGGA': ['PLASMID_VPS_HE_12'],
+   'TCTTAA': ['PLASMID_CDC42_12'],
+    'ATGAAC': ['PLASMID_CDC42_6HE_12'],
+   'GTCAGG': ['PLASMID_SV40_12']}
+
+D={'AGCGCC':0,'GCACAT':1,\
+   'CGCGTA':2,'GATTAT':3,\
+   'ATGACC':4,'CTGATA':5} # GATTAT:6
+
+recordfiles={'PLASMID_IL4RA_12':[open(target+'_ROUND%s.fa'%str(i),'w') for i in [0,1,2,3,4,5]],
+             'PLASMID_IL4RA_HEA_12':[open(target+'_ROUND%s.fa'%str(i),'w') for i in [0,1,2,3,4,5]],
+             'PLASMID_IL4RA_HEB_12':[open(target+'_ROUND%s.fa'%str(i),'w') for i in [0,1,2,3,4,5]],
+            'PLASMID_IGF12_12':[open(target+'_ROUND%s.fa'%str(i),'w') for i in [0,1,2,3,4,5]],
+            'PLASMID_RBM12_12':[open(target+'_ROUND%s.fa'%str(i),'w') for i in [0,1,2,3,4,5]],
+            'PLASMID_VPS_12':[open(target+'_ROUND%s.fa'%str(i),'w') for i in [0,1,2,3,4,5]],
+            'PLASMID_VPS_HE_12':[open(target+'_ROUND%s.fa'%str(i),'w') for i in [0,1,2,3,4,5]],
+            'PLASMID_CDC42_12':[open(target+'_ROUND%s.fa'%str(i),'w') for i in [0,1,2,3,4,5]],
+            'PLASMID_CDC42_6HE_12':[open(target+'_ROUND%s.fa'%str(i),'w') for i in [0,1,2,3,4,5]],
+            'PLASMID_SV40_12':[open(target+'_ROUND%s.fa'%str(i),'w') for i in [0,1,2,3,4,5]],}
+  
+c=0
+for line in open(file,'r'):
+    c+=1
+    if c==1:
+        fa=line
+        index=fa.rstrip()[-6:]
+        if index not in DL:
+            index=''
+        else:
+            for i in DL[index]:
+                if target in i:
+                    index=i
+                    length='12'
+                    break
+                index=''
+    elif c==2:
+        if index:
+            if line[:6] in D:
+                a=re.search(r'CTCGAG[ATCG]{'+length+'}CTCGAG',line)
+                if a:
+                    recordfiles[index][D[line[:6]]].write(fa)
+                    recordfiles[index][D[line[:6]]].write(a.group()+'\n')        
+    elif c==4:
+        c=0
+for i in recordfiles:
+    for j in recordfiles[i]:
+        j.close()

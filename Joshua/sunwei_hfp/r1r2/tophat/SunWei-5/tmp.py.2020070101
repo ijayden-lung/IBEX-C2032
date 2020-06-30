@@ -1,0 +1,15 @@
+
+with open('/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-5/accepted_hits_firstbase.bed','w') as w:
+    with open('/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-5/accepted_hits.bed','r') as f:
+        for line in f:
+            line=line.rstrip('\n').split('\t')
+            chromosome=line[0]
+            start=int(line[1])
+            end=int(line[2])
+            ID=line[3]
+            strand=line[5]
+            if strand=='+':
+                w.write(chromosome+'\t'+str(start)+'\t'+str(start+1)+'\t'+ID+'\t'+'50'+'\t'+strand+'\n')
+            elif strand=='-':
+                w.write(chromosome+'\t'+str(end-1)+'\t'+str(end)+'\t'+ID+'\t'+'50'+'\t'+strand+'\n')
+

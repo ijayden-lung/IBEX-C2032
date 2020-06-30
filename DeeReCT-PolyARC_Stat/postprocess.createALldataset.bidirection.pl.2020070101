@@ -1,0 +1,246 @@
+#!/usr/bin/perl -w
+
+
+use Statistics::Descriptive;
+my ($maxLength,$penality,$sample) = @ARGV;
+
+my %chr;
+open FILE,"/home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.zhangbin.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$end,$srd) = split;
+	my ($gene_id) = split /\./,$pas_id;
+	$chr{$pas_id} = $chr;
+}
+
+my %pas_left;
+open FILE,"Stat/bl6.pAs.scanGenome.maxSum.$maxLength.$penality.$sample.txt";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$maxPoint,$diff,$pos,$start,$end) = split;
+	my ($gene_id) = split /\./,$pas_id;
+	my $chr;
+	if($pas_id =~ /chr/){
+		($chr) = split /\:/,$pas_id;
+	}
+	else{
+		$chr = $chr{$pas_id};
+	}
+	$pas_left{$chr}->{$pos} = "$start\t$end";
+}
+my %pas_right;
+open FILE,"Stat/bl6.pAs.scanGenome.maxSum.reverse.$maxLength.$penality.$sample.txt";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$maxPoint,$diff,$pos,$start,$end) = split;
+	my ($gene_id) = split /\./,$pas_id;
+	my $chr;
+	if($pas_id =~ /chr/){
+		($chr) = split /\:/,$pas_id;
+	}
+	else{
+		$chr = $chr{$pas_id};
+	}
+	$pas_right{$chr}->{$pos} = "$end\t$start";
+}
+
+
+my %merge_pas;
+my $total = 0;
+while(my ($chr,$val) = each %pas_left){
+	my @sort_pas_pos1 = sort{$a<=>$b} keys %$val;
+	my $val2 = $pas_right{$chr};
+	my @sort_pas_pos2 = sort{$a<=>$b} keys %$val2;
+	for(my$i=0,$j=0;$i<@sort_pas_pos1 && $j<@sort_pas_pos2;){
+		my $pos1 = $sort_pas_pos1[$i];
+		my $pos2 = $sort_pas_pos2[$j];
+		if($pos2>$pos1){
+			$i++;
+		}
+		else{
+			my ($start1,$end1) = split /\t/,$val->{$pos1};
+			my ($start2,$end2) = split /\t/,$val2->{$pos2};
+			if($pos1>$end2 || $pos2<$start1){
+				$j++;
+			}
+			else{
+				my $pos = ($pos1+$pos2)/2;
+				#print "$chr\t$pos\n";
+				$merge_pas{$chr}->{$pos} = "$chr:$pos";
+				$total++;
+				$i++,$j++;
+			}
+
+		}
+	}
+}
+
+my %nearest;
+my %nearReal;
+my $ground_truth;
+open FILE,"/home/longy/project/DeeReCT-PolyARC_Data/data/bl6.pAs.fibroblast.REP1.positive.usage0.2.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$end,$srd) = split;
+	my ($gene_id) = split /\./,$pas_id;
+	next if $srd eq "-";
+	$ground_truth++;
+	if(exists $merge_pas{$chr}){
+		my $pas_ref = $merge_pas{$chr};
+		while(my($pos,$pas_id) = each %$pas_ref){
+			if(exists $nearest{$pas_id}){
+				if( abs($pos-$end)<abs($nearest{$pas_id})){
+					$nearest{$pas_id} = $pos-$end;
+					$nearReal{$pas_id} = $end;
+				}
+			}
+			else{
+				$nearest{$pas_id} = $pos-$end;
+				$nearReal{$pas_id} = $end;
+			}
+		}
+	}
+}
+my $RealNum20 = 0;
+my $RealNum50 = 0;
+my $RealNum100 = 0;
+while(my($pas_id,$diff) = each %nearest){
+	if(abs($diff)<100){
+		$RealNum100++;
+		if(abs($diff)<50){
+			$RealNum50++;
+			if(abs($diff)<25){
+				$RealNum20++;
+			}
+		}
+	}
+}
+$rc20 = $RealNum20/$ground_truth;
+$rc50 = $RealNum50/$ground_truth;
+$rc100 = $RealNum100/$ground_truth;
+print "$RealNum20\t$RealNum50\t$RealNum100\t$ground_truth\n";
+print "$rc20\t$rc50\t$rc100\n";
+
+
+open ENS,"awk '(\$3 == \"three_prime_utr\")' /home/longy/cnda/ensembl/mm10.ensemblv95.nopsuedo.gtf |" ;
+while(<ENS>){
+	chomp;
+	my ($chr,$source,$type,$start,$end,undef,$srd,undef,undef,$gene_id) = split;
+	$gene_id =~ s/\"|\;//g;
+	if(exists $merge_pas{$chr}){
+		my $pas_ref = $merge_pas{$chr};
+		while(my($pos,$pas_id) = each %$pas_ref){
+			if(exists $nearest{$pas_id}){
+				if( abs($pos-$end)<abs($nearest{$pas_id})){
+					$nearest{$pas_id} = $pos-$end;
+					$nearReal{$pas_id} = $end;
+				}
+			}
+			else{
+				$nearest{$pas_id} = $pos-$end;
+				$nearReal{$pas_id} = $end;
+			}
+		}
+	}
+}
+open FILE,"/home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.tianbin.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$end,$srd) = split;
+	my ($gene_id) = split /\./,$pas_id;
+	if(exists $merge_pas{$chr}){
+		my $pas_ref = $merge_pas{$chr};
+		while(my($pos,$pas_id) = each %$pas_ref){
+			if(exists $nearest{$pas_id}){
+				if( abs($pos-$end)<abs($nearest{$pas_id})){
+					$nearest{$pas_id} = $pos-$end;
+					$nearReal{$pas_id} = $end;
+				}
+			}
+			else{
+				$nearest{$pas_id} = $pos-$end;
+				$nearReal{$pas_id} = $end;
+			}
+		}
+	}
+}
+
+open FILE,"/home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.zhangbin.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$end,$srd) = split;
+	my ($gene_id) = split /\./,$pas_id;
+	if(exists $merge_pas{$chr}){
+		my $pas_ref = $merge_pas{$chr};
+		while(my($pos,$pas_id) = each %$pas_ref){
+			if(exists $nearest{$pas_id}){
+				if( abs($pos-$end)<abs($nearest{$pas_id})){
+					$nearest{$pas_id} = $pos-$end;
+					$nearReal{$pas_id} = $end;
+				}
+			}
+			else{
+				$nearest{$pas_id} = $pos-$end;
+				$nearReal{$pas_id} = $end;
+			}
+		}
+	}
+}
+
+
+my $recall20 = 0;
+my $recall50 = 0;
+my $recall100 = 0;
+
+open OUT,">Stat/postprocess.allDatasetPredict.distribute.$maxLength.$penality.$sample.txt";
+print OUT "pas_id\trealPasPos\tdiff\tlabel\n";
+my @stat;
+while(my ($key,$val) = each %nearReal){
+	my $diff = $nearest{$key};
+	if($key =~ /chr/){
+		print OUT "$key\t$val\t$diff\tFPinLastStep\n";
+	}
+	elsif($key =~ /ENS/){
+		print OUT "$key\t$val\t$diff\tTPinLastStep\n";
+	}
+	print OUT "$key\t$val\t$diff\tAllPredict\n";
+	if(abs($diff)<100){
+		$recall100++;
+		#push @stat,$diff;
+		if(abs($diff)<50){
+			#push @stat,$diff;
+			$recall50++;
+			if(abs($diff)<25){
+				push @stat,$diff;
+				$recall20++;
+			}
+		}
+	}
+}
+my $percent20 = 1-$recall20/$total;
+my $percent50 = 1-$recall50/$total;
+my $percent100 = 1-$recall100/$total;
+print "$recall20\t$recall50\t$recall100\t$total\n";
+print "$percent20\t$percent50\t$percent100\n";
+
+my $stat = Statistics::Descriptive::Full->new();
+$stat->add_data(@stat);
+my $mean = $stat->mean();#平均值
+my $variance = $stat->variance();#方差
+my $num = $stat->count();#data的数目
+my $standard_deviation=$stat->standard_deviation();#标准差
+my $sum=$stat->sum();#求和
+my $min=$stat->min();#最小值
+my $mindex=$stat->mindex();#最小值的index
+my $max=$stat->max();#最大值
+my $maxdex=$stat->maxdex();#最大值的index
+my $range=$stat->sample_range();#最小值到最大值
+my $median=$stat->median();
+
+
+print "Header\tRecall\tFPR\tMean\tMedian\tSTD\tRange\n";
+print "$penality,$maxLength\t$recall20\t$percent20\t$mean\t$median\t$standard_deviation\t$min,$max\n";

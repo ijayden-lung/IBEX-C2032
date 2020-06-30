@@ -1,0 +1,55 @@
+#!/usr/bin/perl -w
+#
+#
+#Upate 2019/11/05
+
+my %pas;
+open FILE,"data/bl6.pAs.fibroblast.REP1.positive.usage0.2.txt";
+<FILE>;
+my %chr;
+while(<FILE>){
+	chomp;
+	my ($pas_id,undef,$chr,$position,$str) = split;
+	$pas{$pas_id} = $position;
+	$chr{$pas_id} = "$chr\t$str";
+}
+
+
+foreach my $file (glob 'predict/bl6.pAs.scanGenome.step1.str*.REP1.chr*.Trimmed10.Optimize.txt'){
+	&sumDistribution($file);
+}
+
+
+my %correct;
+sub sumDistribution{
+	my ($file) = @_;
+	open FILE,$file;
+	while(<FILE>){
+		chomp;
+		my ($key,$predition) = split;
+		next if $predition ==1;
+		if($key =~ /ENS/){
+			my @id = split /,/,$key;
+			next if @id >1;
+			foreach my $id (@id){
+				my ($pas_id,$pos) = split /\-/,$id;
+				if(exists $pas{$pas_id}){
+					my $position = int(substr($pos,3));
+					my $relative = $position-100;
+					if($file =~ /str1/){
+						$relative++;
+					}
+					if($relative == 0){
+						$correct{$pas_id} = '';
+					}
+
+				}
+			}
+		}
+	}
+}
+
+open OUT,">Correct_pas.txt";
+while(my ($key,$val) = each %correct){
+	print OUT "$key\t$chr{$key}\n";
+}

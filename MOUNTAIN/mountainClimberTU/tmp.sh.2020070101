@@ -1,0 +1,11 @@
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J merge_tus_MOUNTAIN
+#SBATCH --output /home/zhouj0d/c2032/MOUNTAIN/log/merge_tus_MOUNTAIN.log
+#SBATCH --time=72:00:00
+#SBATCH --mem=30G
+
+cd /home/zhouj0d/c2032/MOUNTAIN/mountainClimber/src
+python merge_tus.py -i /home/zhouj0d/c2032/MOUNTAIN/mountainClimberTU/*_tu.bed -s n -g /home/zhouj0d/c2032/MOUNTAIN/hg38/Homo_sapiens.GRCh38.95.gtf -o /home/zhouj0d/c2032/MOUNTAIN/tus_merged
+

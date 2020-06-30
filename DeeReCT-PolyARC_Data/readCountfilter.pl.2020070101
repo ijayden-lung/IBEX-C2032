@@ -1,0 +1,26 @@
+#!/usr/bin/perl -w
+use List::Util qw/shuffle sum/;
+
+open FILE,"data/bl6.pAs.random.negative.merge.txt";
+my $header = <FILE>;
+open OUT,">data/bl6.pAs.genome.trimmed30.txt";
+print OUT "$header";
+while(<FILE>){
+	chomp;
+	my @data = (split)[8..208];
+	my $trimMean = &TrimmedMean(@data);
+	if($trimMean>30){
+		print OUT "$_\n";
+	}
+
+}
+
+
+sub TrimmedMean{
+	my @sort = sort{$a<=>$b} @_;
+	my $len = @sort;
+	my $ltrim = int($len*0.2);
+	my $utrim = $len-$ltrim-1;
+	my $ave =  sum(@sort[$ltrim..$utrim])/($utrim-$ltrim+1);
+	return $ave;
+}

@@ -1,0 +1,72 @@
+#!/bin/bash
+#SBATCH --job-name=DeeReCT_PolyA
+#SBATCH --partition=batch
+#SBATCH --nodes=1
+#SBATCH --time=6:00:00
+#SBATCH --output=log.%J
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --dependency=afterok:6762976_[0-5] 
+#SBATCH --mem=30M
+#SBATCH -a 0-45
+
+#source ~/.bash_aliases
+#rna_seq3
+#cd /ibex/scratch/projects/c2032/DeeReCT-PolyARC/
+allsteps=(1 1)
+#allsteps=(59 59)
+allstrands=("str2" "str1")
+allsigns=("+" "-")
+#allchrs=("chr1" "chr2" "chr3" "chr4" "chr5" "chr6" "chr7" "chr8" "chr9" "chr10" "chr11" "chr12" "chr13" "chr14" "chr15" "chr16" "chr17" "chr18"  "chr19" "chrX")  
+allchrs=("chr1" "chr2" "chr3" "chr4" "chr5" "chr6" "chr7" "chr8" "chr9" "chr10" "chr11" "chr12" "chr13" "chr14" "chr15" "chr16" "chr17" "chr18"  "chr19" "chr20" "chr21" "chr22" "chrX")  
+
+for ((i=0;i<=45;i++))
+do
+	b=$(( $i % 2 ))
+	c=$(( $i / 2))
+	steps[$i]=${allsteps[$b]}
+	strands[$i]=${allstrands[$b]}
+	signs[$i]=${allsigns[$b]}
+	reps[$i]=${allreps[$b]}
+	chrs[$i]=${allchrs[$c]}
+done
+
+
+window=176
+step=${steps[$SLURM_ARRAY_TASK_ID]}
+strand=${strands[$SLURM_ARRAY_TASK_ID]}
+sign=${signs[$SLURM_ARRAY_TASK_ID]}
+rep=${reps[$SLURM_ARRAY_TASK_ID]}
+chr=${chrs[$SLURM_ARRAY_TASK_ID]}
+#Pas=data/bl6.pAs.zhangbin.fibroblast.txt
+Pas=data/human.pAs.brain.REP1.txt
+#WIG=STAR/BL6_${rep}/Signal.Unique.${strand}.out.${chr}.wig
+WIG=STAR/HUM_Brain_${rep}/Signal.Unique.${strand}.out.${chr}.wig
+ScanGenome=data/humanBrain.pAs.scanGenome.step${step}.${strand}.${rep}.${chr}.txt
+Trim=data/humanBrain.pAs.scanGenome.step${step}.${strand}.${rep}.${chr}.Trimmed10.txt
+
+echo "processing strand $strand in step $step for rep $rep in chr $chr"
+
+
+#perl seperate_chr_wig.pl $WIG
+
+perl generate_slidingWidnows.pl $WIG $ScanGenome $window $step
+perl prepare_scanGenome.pl $Pas $ScanGenome $Trim $window $sign $chr
+
+
+TRIM1=data/bl6.pAs.scanGenome.step${step}.${strand}.REP1.${chr}.Trimmed10.txt
+TRIM2=data/bl6.pAs.scanGenome.step${step}.${strand}.REP2.${chr}.Trimmed10.txt
+TRIM3=data/bl6.pAs.scanGenome.step${step}.${strand}.REP3.${chr}.Trimmed10.txt
+MERGE=data/bl6.pAs.scanGenome.step${step}.${strand}.merge.${chr}.Trimmed10.txt
+
+TPM=data/tmp.bl6.pAs.scanGenome.step${step}.${strand}.REP1.${chr}.Trimmed10.txt
+#perl select_negative.pl $TRIM1 $TPM
+
+
+ORI=predict/bl6.pAs.scanGenome.step${step}.${strand}.REP1.${chr}.Trimmed10.model28.onlymotif.summary.processed.csv
+OUT=predict/bl6.pAs.scanGenome.step${step}.${strand}.REP1.${chr}.Trimmed10.fptp.onlymotif.txt
+#perl merge_scangenome.pl $TRIM1 $TRIM2 $TRIM3 $MERGE
+#perl extract_fp.pl $ORI $MERGE $OUT
+#perl extract_fptp.pl $ORI $TRIM1 $OUT
+
+#perl split_data.pl

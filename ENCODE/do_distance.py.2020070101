@@ -1,0 +1,21 @@
+import pandas as pd
+import os
+df=pd.read_csv('All_selected.tsv',sep='\t')
+
+for CELL1 in ['HepG2','K562']:
+    for TARGET1 in ['ZRANB2','FUS','RBFOX2']:
+        for REP1 in ['REP1','REP2']:
+            for CELL2 in ['HepG2','K562']:
+                for TARGET2 in ['ZRANB2','FUS','RBFOX2']:
+                    for REP2 in ['REP1','REP2']:
+        
+                        os.environ['CELL1']=CELL1
+                        os.environ['TARGET1']=TARGET1
+                        os.environ['REP1']=REP1
+                        os.environ['CELL2']=CELL2
+                        os.environ['TARGET2']=TARGET2
+                        os.environ['REP2']=REP2
+            
+                        os.system("bash do_distance.sh")
+
+

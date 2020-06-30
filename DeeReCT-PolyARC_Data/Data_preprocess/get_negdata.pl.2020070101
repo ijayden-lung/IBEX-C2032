@@ -1,0 +1,8 @@
+#!/usr/bin/perl -w
+
+open FILE,"bl6.pAs.random.negative.merge.txt";
+open OUT,">bl6.tianbin.all.negative.txt";
+while(<FILE>){
+	print OUT $_;
+	last if $. >217181;
+}

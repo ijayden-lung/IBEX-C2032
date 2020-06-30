@@ -1,0 +1,22 @@
+#!/usr/bin/perl -w
+#
+#
+
+my %tn;
+open FILE,"predict/positive.bl6.pAs.fibroblast.REP1.txt";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pred) = split;
+	if($pred ==1){
+		$tn{$pas_id} ='';
+	}
+}
+
+open FILE,"Wrong_pas.txt";
+while(<FILE>){
+	chomp;
+	my ($pas_id) = split;
+	if(!exists $tn{$pas_id}){
+		print "$pas_id\n";
+	}
+}

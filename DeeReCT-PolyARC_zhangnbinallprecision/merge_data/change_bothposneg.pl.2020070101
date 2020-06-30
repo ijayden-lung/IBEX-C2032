@@ -1,0 +1,61 @@
+#!/usr/bin/perl -w
+use List::Util qw(first max maxstr min minstr reduce shuffle sum shuffle) ;
+
+my %hash;
+open FILE,"bl6.pAs.subset.tianbin.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$motif,$usage,$readCount) = split;
+	$pas_id = "$chr:$pos:$strand";
+	$hash{$pas_id} = "$motif\t$symbol";
+}
+
+open FILE,"bl6.pAs.subset.predict.txt";
+my %zb_pas;
+my %pr_pas;
+my $count = 0;
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif,$ave_diff,$biotype,$distance,$map_id)  = split;
+	$pos = sprintf("%.0f",$pos);
+	if(exists $hash{$map_id} && abs($distance)<=25){
+		$zb_pas{$map_id} = '';
+		$pr_pas{"$chr:$pos:$strand"} = '';
+	}
+}
+
+
+my $num = keys %zb_pas;
+my $num2 = keys %pr_pas;
+print "$num\t$num2\n"; ######num1 < num2 because it's some pas mapped to two pas. in themiddle
+
+open FILE,"bl6.pAs.subset.predict.txt";
+$header = <FILE>;
+open OUT,">bl6.pAs.subset.fp.txt";
+print OUT "$header";
+open OUT2,">bl6.pAs.subset.tp.txt";
+print OUT2 "$header";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand) = split;
+	if (exists $pr_pas{"$chr:$pos:$strand"}){
+		print OUT2 "$_\n";
+	}
+	else{
+		print OUT "$_\n";
+	}
+}
+
+open FILE,"bl6.pAs.subset.tianbin.txt";
+$header = <FILE>;
+open OUT,">bl6.pAs.subset.fn.txt";
+print OUT "$header";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand) = split;
+	if (!exists $zb_pas{"$chr:$pos:$strand"}){
+		print OUT "$_\n";
+	}
+}

@@ -1,0 +1,25 @@
+#!/usr/bin/env Rscript
+
+library(ggplot2)
+data =  read.table('Distribution_hparamOri.txt',sep="\t",header=TRUE)
+
+
+#data = data[data$parameter!='Para2',]
+
+
+pdf("Distribution_Para.Ori.pdf")
+ggplot(data=data,aes(x=fdr,color=parameter))+geom_density()+theme_bw()+
+theme(axis.title=element_text(size =20),axis.text=element_text(size =20))+
+theme(plot.title = element_text(,size=20,hjust = 0.5))+
+labs(title='Distribution of  FDR')
+
+
+ggplot(data=data,aes(x=tpr,color=parameter))+geom_density()+theme_bw()+
+theme(axis.title=element_text(size =20),axis.text=element_text(size =20))+
+theme(plot.title = element_text(,size=20,hjust = 0.5))+
+labs(title='Distribution of TPR')
+
+ggplot(data=data,aes(x=f1score,color=parameter))+geom_density()+theme_bw()+
+theme(axis.title=element_text(size =20),axis.text=element_text(size =20))+
+theme(plot.title = element_text(,size=20,hjust = 0.5))+
+labs(title='Distribution of F1Score')

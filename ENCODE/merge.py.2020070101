@@ -1,0 +1,20 @@
+import argparse
+
+parser = argparse.ArgumentParser(description='Prediction')
+parser.add_argument('--cell', help='cell line', default='HepG2')
+parser.add_argument('--target', help='target rbp', default='ZRANB2')
+parser.add_argument('--rep', help='replicate', default='REP1')
+args = parser.parse_args()
+
+CELL=args.cell
+TARGET=args.target
+REP=args.rep
+
+with open('/home/zhouj0d/c2032/ENCODE/data/%s_%s/%s/Prediction_HM/scanGenome.step1.Trimmed10.all.bed'%(CELL,TARGET,REP),'w') as w:
+    for STR in ['+','-']:
+        for CHR in [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,'X']:
+            with open('/home/zhouj0d/c2032/ENCODE/data/%s_%s/%s/Prediction_HM/scanGenome.step1.%s.chr%s.Trimmed10.summary.processed.csv.output'%(CELL,TARGET,REP,str(STR),str(CHR)),'r') as f:
+                for line in f:
+                    line=line.split('\t')
+                    if line[0]!='chr':
+                        w.write('%s\t%s\t%s\t%s\t%s\t%s\n'%(line[0],str(int(float(line[1]))),str(int(float(line[1]))+1),STR,STR,STR))

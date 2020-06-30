@@ -1,0 +1,59 @@
+#!/usr/bin/perl -w
+
+open OUT,">train_data/bl6.pAs.negative.REP1.txt";
+print OUT "pas_id\tpas_type\tchr\tpos\tstrand\tsymbol\tusage\tsequence\n";
+
+foreach my $file (glob "train_data/bl6.pAs.scanGenome.step1.*.REP1.chr*.Trimmed10.txt.tandemUTR.txt"){
+	open FILE,"$file\n";
+	<FILE>;
+	while(<FILE>){
+		chomp;
+		my @data = split /\t/;
+		my ($pas_id,$motif) = @data[0,1];
+		my @coverage  = @data[8..$#data];
+		my $sum = 0;
+		my $count=0;
+		for(my$i=0;$i<@coverage;$i++){
+			if($coverage[$i]>0){
+				$sum+= $coverage[$i];
+				$count++;
+			}
+		}
+		my $ave = $sum/$count;
+		next if $ave < 25;
+		if($motif eq "motif=0"){
+			print OUT "$_\n" if rand() <0.005;
+		}
+		else{
+			print OUT "$_\n";
+		}
+	}
+}
+
+foreach my $file (glob "train_data/bl6.pAs.scanGenome.step1.*.REP1.chr*.Trimmed10.txt.exon.txt"){
+	open FILE,"$file\n";
+	<FILE>;
+	while(<FILE>){
+		chomp;
+		my @data = split /\t/;
+		my ($pas_id,$motif) = @data[0,1];
+		my @coverage  = @data[8..$#data];
+		my $sum = 0;
+		my $count=0;
+		for(my$i=0;$i<@coverage;$i++){
+			if($coverage[$i]>0){
+				$sum+= $coverage[$i];
+				$count++;
+			}
+		}
+		my $ave = $sum/$count;
+		next if $ave < 25;
+		if($motif eq "motif=0"){
+			print OUT "$_\n" if rand() <0.01;
+		}
+		else{
+			print OUT "$_\n";
+		}
+	}
+}
+

@@ -1,0 +1,79 @@
+#!/usr/bin/perl 
+#Update 2019/11/06
+#
+
+use Statistics::Descriptive;
+my ($maxLength,$penality) = @ARGV;
+my $repeat;
+my %pas;
+open FILE,"Stat/maxSum.$maxLength.$penality.txt";
+while(<FILE>){
+	chomp;
+	my ($pas_id,undef,undef,undef,$diff) = split;
+	if(exists $pas{$pas_id}){ 
+		$repeat++;
+		if(abs($pas{$pas_id}) > abs($diff)){
+			$pas{$pas_id} = $diff;
+		}
+	}
+	else{
+		$pas{$pas_id} = $diff;
+	}
+}
+
+
+
+
+open OUT,">Stat/maxSum.$maxLength.$penality.noRepeat.txt";
+print OUT "pas_id\tdiff";
+open FILE,"Correct_pas.txt";
+my $total = 0;
+my $tp = 0;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$chr,$str) = split;
+	if($str eq "+"){
+		$total++;
+		if(exists $pas{$pas_id}){
+			$tp++;
+			print OUT "$pas_id\t$pas{$pas_id}\n";
+		}
+	}
+}
+
+my $recall = $tp/$total;
+my $repeat_rate = $repeat/$total;
+print "recall: $recall\nrepeat: $repeat_rate\n";
+
+my @val = values %pas;
+my $stat = Statistics::Descriptive::Full->new();
+$stat->add_data(@val);
+my $mean = $stat->mean();#平均值
+my $variance = $stat->variance();#方差
+my $num = $stat->count();#data的数目
+my $standard_deviation=$stat->standard_deviation();#标准差
+my $sum=$stat->sum();#求和
+my $min=$stat->min();#最小值
+my $mindex=$stat->mindex();#最小值的index
+my $max=$stat->max();#最大值
+my $maxdex=$stat->maxdex();#最大值的index
+my $range=$stat->sample_range();#最小值到最大值
+my $median=$stat->median();
+
+
+print "Header\tRecall\tFPR\tMean\tMedian\tSTD\tRange\n";
+print "$penality,$maxLength\t$recall\t$repeat_rate\t$mean\t$median\t$standard_deviation\t$min,$max\n";
+
+
+for(my$i=0;$i<@val;$i++){
+	$val[$i] -= $median;
+}
+
+my $stat2 = Statistics::Descriptive::Full->new();
+$stat2->add_data(@val);
+my $mean2 = $stat2->mean();#平均值
+my $standard_deviation2=$stat2->standard_deviation();#标准差
+my $min2=$stat2->min();#最小值
+my $max2=$stat2->max();#最大值
+print "Header\tRecall\tFPR\tMean\tMedian\tSTD\tRange\n";
+print "$penality,$maxLength\t$recall\t$repeat_rate\t$mean2\t0\t$standard_deviation2\t$min2,$max2\n";

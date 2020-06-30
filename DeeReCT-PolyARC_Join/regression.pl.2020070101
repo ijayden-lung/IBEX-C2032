@@ -1,0 +1,61 @@
+#!/usr/bin/perl -w
+
+use Statistics::Regression;
+use List::Util qw(first max maxstr min minstr reduce shuffle sum);
+
+open FILE,"train_data/bl6.pAs.merge.fibroblast.negative.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my @data = split /\t/;
+	my @up_coverage = @data[8..108];
+	my @down_coverage = @data[109..$#data];
+	my $max_up = &max(@up_coverage);
+	my $max_down = &max(@down_coverage);
+	for(my$i=1;$i<@up_coverage;$i++){
+		if($up_coverage[$i]-$up_coverage[$i-1]>0.5*$max_up){
+			@up_coverage = @up_coverage[$i..$#up_coverage];
+			last;
+		}
+	}
+	for(my$i=1;$i<@down_coverage;$i++){
+		if($down_coverage[$i]-$down_coverage[$i-1]>10 && $down_coverage[$i]-$down_coverage[$i-1]> 0.5*$max_down){
+			@down_coverage = @down_coverage[0..$i-1];
+			last;
+		}
+	}
+	#next if($data[0] ne "chr2:150832472-150832648");
+	#next if($data[0] ne "chr2:5795473-5795649" );
+	my ($up_theta,$up_rsq) = &Regression(@up_coverage);
+	my ($down_theta,$down_rsq) = &Regression(@down_coverage);
+	#if($up_theta>0 || $down_theta<-1 || $down_theta>1){
+	if($up_rsq>0.6 &&  $up_theta<0 && $down_theta>=-1 && $down_theta<=1){
+		print "$data[0]\t";
+		print "up_theta\t$up_theta\tup_R-Square\t$up_rsq\t";
+		print "down_theta\t$down_theta\tdown_R-Square\t$down_rsq\n";
+	}
+}
+
+sub Regression{
+	my @coverage = @_;
+	$max = &max(@coverage);
+	$min = &min(@coverage);
+	my $range = ($max-$min)/100;
+	if($range ==0){
+		return (0,1);
+	}
+	else{
+		if($max>100){
+			for(my$i=0;$i<@coverage;$i++){
+				$coverage[$i] = ($coverage[$i]-$min)/$range;
+			}
+		}
+		my $reg = Statistics::Regression->new( "sample regression", [ "const", "someX" ] );
+		for(my$i=0;$i<@coverage;$i++){
+			$reg->include( $coverage[$i], [ 1.0, $i ] );
+		}
+		my @theta  = $reg->theta();
+		my $rsq    = $reg->rsq();
+		return ($theta[1],$rsq);
+	}
+}

@@ -1,0 +1,27 @@
+import numpy as np
+
+import tensorflow as tf
+import tensorflow.contrib.slim as slim
+
+import h5py
+
+def show_all_variables():
+    model_vars = tf.trainable_variables()
+    slim.model_analyzer.analyze_vars(model_vars, print_info=True)
+
+
+def read_mat(dataset, is_train):
+
+    with tf.device('/cpu:0'):
+        arrays = np.load(dataset)
+
+        trX = arrays['datas']
+        if is_train:
+            trY = arrays['labels']
+
+    if is_train:
+        return trX, trY
+    else:
+        return trX
+
+

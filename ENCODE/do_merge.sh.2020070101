@@ -1,0 +1,16 @@
+cat>tmp.sh<<EOF
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J merge_${CELL}_${TARGET}_${REP}
+#SBATCH --output /ibex/scratch/projects/c2032/ENCODE/log/merge_${CELL}_${TARGET}_${REP}.log
+#SBATCH --time=72:00:00
+#SBATCH --mem=100G
+
+cd /home/zhouj0d/c2032/ENCODE
+
+python merge.py --cell ${CELL} --target ${TARGET} --rep ${REP}
+
+EOF
+
+sbatch tmp.sh

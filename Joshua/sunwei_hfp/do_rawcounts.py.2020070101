@@ -1,0 +1,5 @@
+import os
+
+for i in range(1,13):
+    print(i)
+    os.system("zcat /home/zhouj0d/zhouj0d/sunwei_hfp/cleandata/SunWei-%s_FKDL192533308-1a-%s/SunWei-%s_FKDL192533308-1a-%s_1.clean.fq.gz | grep -c '+'"%(str(i),str(i),str(i),str(i)))

@@ -1,0 +1,47 @@
+for chr in chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20 chr21 chr22 chrX
+do
+
+maxPoint=8
+penality=-0.25
+
+cat>tmp.sh<<EOF
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J post_processing_${CELL}_${TARGET}_${REP}_${chr}
+#SBATCH --output /ibex/scratch/projects/c2032/ENCODE/log/post_processing_${CELL}_${TARGET}_${REP}_${chr}.log
+#SBATCH --time=72:00:00
+#SBATCH --mem=30G
+
+cd /home/zhouj0d/c2032/ENCODE/data/${CELL}_${TARGET}/${REP}/Prediction_HM
+
+perl /home/zhouj0d/c2032/ENCODE/scanGenome.maximum_sum4.pl $maxPoint $penality \
+scanGenome.step1.+.${chr}.Trimmed10.summary.processed.csv \
+scanGenome.step1.+.${chr}.Trimmed10.summary.processed.csv.output1
+
+perl /home/zhouj0d/c2032/ENCODE/scanGenome.maximum_sum4.reverse.pl $maxPoint $penality \
+scanGenome.step1.+.${chr}.Trimmed10.summary.processed.csv \
+scanGenome.step1.+.${chr}.Trimmed10.summary.processed.csv.output2
+
+perl /home/zhouj0d/c2032/ENCODE/postprocess.createALldataset.bidirection.pl \
+scanGenome.step1.+.${chr}.Trimmed10.summary.processed.csv.output1 \
+scanGenome.step1.+.${chr}.Trimmed10.summary.processed.csv.output2 \
+scanGenome.step1.+.${chr}.Trimmed10.summary.processed.csv.output
+
+perl /home/zhouj0d/c2032/ENCODE/scanGenome.maximum_sum4.pl $maxPoint $penality \
+scanGenome.step1.-.${chr}.Trimmed10.summary.processed.csv \
+scanGenome.step1.-.${chr}.Trimmed10.summary.processed.csv.output1
+
+perl /home/zhouj0d/c2032/ENCODE/scanGenome.maximum_sum4.reverse.pl $maxPoint $penality \
+scanGenome.step1.-.${chr}.Trimmed10.summary.processed.csv \
+scanGenome.step1.-.${chr}.Trimmed10.summary.processed.csv.output2
+
+perl /home/zhouj0d/c2032/ENCODE/postprocess.createALldataset.bidirection.pl \
+scanGenome.step1.-.${chr}.Trimmed10.summary.processed.csv.output1 \
+scanGenome.step1.-.${chr}.Trimmed10.summary.processed.csv.output2 \
+scanGenome.step1.-.${chr}.Trimmed10.summary.processed.csv.output
+
+EOF
+
+sbatch tmp.sh
+done

@@ -1,0 +1,67 @@
+#!/usr/bin/perl -w
+use List::Util qw(first max maxstr min minstr reduce shuffle sum shuffle) ;
+
+
+my ($file,$predict,$out) = @ARGV;
+
+open $file,"$file" or die;
+<$file>;
+my %pas_id;
+while(<$file>){
+	chomp;
+	my ($pas_id,undef,undef,undef,undef,$symbol) = split;
+	my ($chr,$start,$end) = split /\:|\-/,$pas_id;
+	if($symbol =~ /Dn/){
+		my $num = substr($symbol,2);
+		$start += $num;
+		$end += $num;
+	}
+	elsif($symbol =~ /Up/){
+		my $num = substr($symbol,2);
+		$start -= $num;
+		$end -= $num;
+	}
+	$pas_id{$pas_id} = "$chr:$start-$end";
+}
+
+
+
+
+open $predict ,"$predict" or die;
+my %truePos;
+while(<$predict>){
+	chomp;
+	my ($pas_id,$label) = split;
+	if($label == "0"){
+		$truePos{$pas_id{$pas_id}}++;
+	}
+	else{
+		$truePos{$pas_id{$pas_id}} += 0;
+	}
+}
+
+
+my $total = 0;
+my $false = 0;
+while(my ($pas_id,$num) = each %truePos){
+	$total++;
+	if($num == 0){
+		print "$pas_id\n";
+		$false++;
+	}
+}
+print "$false\t$total\n";
+
+
+open $file,"$file" or die;
+my $header = <$file>;
+
+open $out,">$out" or die;
+print $out "$header";
+while(<$file>){
+	chomp;
+	my ($pas_id,undef,undef,undef,undef,$symbol) = split;
+	if( $truePos{$pas_id{$pas_id}} >0){
+		print $out "$_\n";
+	}
+}

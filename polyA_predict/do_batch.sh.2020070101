@@ -1,0 +1,89 @@
+#!/bin/bash
+#SBATCH --job-name=CALCOV
+#SBATCH --partition=amd
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --time=24:00:00
+#SBATCH --output=log.%J
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --dependency=afterok:2499340
+#SBATCH -a 0-2
+source ~/.bash_slurm
+#module load anaconda3
+#source activate rna_seq3
+
+#####Modify parameter
+threads=64
+input=(BL6_REP1 BL6_REP2 BL6_REP3) ####Sample name
+#input=(BL6_Liver_REP1 BL6_Liver_REP2) ####Sample name
+SPE="BL6"
+sam=${input[$SLURM_ARRAY_TASK_ID]} #####Get Sample Name
+
+dir='/ibex/scratch/longy/workspace/apa_predict' ####Parental Directory
+WIG1="$dir/STAR/$sam/ThreePrimeRead.Forward.wig"
+WIG2="$dir/STAR/$sam/ThreePrimeRead.Reverse.wig"
+
+dir='/ibex/scratch/longy/workspace/polyA_predict'
+cd $dir
+PAS="bl6.pAs.random.negative2.txt"
+COV="Coverage_${sam}.negative2.txt"
+DIF="Different_${sam}.negative.txt"
+
+
+BASE=${input[0]%_*}
+DIFALL="Different_$BASE\_REP*.negative.txt"
+MERGE="Merge_${BASE}.negative.txt"
+PDF="Density_${BASE}.negative.pdf"
+
+time_start=$(date +"%s")
+echo "job start at" `date "+%Y-%m-%d %H:%M:%S"`
+echo "This is job #${SLURM_ARRAY_JOB_ID}, with parameter ${input[$SLURM_ARRAY_TASK_ID]}"
+echo "My hostname is: $(hostname -s)"
+echo "My task ID is $SLURM_ARRAY_TASK_ID"
+echo
+
+####use sbatch do_batch.sh
+
+#calculate_coverage.pl $PAS $WIG1 $WIG2 $COV
+
+#linedrop.pl  $COV $DIF $PAS
+
+
+
+
+##use ./do_batch.sh
+#merge_diff_rep.pl $MERGE $PAS $DIFALL
+#density_negative_fibroblast.r $MERGE $PDF ${input[0]} ${input[1]} ${input[2]}  
+
+#./generate_random_exon.pl
+#./generate_random_utr.pl
+
+#./prepare_positive_sequence.pl
+#prepare_negative_sequence.pl bl6.pAs.random.tandemUTR2.txt bl6.pAs.random.exon2.txt bl6.pAs.random.negative2.txt
+
+COV1=Coverage_BL6_REP1.negative2.txt
+COV2=Coverage_BL6_REP2.negative2.txt
+COV3=Coverage_BL6_REP3.negative2.txt
+
+
+#./select_positive.pl
+#select_negative.pl $COV1 $COV2 $COV3 bl6.pAs.random.negative2.txt data/bl6.pAs.random.negative2.equal.txt data/bl6.pAs.random.negative2.all.txt
+
+#intron_dist.pl data/bl6.pAs.zhangbin.fibroblast.txt stat/Input.density.positive.txt
+#intron_dist.pl data/bl6.pAs.zhangbin.fibroblast.usage.txt stat/Input.density.positive.usage.txt
+intron_dist.pl data/bl6.pAs.random.negative.merge.txt  stat/Input.density.negative.merge.txt
+intron_dist.pl data/bl6.pAs.random.negative.txt  stat/Input.density.negative.txt
+
+#exon_dist.pl data/bl6.pAs.zhangbin.fibroblast.txt stat/Input.density.exon.positive.txt
+#exon_dist.pl data/bl6.pAs.zhangbin.fibroblast.usage.txt stat/Input.density.exon.positive.usage.txt
+#exon_dist.pl data/bl6.pAs.random.negative.merge.txt  stat/Input.density.exon.negative.merge.txt
+#exon_dist.pl data/bl6.pAs.random.negative.txt  stat/Input.density.exon.negative.txt
+
+
+
+echo "job  end  at" `date "+%Y-%m-%d %H:%M:%S"`
+time_end=$(date +"%s")
+duration=$(($time_end-$time_start))
+echo "Run time: $(($duration/3600)):$((($duration/60)%60)):$(($duration % 60))"

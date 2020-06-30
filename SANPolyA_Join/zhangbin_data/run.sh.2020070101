@@ -1,0 +1,10 @@
+#!/bin/bash
+
+
+distance="bl6.pAs.scanGenome.zbround6.txt"
+tianbin="../usage_data/bl6.pAs.zhangbin.usage.txt"
+predict="../polyA_seq/bl6.pAs.predict.zbround6.txt.info.cutoff"
+out_tianbin="bl6.pAs.subset.tianbin.txt"
+out_predict="bl6.pAs.subset.predict.txt"
+
+perl subset_gene.pl $distance $tianbin $predict $out_tianbin $out_predict

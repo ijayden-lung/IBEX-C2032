@@ -1,0 +1,27 @@
+cat>tmp.sh<<EOF
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J ${ID}
+#SBATCH --output /home/zhouj0d/zhouj0d/MultiPlanarUNet/BreastCancer/breastcancer/logs/prediction_${ID}.log
+#SBATCH --time=72:00:00
+#SBATCH --gres=gpu:1
+#SBATCH --mem=20G
+
+cd /home/zhouj0d/zhouj0d/MultiPlanarUNet/BreastCancer/breastcancer
+mkdir /home/zhouj0d/zhouj0d/MultiPlanarUNet/BreastCancer/breastcancer/predictions/${ID}
+
+mp predict --num_GPUs=1 -f /home/zhouj0d/zhouj0d/MultiPlanarUNet/BreastCancer/data/test/images/${ID}.nii.gz \
+-l /home/zhouj0d/zhouj0d/MultiPlanarUNet/BreastCancer/data/test/labels/${ID}.nii.gz \
+--out_dir /home/zhouj0d/zhouj0d/MultiPlanarUNet/BreastCancer/breastcancer/predictions/${ID} --overwrite
+
+EOF
+
+sbatch tmp.sh
+
+
+
+
+
+
+

@@ -1,0 +1,13 @@
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --gpus-per-node=1
+#SBATCH --partition=batch
+#SBATCH -J 3D1_Z
+#SBATCH --output /home/zhouj0d/zhouj0d/breast_cancer/joshua_unet/sbatch_log/3D1_Z.log
+#SBATCH --mail-user=juexiao.zhou@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --time=72:00:00
+#SBATCH --mem=30G
+
+conda activate ml
+python Main_Z.py

@@ -1,0 +1,64 @@
+# distance between samples
+
+import pandas as pd
+import numpy as np
+import argparse
+
+parser = argparse.ArgumentParser(description='Prediction')
+parser.add_argument('--cell1', help='cell line', default='HepG2')
+parser.add_argument('--target1', help='target rbp', default='ZRANB2')
+parser.add_argument('--rep1', help='replicate', default='REP1')
+parser.add_argument('--cell2', help='cell line', default='HepG2')
+parser.add_argument('--target2', help='target rbp', default='ZRANB2')
+parser.add_argument('--rep2', help='replicate', default='REP1')
+args = parser.parse_args()
+
+CELL1=args.cell1
+TARGET1=args.target1
+REP1=args.rep1
+CELL2=args.cell2
+TARGET2=args.target2
+REP2=args.rep2
+
+gt=pd.read_csv('/home/zhouj0d/c2032/ENCODE/data/%s_%s/%s/Prediction_HM/scanGenome.step1.Trimmed10.all.bed'%(CELL1,TARGET1,REP1),sep='\t',header=None)
+pred=pd.read_csv('/home/zhouj0d/c2032/ENCODE/data/%s_%s/%s/Prediction_HM/scanGenome.step1.Trimmed10.all.bed'%(CELL2,TARGET2,REP2),sep='\t',header=None)
+
+distance=[]
+pred_up=[]
+pred_down=[]
+for i in range(len(pred)):
+    chromosome='%s'%str(pred.iloc[i,0])
+    pos=pred.iloc[i,1]
+    strand=pred.iloc[i,5]
+    gtt=gt[(gt.iloc[:,0]==chromosome)&(gt.iloc[:,5]==strand)]
+    if strand=='+':
+        all_distance=list(pos-gtt.iloc[:,1])
+        try:
+            up=max([x for x in all_distance if x<=0])
+        except:
+            up=-np.inf
+        try:
+            down=min([x for x in all_distance if x>0])
+        except:
+            down=np.inf
+        distance.append(up)
+        distance.append(down)
+    elif strand=='-':
+        all_distance=list(pos-gtt.iloc[:,1])
+        try:
+            down=-max([x for x in all_distance if x<=0])
+        except:
+            down=np.inf
+        try:
+            up=-min([x for x in all_distance if x>0])
+        except:
+            up=-np.inf
+        distance.append(up)
+        distance.append(down)
+    pred_up.append(up)
+    pred_down.append(down)
+    print(i,len(pred),up,down)
+    
+pred['distance_up']=pred_up
+pred['distance_down']=pred_down
+pred.to_csv('/home/zhouj0d/c2032/ENCODE/distance/%s_%s_%s_to_%s_%s_%s.bed'%(CELL1,TARGET1,REP1,CELL2,TARGET2,REP2),sep='\t',index=False)

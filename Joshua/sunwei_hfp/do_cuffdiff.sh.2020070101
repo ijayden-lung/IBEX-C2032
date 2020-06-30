@@ -1,0 +1,27 @@
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J cuffdiff_SunWei
+#SBATCH --output /home/zhouj0d/zhouj0d/sunwei_hfp/log/cuffdiff_SunWei.out
+#SBATCH --mail-user=juexiao.zhou@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --time=72:00:00
+#SBATCH --mem=30G
+
+cd /home/zhouj0d/zhouj0d/sunwei_hfp/
+cuffdiff -o ./ALL/ \
+-b /home/zhouj0d/zhouj0d/sunwei_hfp/ref/GCF_000005845.2_ASM584v2_genomic.fna \
+-u /home/zhouj0d/zhouj0d/sunwei_hfp/cuffmerge/merged_asm/merged.gtf \
+-p 24 -L 20190925-input--,20190925-input-WT,20190925-input-9FSY,20190925-input-25FSY,20190925-IP--,20190925-IP-WT,20190925-IP-9FSY,20190925-IP-25FSY,20190927-IP--,20190927-IP-WT,20190927-IP-9FSY,20190927-IP-25FSY \
+/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-1/accepted_hits.bam \
+/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-2/accepted_hits.bam \
+/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-3/accepted_hits.bam \
+/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-4/accepted_hits.bam \
+/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-5/accepted_hits.bam \
+/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-6/accepted_hits.bam \
+/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-7/accepted_hits.bam \
+/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-8/accepted_hits.bam \
+/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-9/accepted_hits.bam \
+/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-10/accepted_hits.bam \
+/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-11/accepted_hits.bam \
+/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-12/accepted_hits.bam

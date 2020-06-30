@@ -1,0 +1,38 @@
+#!/usr/bin/perl -w
+
+my $window = 176;
+my %chr;
+foreach my $file (glob "/ibex/scratch/longy/cnda/ensembl/oneLine/mm10.*.fa"){
+	open $file,"$file";
+	my ($chr) = (split /\./,$file)[-2];
+	$chr{"chr$chr"} = <$file>;
+}
+
+my @motif = qw/AAGAAA AATAAA AATACA AATAGA AATATA AATGAA ACTAAA AGTAAA ATTAAA CATAAA GATAAA TATAAA AAAAAG/;
+
+open FILE,"bl6.pAs.zhangbin.fibroblast.txt";
+my $header = <FILE>;
+chomp $header;
+open OUT,">bl6.pAs.motif.zhangbin.txt";
+print OUT "$header\tmotifNum\n";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol) = split;
+	my $sequence;
+	if($strand eq "+"){
+		$sequence = substr($chr{$chr},$pos-100-1,$window);
+	}
+	else{
+		$sequence = substr($chr{$chr},$pos-75-1,$window);
+		$sequence =~ tr/ATCG/TAGC/;
+		$sequence = reverse $sequence;
+	}
+	my $motifNum = 0;
+	my $subseq = substr($sequence,63,32);
+	foreach my $motif(@motif){
+		$motifNum += ($subseq =~ s/$motif/$motif/g);
+	}
+	$motifNum = "motif=$motifNum";
+	print OUT "$_\t$motifNum\n";
+}
+

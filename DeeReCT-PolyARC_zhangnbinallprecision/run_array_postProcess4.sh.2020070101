@@ -1,0 +1,91 @@
+#!/bin/bash
+#SBATCH --job-name=POS_com
+#SBATCH --partition=batch
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --output=log.%J
+#SBATCH --time=1:00:00
+#SBATCH --mem=498G
+#SBATCH -a 0-39
+
+#####SBATCH --gres=gpu:1
+
+#source activate ML
+cd /home/longy/project/DeeReCT-PolyARC_zhangnbinallprecision/
+echo "This is job #${SLURM_ARRAY_JOB_ID}, task id ${SLURM_ARRAY_TASK_ID}"
+allsteps=(1 1 1 1 1 1)
+allstrands=("str2" "str1" "str2" "str1" "str2" "str1")
+allsigns=("+" "-" "+" "-" "+" "-")
+#allreps=("MERGE" "MERGE")
+allreps=("REP1" "REP1")
+allchrs=("chr1" "chr2" "chr3" "chr4" "chr5" "chr6" "chr7" "chr8" "chr9" "chr10" "chr11" "chr12" "chr13" "chr14" "chr15" "chr16" "chr17" "chr18"  "chr19" "chrX")  
+#allchrs=("chr1" "chr5" "chr9" "chr11" "chr7" "chr2")
+for ((i=0;i<=119;i++))
+do
+	b=$(( $i % 2 ))
+	c=$(( $i / 2))
+	steps[$i]=${allsteps[$b]}
+	strands[$i]=${allstrands[$b]}
+	signs[$i]=${allsigns[$b]}
+	reps[$i]=${allreps[$b]}
+	chrs[$i]=${allchrs[$c]}
+done
+
+window=176
+step=${steps[$SLURM_ARRAY_TASK_ID]}
+strand=${strands[$SLURM_ARRAY_TASK_ID]}
+sign=${signs[$SLURM_ARRAY_TASK_ID]}
+rep=${reps[$SLURM_ARRAY_TASK_ID]}
+chr=${chrs[$SLURM_ARRAY_TASK_ID]}
+
+PAS="/home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.zhangbin.txt"
+ENS="/home/longy/cnda/ensembl/mm10.ensemblv95.nopsuedo.gtf"
+DB="/home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.tianbin.txt"
+
+
+####Validation
+round=1
+USAGE="train_data/bl6.pAs.positive.REP1.comround${round}.txt"
+scanGenome="../DeeReCT-PolyARC_Join/data/bl6.pAs.scanGenome.step${step}.${strand}.${rep}.${chr}.Trimmed10.txt"
+Data="../DeeReCT-PolyARC_Join/Data/bl6.pAs.scanGenome.step${step}.${strand}.${rep}.${chr}.Trimmed10.txt"
+Testid="bl6.pAs.scanGenome.step${step}.${strand}.${rep}.${chr}.Trimmed10.txt.comround${round}"
+#python3 prep_test_data.py $scanGenome --out $Data  ####You don't need to prepreare again and again
+#python3 test.scanGenome.py ${Data}.npz Model/bl6.pAs.REP1.0.comround${round}_epoch14.npz --testid $Testid
+
+
+input="predict/${Testid}.txt"
+
+####正向
+echo $input
+maxPoint=6
+penality=2
+#perl scanGenome.maximum_sum4.chr.pl $maxPoint $penality $input
+####反向
+#perl scanGenome.maximum_sum4.reverse.chr.pl $maxPoint $penality $input
+#####正反向
+#perl postprocess.bidirection.pl $maxPoint $penality $chr $sign $USAGE $PAS $ENS $DB $input
+
+####合并
+#perl merge_postpropose.pl
+
+input="maxSum/${Testid}.txt.bidirection.$maxPoint.$penality.txt"
+negative="train_data/bl6.pAs.negative.REP1.comround${round}.txt"
+((round=$round+1))
+out="train_data/bl6.pAs.negative.REP1.comround${round}.txt.${chr}.${sign}.txt"
+out2="train_data/bl6.pAs.predictFalsePositive.REP1.comround${round}.txt.${chr}.${sign}.txt"
+perl change_negative2.pl $chr $sign $input $negative $out $out2 $scanGenome "round$round"
+
+allmaxLengths=(16 20 24)
+allpenalitys=(-8 -12 -16)
+for ((i=0;i<=24;i++))
+do
+	b=$(( $i % 3 ))
+	c=$(( $i / 3))
+	maxLengths[$i]=${allmaxLengths[$b]}
+	penalitys[$i]=${allpenalitys[$c]}
+done
+maxPoint=${maxLengths[$SLURM_ARRAY_TASK_ID]}
+penality=${penalitys[$SLURM_ARRAY_TASK_ID]}

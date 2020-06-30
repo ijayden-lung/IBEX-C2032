@@ -1,0 +1,41 @@
+import tensorflow as tf
+from model import Unet
+from utils import *
+
+is_train=True #""" True for training, False for testing."""
+#is_train=False
+epoch_num=50 #""" Epoch to train."""
+num_gpu=1  # can only be 1, due to some unknown reasons
+batch_size=4 #""" The size of batch images."""
+w_bn=False #""" Use batch-normalization."""
+
+width=448 #""" The size of image to use."""
+height=896 #""" The size of image to use. If None, same value as width"""
+learning_rate=0.0001 #""" Learning rate of for RMSProp"""
+data_set='processed_data/train.npz' #""" The name of dataset matlab file."""
+test_set='processed_data/valid.npz' #""" The name of testset matlab file."""
+result_name='gingiva_t1'  #""" The name of matlab file to save the result."""
+ckpt_dir='gingiva_t1'  #""" Directory name to save the checkpoints."""
+logs_step=5  #""" logs_step. If none, epoch_num/5. """
+restore_step=None #""" Index of restore ckpt file."""
+
+hidden_num=64 #""" Number of channels at first hidden layer."""
+
+
+
+
+if height is None:
+    height = width
+
+unet = Unet(width=width, height=height, learning_rate=learning_rate,
+                data_set=data_set, test_set=test_set, result_name=result_name,
+                ckpt_dir=ckpt_dir, logs_step=logs_step, restore_step=restore_step,
+                hidden_num=hidden_num, epoch_num=epoch_num, batch_size=batch_size,
+                num_gpu=num_gpu, is_train=is_train, w_bn=w_bn)
+
+show_all_variables()
+
+if is_train:
+    unet.train()
+else:
+    unet.test()

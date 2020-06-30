@@ -1,0 +1,107 @@
+#!/bin/bash
+#SBATCH --job-name=POSTREV
+#SBATCH --partition=batch
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --output=log.%J
+#SBATCH --time=4:00:00
+#SBATCH --mem=30G
+#SBATCH -a 0-39
+
+#source activate ML
+cd /home/longy/project/DeeReCT-PolyARC_Join
+echo "This is job #${SLURM_ARRAY_JOB_ID}, task id ${SLURM_ARRAY_TASK_ID}"
+allsteps=(1 1 1 1 1 1)
+allstrands=("str2" "str1" "str2" "str1" "str2" "str1")
+allsigns=("+" "-" "+" "-" "+" "-")
+allreps=("MERGE" "MERGE")
+allchrs=("chr1" "chr2" "chr3" "chr4" "chr5" "chr6" "chr7" "chr8" "chr9" "chr10" "chr11" "chr12" "chr13" "chr14" "chr15" "chr16" "chr17" "chr18"  "chr19" "chrX")  
+for ((i=0;i<=119;i++))
+do
+	b=$(( $i % 2 ))
+	c=$(( $i / 2))
+	steps[$i]=${allsteps[$b]}
+	strands[$i]=${allstrands[$b]}
+	signs[$i]=${allsigns[$b]}
+	reps[$i]=${allreps[$b]}
+	chrs[$i]=${allchrs[$c]}
+done
+
+window=176
+step=${steps[$SLURM_ARRAY_TASK_ID]}
+strand=${strands[$SLURM_ARRAY_TASK_ID]}
+sign=${signs[$SLURM_ARRAY_TASK_ID]}
+rep=${reps[$SLURM_ARRAY_TASK_ID]}
+chr=${chrs[$SLURM_ARRAY_TASK_ID]}
+PAS="/home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.zhangbin.txt"
+#USAGE="train_data/bl6.pAs.merge.fibroblast.txt"
+#USAGE="train_data/bl6.pAs.merge.fibroblast.highThreshold.txt"
+#USAGE="train_data/bl6.pAs.merge.fibroblast.zhangbin.txt"
+USAGE="../DeeReCT-PolyARC_Data/data/bl6.pAs.fibroblast.usage0.2.txt"
+#USAGE="train_data/bl6.pAs.merge.fibroblast.randomSelect.txt"
+ENS="/home/longy/cnda/ensembl/mm10.ensemblv95.nopsuedo.gtf"
+DB="/home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.tianbin.txt"
+
+:<<BL
+PAS="/home/longy/workspace/apa_predict/pas_dataset/human.pAs.brain.txt"
+USAGE="data/human.brain.merge.usage0.2.txt"
+PREFIX="humanBrain.pAs.scanGenome"
+ENS="/home/longy/cnda/ensembl/hg38.ensemblv95.nopsuedo.gtf"
+DB="/home/longy/workspace/apa_predict/pas_dataset/human.pAs.all.txt"
+BL
+
+#chr="chr21"
+#strand='str2'
+#sign='+'
+#rep='MERGE'
+#step=1
+
+maxPoint=30
+penality=15
+Testid="bl6.pAs.scanGenome.step${step}.${strand}.${rep}.${chr}.Trimmed25.usage0.2.npz.37"
+input="predict/${Testid}.txt"
+#input="predict/bl6.pAs.scanGenome.step1.str2.MERGE.chr3.Trimmed10.37.txt"
+#input="predict/humanBrain.pAs.scanGenome.step1.str2.REP1.chr21.Trimmed10.37.txt"
+
+#input="predict/bl6.pAs.scanGenome.step1.str2.REP1.chr3.Trimmed10.Optimize.txt"
+
+####正向
+echo $input
+perl scanGenome.maximum_sum4.chr.pl $maxPoint $penality $input
+####反向
+perl scanGenome.maximum_sum4.reverse.chr.pl $maxPoint $penality $input
+#####合并
+#perl postprocess.createALldataset.middle.pl $maxPoint $penality $chr $sign $USAGE $PAS $ENS $DB $input
+perl postprocess.bidirection.pl $maxPoint $penality $chr $sign $USAGE $PAS $ENS $DB $input
+allmaxLengths=(16 20 24)
+allpenalitys=(-8 -12 -16)
+for ((i=0;i<=24;i++))
+do
+	b=$(( $i % 3 ))
+	c=$(( $i / 3))
+	maxLengths[$i]=${allmaxLengths[$b]}
+	penalitys[$i]=${allpenalitys[$c]}
+done
+maxPoint=${maxLengths[$SLURM_ARRAY_TASK_ID]}
+penality=${penalitys[$SLURM_ARRAY_TASK_ID]}
+
+maxPoint=6
+penality=8
+
+#PAS="/home/longy/workspace/apa_predict/pas_dataset/human.pAs.brain.txt"
+#USAGE="data/human.brain.merge.usage0.2.txt"
+#PREFIX="humanBrain.pAs.scanGenome"
+#ENS="/home/longy/cnda/ensembl/hg38v95_ensembl.gtf"
+#DB="/home/longy/workspace/apa_predict/pas_dataset/human.pAs.brain.txt"
+
+#PAS="/home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.zhangbin.fibroblast.txt"
+#USAGE="data/bl6.merge.usage0.2.txt"
+#PREFIX="bl6.pAs.scanGenome"
+#ENS="/home/longy/cnda/ensembl/mm10v95_ensembl.gtf"
+#DB="/home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.tianbin.txt"
+#perl scanGenome.maximum_sum4.pl $maxPoint $penality $PAS $USAGE $PREFIX
+#perl scanGenome.maximum_sum4.reverse.pl $maxPoint $penality $PAS $USAGE $PREFIX
+#perl postprocess.createALldataset.bidirection.pl $maxPoint $penality $PAS $USAGE $PREFIX $ENS $DB

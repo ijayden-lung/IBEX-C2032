@@ -1,0 +1,50 @@
+#!/usr/bin/perl -w
+#
+#
+#Upate 2019/11/05
+
+my %pas;
+open FILE,"data/bl6.pAs.fibroblast.REP1.positive.usage0.2.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,undef,undef,$position) = split;
+	$pas{$pas_id} = $position;
+}
+
+
+foreach my $file (glob 'predict/bl6.pAs.scanGenome.step1.str*.REP1.chr*.Trimmed10.Optimize.txt'){
+	&sumDistribution($file);
+}
+
+
+my %distribution;
+sub sumDistribution{
+	my ($file) = @_;
+	open FILE,$file;
+	while(<FILE>){
+		chomp;
+		my ($key,$predition) = split;
+		next if $predition ==1;
+		if($key =~ /ENS/){
+			my @id = split /,/,$key;
+			foreach my $id (@id){
+				my ($pas_id,$pos) = split /\-/,$id;
+				if(exists $pas{$pas_id}){
+					my $position = int(substr($pos,3));
+					my $relative = $position-100;
+					if($file =~ /str1/){
+						$relative++;
+					}
+					$distribution{$relative}++;
+				}
+			}
+		}
+	}
+}
+
+open OUT,">Stat/Prediction_distribution_Optimize.txt";
+print OUT "relative\tfrequency\n";
+while(my ($key,$val) = each %distribution){
+	print OUT "$key\t$val\n";
+}

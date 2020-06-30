@@ -1,0 +1,54 @@
+#!/bin/bash
+#SBATCH --job-name=DeeReCT_PolyA
+#SBATCH --partition=batch
+#SBATCH --nodes=1
+#SBATCH --time=2:00:00
+#SBATCH --output=log.%J
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --dependency=afterok:6762976_[0-5] 
+#SBATCH --mem=30G
+#SBATCH -a 0-0
+
+#source ~/.bash_aliases
+#rna_seq3
+#cd /ibex/scratch/projects/c2032/DeeReCT-PolyARC/
+
+#input=(5 10 15 20 30)
+#i=${input[$SLURM_ARRAY_TASK_ID]}
+#i=30
+#python3 DataPrep.py data/bl6.pAs.positive.random.length176.txt data/bl6.pAs.negative.random.length176.txt --out Data/random.length176
+#python3 DataPrep_negative.py data/bl6.pAs.genome.random.length176.txt --out Data/random.length176_neg
+
+window=176
+#steps=(59 59 10 10 30 30)
+#strands=("Forward" "Reverse" "Forward" "Reverse" "Forward" "Reverse")
+#signs=("+" "-" "+" "-" "+" "-")
+steps=(1 1 1 1 1 1)
+#strands=("Forward" "Reverse" "Forward" "Reverse" "Forward" "Reverse")
+strands=("str2" "str1" "str2" "str1" "str2" "str1")
+signs=("+" "-" "+" "-" "+" "-")
+reps=("REP1" "REP1" "REP2" "REP2" "REP3" "REP3")
+step=${steps[$SLURM_ARRAY_TASK_ID]}
+strand=${strands[$SLURM_ARRAY_TASK_ID]}
+sign=${signs[$SLURM_ARRAY_TASK_ID]}
+rep=${reps[$SLURM_ARRAY_TASK_ID]}
+Pas=data/bl6.pAs.zhangbin.fibroblast.txt
+#WIG=STAR/BL6_${rep}/ThreePrimeRead.${strand}.wig
+WIG=STAR/BL6_${rep}/Signal.Unique.${strand}.out.wig
+ScanGenome=data/bl6.pAs.scanGenome.step${step}.${strand}.${rep}.txt
+Trim=data/bl6.pAs.scanGenome.step${step}.${strand}.${rep}.Trimmed10.txt
+#Pas=data/bl6.pAs.zhangbin.fibroblast.txt
+#WIG=STAR/SPR_REP1/ThreePrimeRead.${strand}.wig
+#ScanGenome=data/spr.pAs.scanGenome.step${step}.${strand}.txt
+#Trim=data/spr.pAs.scanGenome.step${step}.${strand}.Trimmed10.txt
+echo "processing strand $strand in step $step for rep $rep"
+
+WIG="/home/longy/project/mountainClimber/STAR/HUM_Brain_MERGE/Signal.Unique.str2.out.wig"
+perl seperate_chr_wig.pl $WIG
+
+#perl generate_slidingWidnows.pl $WIG $ScanGenome $window $step
+#perl prepare_scanGenome.pl $Pas $ScanGenome $Trim $window $sign
+
+#perl merge_scangenome.pl
+#perl split_data.pl

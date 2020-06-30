@@ -1,0 +1,17 @@
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J bamtobed_SunWei-12
+#SBATCH --output /home/zhouj0d/zhouj0d/sunwei_hfp/log/bamtobed_SunWei-12.out
+#SBATCH --time=72:00:00
+#SBATCH --mem=30G
+
+module load bedtools
+module load samtools
+
+bamToBed -i /home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-12/accepted_hits.bam > /home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-12/accepted_hits.bed
+
+samtools view -bq 1 /home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-12/accepted_hits.bam > /home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-12/uniq_accepted_hits.bam
+
+bamToBed -i /home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-12/uniq_accepted_hits.bam > /home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-12/uniq_accepted_hits.bed
+

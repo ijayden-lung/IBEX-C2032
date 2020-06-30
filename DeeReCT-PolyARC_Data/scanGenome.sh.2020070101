@@ -1,0 +1,28 @@
+#!/bin/bash
+#SBATCH --job-name=Stat_scanGenom
+#SBATCH --partition=debug
+#SBATCH --nodes=1
+#SBATCH --time=1:00:00
+#SBATCH --output=log.%J
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --dependency=afterok:6762976_[0-5] 
+#SBATCH --mem=3G
+#SBATCH -a 0-8
+
+
+allmaxLengths=(8 12 14)
+allpenalitys=(-0.9 -1 -1.1)
+for ((i=0;i<=24;i++))
+do
+	b=$(( $i % 3 ))
+	c=$(( $i / 3))
+	maxLengths[$i]=${allmaxLengths[$b]}
+	penalitys[$i]=${allpenalitys[$c]}
+done
+maxLength=${maxLengths[$SLURM_ARRAY_TASK_ID]}
+penality=${penalitys[$SLURM_ARRAY_TASK_ID]}
+
+perl scanGenome.maximum_sum4.pl $maxLength $penality Optimize
+perl scanGenome.maximum_sum4.reverse.pl $maxLength $penality Optimize
+perl postprocess.createALldataset.bidirection.pl $maxLength $penality Optimize

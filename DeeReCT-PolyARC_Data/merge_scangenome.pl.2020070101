@@ -1,0 +1,55 @@
+#!/usr/bin/perl -w
+#
+#
+
+my ($REP1,$REP2,$REP3,$OUT) = @ARGV;
+
+my @rep1_for;
+my %rep1_for;
+#open FILE,"data/bl6.pAs.scanGenome.step1.str2.REP1.Trimmed10.txt";
+open FILE,"$REP1";
+my $header = <FILE>;
+while(<FILE>){
+	chomp;
+	my @data = split;
+	if(!exists $rep1_for{$data[0]}){
+		push @rep1_for,$data[0];
+		$rep1_for{$data[0]} = \@data;
+	}
+}
+
+
+my %rep2_for;
+#open FILE,"data/bl6.pAs.scanGenome.step1.str2.REP2.Trimmed10.txt";
+open FILE,"$REP2";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my @data = split;
+	$rep2_for{$data[0]} = \@data;
+}
+
+
+my %rep3_for;
+#open FILE,"data/bl6.pAs.scanGenome.step1.str2.REP3.Trimmed10.txt";
+open FILE,"$REP3";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my @data = split;
+	$rep3_for{$data[0]} = \@data;
+}
+
+
+
+open OUT,">$OUT";
+print OUT $header;
+foreach my $key  (@rep1_for){
+	my $val = $rep1_for{$key};
+	if(exists $rep2_for{$key} && exists $rep3_for{$key}){
+		for(my $i=8;$i<@$val;$i++){
+			$val->[$i] += $rep2_for{$key}->[$i]+$rep3_for{$key}->[$i]
+		}
+		print OUT join("\t",@$val),"\n";
+	}
+}

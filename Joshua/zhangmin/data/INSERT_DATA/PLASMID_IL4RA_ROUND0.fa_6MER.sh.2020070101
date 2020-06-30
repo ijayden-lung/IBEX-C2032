@@ -1,0 +1,12 @@
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J PLASMID_IL4RA_ROUND0.fa_6MER
+#SBATCH --output /home/zhouj0d/zhouj0d/zhangmin/data/COUNT/log/PLASMID_IL4RA_ROUND0.fa_6MER.log
+#SBATCH --time=72:00:00
+#SBATCH --mem=30G
+
+cd /home/zhouj0d/zhouj0d/zhangmin/data/INSERT_DATA
+./jellyfish-linux count -m 6 -t 10 -s 100M -o 6MER/PLASMID_IL4RA_ROUND0.fa.jf PLASMID_IL4RA_ROUND0.fa
+./jellyfish-linux dump -c -t 6MER/PLASMID_IL4RA_ROUND0.fa.jf  > /home/zhouj0d/zhouj0d/zhangmin/data/COUNT/6MER/RAW_PLASMID_IL4RA_ROUND0.fa.tsv
+

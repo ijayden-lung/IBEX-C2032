@@ -1,0 +1,166 @@
+# run_svm.py
+
+from sklearn.svm import SVC
+from sklearn import datasets
+from sklearn.preprocessing import StandardScaler
+import numpy as np
+from sklearn.model_selection import GridSearchCV
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import accuracy_score, f1_score
+from sklearn.externals import joblib
+import os
+from random import shuffle
+
+def get_train_data(patient_ids):
+    
+    X=[]
+    Y=[]
+    
+    for patient_id in patient_ids:
+        
+        try:
+    
+            data=np.load('hayida_dataset/%s/rescaled.npy'%patient_id) # (237, 4, 461, 461) (z, time_information, x, y)
+
+            y_with_cancer=[]
+            for y in range(461):
+                if max(data[:,3,:,y].reshape(-1))>0.5:
+                    y_with_cancer.append(y)
+
+            DATA=[]
+
+            for y in y_with_cancer:
+                for x in range(461):
+                    for z in range(237):
+                        DATA.append(data[z,:,x,y])
+
+            shuffle(DATA)
+
+            Neg_DATA=[]
+            for data in DATA:
+                if data[3]>0.5:
+                    X.append(data[0:3])
+                    Y.append(1)
+                else:
+                    Neg_DATA.append(data)
+
+            for i in range(len(Y)):
+                X.append(Neg_DATA[i][0:3])
+                Y.append(0)
+        except:
+            print('error %s'%patient_id)
+
+    return X,Y
+
+def get_val_data(patient_ids):
+    
+    X=[]
+    Y=[]
+    
+    for patient_id in patient_ids:
+    
+        data=np.load('hayida_dataset/%s/rescaled.npy'%patient_id) # (237, 4, 461, 461) （z, time_information, x, y）
+
+        y_with_cancer=[]
+        for y in range(461):
+            if max(data[:,3,:,y].reshape(-1))>0.5:
+                y_with_cancer.append(y)
+
+        DATA=[]
+
+        for y in y_with_cancer:
+            for x in range(461):
+                for z in range(237):
+                    DATA.append(data[z,:,x,y])
+
+        for data in DATA:
+            if data[3]>0.5:
+                X.append(data[0:3])
+                Y.append(1)
+            else:
+                X.append(data[0:3])
+                Y.append(0)
+
+    return X,Y
+
+def get_predict_data(patient_ids):
+    
+    X=[]
+    Y=[]
+    
+    for patient_id in patient_ids:
+    
+        data=np.load('hayida_dataset/%s/rescaled.npy'%patient_id) # (237, 4, 461, 461) （z, time_information, x, y）
+
+        DATA=[]
+
+        for y in range(461):
+            for x in range(461):
+                for z in range(237):
+                    DATA.append(data[z,:,x,y])
+
+        for data in DATA:
+            if data[3]>0.5:
+                X.append(data[0:3])
+                Y.append(1)
+            else:
+                X.append(data[0:3])
+                Y.append(0)
+
+    return X,Y
+
+
+train_list=['guochunjie', '1755479', 'sunye', 'wangdongmei', 'hezhouyan', '1666202', 'chelihua', 'liuxiaoli', \
+            '1759287', 'panxiuzhen', '1674771', '1685811', '1737632', '1705448', 'wangshuxin', 'suyuhua', \
+            '1700887', 'chenxiaohui', '1721009', '1726228', '1656721', '1445580', '1685571', 'wanghaiping', \
+            '1688011', 'haoliping', '1693393', '1664455', 'fengying', '1707214', 'liming', 'huangxiuhong', \
+            '1677458', 'kongdehui', 'liumeiping', 'lixinxing', '1628654', '1726016', 'denglijuan', 'wangxiaojuan', \
+            '1722246', 'chenyuyan', '1561011', '1682276', '1706088', 'wangqiu', 'sunyan', 'wanyongyan', 'liuxiuli', \
+            'wangyanxia', '1724874', 'shenyanxia', '1728260', 'wangyan', '1689586', 'jiangshufan', '1713414', \
+            '1716500', '1738680', '1719076', 'wangyuhua', 'lishuyan', 'chenqianchan', 'guomeijia', '1705765', \
+            '1739453', 'wangxiuli', 'chenbo', 'wangyujie', '1719924', 'wanglingli', '1711988', 'lijing', \
+            'gaoyanshuang', 'mayuying', 'lijiqi', 'duanli', '1698240', '1708198', 'shunshuhua', 'chafengxia', \
+            '1722643', '1756086', 'fanqingmin', 'shengxiuli', '1722289', '1688230', '16850831', 'liuguirong', \
+            'kongminyu', 'gelian', 'wanglei', '1649095', 'fuqian', '1705801', '1688156', 'qubaiming', 'fenglijie', \
+            '1723022', 'rongxiaoling', 'muxinli', '1723757', 'wangyuwei', '1716468', '1760150', 'shangling', \
+            'houshuyan', 'sunyaojuan', 'mayufan', 'sunyuhong', '1741399', 'liangweiwei', 'qiwei', '1725450', \
+            '1727839', 'mengqingyun', 'mengxiuying', 'jiying', 'lichunhong', '1695237', 'jieliqiu', '1655687', \
+            '1672876', '1695693', '1704251', 'wangjingyun', 'liuxuan', '1728001', '1758732', '1699822', \
+            '12034281', '1677042', '1677985', '1683936', '1693729', 'wangyajie', '1659628', 'lilixian', \
+            'lishengrong', 'linanan', 'chenyunhong', '1194066', 'lichunling', '1724552', 'chenyouwen']
+            
+print('start loading data')
+X_train,Y_train=get_train_data(train_list)
+val_list=['gengwie', '1686292', '1678255', '1724535', '1755851', '1711805', '1755476', 'lijeiqin', \
+            'guoting', 'cheyunhong', '1740609', 'sunxiaoxia', 'wangying', 'wangchunling', '1653966', 'shengnan']
+X_val,Y_val=get_val_data(train_list)
+
+accs=[]
+f1s=[]
+acc=0
+
+exp_name='test1'
+try:
+    os.mkdir('%s'%exp_name)
+    os.mkdir('%s/model_save'%exp_name)
+except:
+    pass
+w=open('%s/record.txt'%exp_name,'w')
+
+clf = SVC(kernel='rbf', class_weight='balanced', C=0.5,gamma=0.11, random_state=1)
+print('start train')
+clf.fit(X_train,Y_train)
+print('start val')
+preds=clf.predict(X_val)
+acc=accuracy_score(Y_val,preds)
+f1=f1_score(Y_val,preds, average='macro')
+accs.append(acc)
+f1s.append(f1)
+joblib.dump(clf, "%s/model_save/train_models.m"%(exp_name))
+w.write(exp_name+'\t'+str(acc)+'\t'+str(f1)+'\n')
+print(acc,f1,'model saved')
+    
+w.close()
+
+

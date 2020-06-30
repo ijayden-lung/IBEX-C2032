@@ -1,0 +1,42 @@
+#!/usr/bin/perl -w
+
+=pod
+my %fp;
+open FILE,"Stat/bl6.pAs.scanGenome.maxSum.8.-0.25.Optimize.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pasid,$maxPoint,$diff,$pos) = split;
+	my ($chr) = split /\:/,$pasid;
+	$fp{$chr}->{$pos} = $pasid;
+}
+=cut
+my %fp;
+open FILE,"predict/bl6.pAs.genome.subset.REP1.sameDistribute.accuracy.1.txt";
+while(<FILE>){
+	chomp;
+	next if rand()>0.005;
+	my ($pasid) = split;
+	my ($chr,$start) = split /\:|\-/,$pasid;
+	$fp{$chr}->{$start+100} = $pasid;
+}
+
+open ENS,"awk '(\$3 == \"gene\")' /home/longy/cnda/ensembl/mm10.ensemblv95.nopsuedo.gtf |" ;
+open OUT,">RandominGene.txt";
+print OUT "gene_id\tchr\tpos\trelative_dist\n";
+while(<ENS>){
+	chomp;
+	my ($chr,$source,$type,$start,$end,undef,$srd,undef,undef,$gene_id) = split;
+	if($srd eq "+"){
+		my $fp_ref = $fp{$chr};
+		my $length = $end-$start;
+		while(my ($pos,$val) = each %$fp_ref){
+			if($start<$pos && $end+0.2*$length>$pos){
+				$gene_id =~ s/\"|\;//g;
+				my $diff = ($pos-$start)/$length;
+				print OUT "$gene_id\t$pos\t$val\t$diff\n";
+			}
+		}
+	}
+}
+

@@ -1,0 +1,14 @@
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J P199253
+#SBATCH --output /home/zhouj0d/zhouj0d/MultiPlanarUNet/BreastCancer/breastcancer/logs/prediction_P199253.log
+#SBATCH --time=72:00:00
+#SBATCH --gres=gpu:1
+#SBATCH --mem=20G
+
+cd /home/zhouj0d/zhouj0d/MultiPlanarUNet/BreastCancer/breastcancer
+mkdir /home/zhouj0d/zhouj0d/MultiPlanarUNet/BreastCancer/breastcancer/predictions/P199253
+
+mp predict --num_GPUs=1 -f /home/zhouj0d/zhouj0d/MultiPlanarUNet/BreastCancer/data/test/images/P199253.nii.gz -l /home/zhouj0d/zhouj0d/MultiPlanarUNet/BreastCancer/data/test/labels/P199253.nii.gz --out_dir /home/zhouj0d/zhouj0d/MultiPlanarUNet/BreastCancer/breastcancer/predictions/P199253 --overwrite
+

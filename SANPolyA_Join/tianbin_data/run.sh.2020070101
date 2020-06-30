@@ -1,0 +1,6 @@
+#!/bin/bash
+
+perl subset_usage.readCount.predict.pl   ##Calculate predict usage
+
+perl add_motif ##  Add motif number to tianbin
+perl subset_gene.pl

@@ -1,0 +1,30 @@
+cat>tmp.sh<<EOF
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J seperate_chr_wig_${CELL}_${TARGET}_${REP}_str1
+#SBATCH --output /ibex/scratch/projects/c2032/ENCODE/log/seperate_chr_wig_${CELL}_${TARGET}_${REP}_str1.log
+#SBATCH --time=72:00:00
+#SBATCH --mem=50G
+
+cd /ibex/scratch/projects/c2032/ENCODE/data/${CELL}_${TARGET}/${REP}
+perl /ibex/scratch/projects/c2032/ENCODE/seperate_chr_wig.pl Signal.Unique.str1.out.wig
+
+EOF
+sbatch tmp.sh
+
+
+cat>tmp.sh<<EOF
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J seperate_chr_wig_${CELL}_${TARGET}_${REP}_str2
+#SBATCH --output /ibex/scratch/projects/c2032/ENCODE/log/seperate_chr_wig_${CELL}_${TARGET}_${REP}_str2.log
+#SBATCH --time=72:00:00
+#SBATCH --mem=50G
+
+cd /ibex/scratch/projects/c2032/ENCODE/data/${CELL}_${TARGET}/${REP}
+perl /ibex/scratch/projects/c2032/ENCODE/seperate_chr_wig.pl Signal.Unique.str2.out.wig
+
+EOF
+sbatch tmp.sh

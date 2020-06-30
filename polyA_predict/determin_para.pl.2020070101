@@ -1,0 +1,69 @@
+#!/usr/bin/perl -w
+
+#open FILE,"log.6024673";    #####InB
+#open FILE,"log.6024701";    #####InA
+#open FILE,"log.6054119";    #####OUT
+
+#open FILE,"log.InSeqrchPara";
+open FILE,"log.RcSearchPara3";
+
+
+
+my %tp;
+my %fp;
+my %fn;
+my %tn;
+my @record;
+
+while(<FILE>){
+	chomp;
+	push @record,$_;
+	if($_ =~ /TP:/){
+		my ($tp,$fp) = split /,/;
+		$tp = (split /\s+/,$tp)[-1];
+		$fp = (split /\s+/,$fp)[-1];
+		my $file = @record[$.-3];
+		$file =~ /(\d+)/;
+		$tp{$1} = $tp;
+		$fp{$1} = $fp;
+		#print "$file\t$tp\t$fp\n";
+	}
+	elsif($_ =~ /FN:/){
+		my ($fn,$tn) = split /,/;
+		$fn = (split /\s+/,$fn)[-1];
+		$tn = (split /\s+/,$tn)[-1];
+		my $file = @record[$.-4];
+		$file =~ /(\d+)/;
+		$fn{$1} = $fn;
+		$tn{$1} = $tn;
+		#print "$file\t$fn\t$tn\n";
+	}
+}
+
+my %f1score;
+my %falsedr;
+my %truepr;
+while(my ($key,$tp) = each %tp){
+	my $fp = $fp{$key};
+	my $fn = $fn{$key};
+	my $tn = $tn{$key};
+	my $tpr = $tp/($tp+$fn);
+	my $ppv = $tp/($tp+$fp);
+	my $fdr = 1-$ppv;
+	if(($ppv+$tpr) eq 0){
+		print"$key,$fp,$fn,$tn,$tp\n";
+		next;
+	}
+	my $f1score = 2*$tpr*$ppv/($ppv+$tpr);
+	$falsedr{$key} = $fdr;
+	$truepr{$key} = $tpr;
+	$f1score{$key} = $f1score;
+}
+
+
+my $i = 0;
+foreach my $key (sort{$f1score{$b}<=>$f1score{$a}} keys %f1score){
+	printf("%d,fdr:%.3f,tpr:%.3f,f1score:%.3f\n",$key,$falsedr{$key},$truepr{$key},$f1score{$key});
+	$i++;
+	last if $i>10;
+}

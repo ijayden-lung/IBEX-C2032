@@ -1,0 +1,10 @@
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J get1stbase_SunWei-12
+#SBATCH --output /home/zhouj0d/zhouj0d/sunwei_hfp/log/get1stbase_SunWei-12.out
+#SBATCH --time=72:00:00
+#SBATCH --mem=30G
+
+python /home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-12/tmp.py
+

@@ -1,0 +1,20 @@
+#!/usr/bin/perl -w
+
+open FILE,"BOTH100_summary.txt";
+<FILE>;
+open OUT,">>Distribution_hparamBestCompare.txt";
+while(<FILE>){
+	chomp;
+	my ($tn,$fn,$tp,$fp)  = (split)[3,4,5,6];
+	my $tpr = ($tp+$fn)>0 ? $tp/($tp+$fn) : 100;
+	my $ppv = $tp/($tp+$fp);
+	my $fdr = 1-$ppv;
+	my $fpr = $fp/($fp+$tn);
+	if(($ppv+$tpr) eq 0){
+		print"$key,$fp,$fn,$tn,$tp\n";
+		next;
+	}
+	my $f1score = 2*$tpr*$ppv/($ppv+$tpr);
+	print OUT "$fdr\t$tpr\t$f1score\t$fpr\tSeparate\n";
+}
+

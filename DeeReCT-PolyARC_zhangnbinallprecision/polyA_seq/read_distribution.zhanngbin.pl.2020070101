@@ -1,0 +1,62 @@
+#!/usr/bin/perl -w
+
+
+my %predict_zb;
+my $total = 0;
+foreach my $file (glob "../maxSum/bl6.pAs.scanGenome.step1.str*.REP1.chr*.Trimmed10.txt.newround3.txt.bidirection.6.2.txt"){
+	open FILE,"$file";
+	<FILE>;
+	while(<FILE>){
+		chomp;
+		my ($predict_pos,undef,undef,$pas_id,$diff) = split;
+		if(abs($diff)<25 && $pas_id =~ /chr/){
+			$total++;
+			$predict_zb{$pas_id} = '';
+		}
+	}
+}
+
+my $nume = keys %predict_zb;
+print "$total\t$nume\n";
+
+
+my %fn;
+my %gt;
+open FILE,"../train_data/bl6.pAs.positive.REP1.newround0.txt";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol) = split;
+	if($symbol eq "Origin" ){
+		$gt{"$chr:$pos:$strand"} = '';
+	}
+	if(! exists $predict_zb{$pas_id} ){
+		$fn{"$chr:$pos:$strand"} = '';
+	}
+}
+
+
+
+my $num = keys %gt;
+print "$num\n";
+open FILE,"pAs_zhangbin.info";
+open OUT,">bl6.pAs.zb_fn.txt";
+#print OUT "pas_id\tread_count\n";
+<FILE>;
+ $total = 0;
+my $pass = 0;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$chr,$start,$end,$pos,$strand,$rep1,$rep2) = split;
+	if (exists $gt{"$chr:$pos:$strand"}){
+		if (exists $fn{"$chr:$pos:$strand"}){
+			print "$pas_id\t$chr:$pos:$strand\n";
+	my $ave_read = ($rep1+$rep2)/2;
+	if($ave_read>10){
+		$pass++;
+	}
+	$total++;
+	print OUT "$pas_id\t$ave_read\tFN(vsGT)\n";
+}
+}}
+
+print "$pass\t$total\n";

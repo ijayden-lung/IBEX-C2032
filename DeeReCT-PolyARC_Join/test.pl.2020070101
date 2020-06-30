@@ -1,0 +1,6 @@
+
+$diff = 10;
+$trimMean = 20;
+for(my$j=0;$j<$diff && $trimMean>10;$j++){
+	print "$j\n";
+}

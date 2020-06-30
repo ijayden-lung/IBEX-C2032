@@ -1,0 +1,81 @@
+#!/usr/bin/perl -w
+
+#########NOTICE
+
+open OUT,">Distribution_evaluateMetrix2.txt";
+print OUT "id\tprecision\trecall\tf1score\tfpr\ttranscriptome_fpr\tparameter\n";
+my $EPOCH_LEV=20;
+
+my %stat_pos;
+my %stat_neg;
+
+&openPosFile("Dp","bl6.pAs.zhangbin.fibroblast");
+&openPosFile("Cat","bl6.pAs.zhangbin.fibroblast");
+&openPosFile("Join","bl6.pAs.zhangbin.fibroblast");
+&openPosFile("Seq","bl6.pAs.zhangbin.fibroblast");
+&openPosFile("Rc","bl6.pAs.zhangbin.fibroblast");
+&openNegFile("Dp","bl6.pAs.zhangbin.fibroblast");
+&openNegFile("Cat","bl6.pAs.zhangbin.fibroblast");
+&openNegFile("Join","bl6.pAs.zhangbin.fibroblast");
+&openNegFile("Seq","bl6.pAs.zhangbin.fibroblast");
+&openNegFile("Rc","bl6.pAs.zhangbin.fibroblast");
+sub openPosFile{
+	my ($label,$data) = @_;
+	foreach my $file (glob "../DeeReCT-PolyARC_$label/out/$data"."*.txt"){
+		&get_data_pos($file,$label);
+	}
+}
+
+sub openNegFile{
+	my ($label,$data) = @_;
+	foreach my $file (glob "../DeeReCT-PolyARC_$label/out/neg.$data"."*.txt"){
+		&get_data_neg($file,$label);
+	}
+}
+
+while(my ($key,$val) = each %stat_pos){
+	while(my($id,$val2) = each %$val){
+		my $para = $key;
+		if(exists $stat_neg{$para}->{$id}){
+			print OUT "$id\t$val2\t$stat_neg{$para}->{$id}\t$para\n";
+		}
+	}
+}
+
+sub get_data_pos{
+	my ($file,$para) = @_;
+	open $file,$file;
+	<$file>;
+	my %hash;
+	my $last_epoch = 0;
+	while(<$file>){
+		chomp;
+		my ($epoch,$tp,$fp,$tn,$fn) = (split)[0,3,4,5,6];
+		my $precision = $tp/($tp+$fp);
+		my $recall = $tp/($tp+$fn);
+		my $f1score = 2*$precision*$recall/($precision+$recall);
+		my $fpr = $fp/($fp+$tn);
+		$hash{$epoch} = "$precision\t$recall\t$f1score\t$fpr";
+		$last_epoch = $epoch;
+	}
+	my ($distribute,$evaluate,$id) = (split /\./,$file)[-4,-3,-2];
+	my $best_epoch = $last_epoch-$EPOCH_LEV;
+	$best_epoch = $last_epoch if $last_epoch<=$EPOCH_LEV;
+	$stat_pos{$para}->{$id} = $hash{$best_epoch};
+}
+
+
+sub get_data_neg{
+	my ($file,$para) = @_;
+	open $file,$file;
+	<$file>;
+	my $line = <$file>;
+	if(defined $line){
+		my ($epoch,undef,$tp,$fp,$tn,$fn) = split /\t/,$line; 
+		my $fpr = $fp/($fp+$tn) ;
+		my ($distribute,$evaluate,$id) = (split /\./,$file)[-4,-3,-2];
+		$stat_neg{$para}->{$id} = $fpr;
+	}
+}
+
+

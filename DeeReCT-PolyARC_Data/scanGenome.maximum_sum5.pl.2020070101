@@ -1,0 +1,167 @@
+#!/usr/bin/perl -w
+#
+#
+#Upate 2019/11/07
+#The negative justthe position wrong, but the data is correct
+#Only Include motif only data
+
+use POSIX;
+my ($maxLength,$penality,$sample) = @ARGV;
+print "$sample\n";
+
+my %pas;
+open FILE,"data/bl6.pAs.zhangbin.fibroblast.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,undef,undef,$position) = split;
+	$pas{$pas_id} = $position;
+}
+
+my %correct;
+open FILE,"data/bl6.pAs.fibroblast.REP1.positive.usage0.2.allmotif.txt";
+while(<FILE>){
+	chomp;
+	my ($pas_id) = split;
+	$correct{$pas_id} = '';
+}
+
+open OUT,">Stat/bl6.pAs.scanGenome.maxSum.onlyMotif.$maxLength.$penality.$sample.txt";
+#my $file = "predict/bl6.pAs.scanGenome.step1.str2.REP1.$chr.Trimmed10.Optimize.txt"
+#&maxSum($file);
+foreach my $file (glob "predict/bl6.pAs.scanGenome.step1.str2.REP1.chr*.Trimmed10.onlyMotif.$sample.txt"){
+	&maxSum($file);
+}
+
+#&maxSum('test.txt');
+
+my %distribution;
+sub maxSum{
+	my ($file) = @_;
+	open FILE,$file;
+	my %predict;
+	my %coor2pas;
+	while(<FILE>){
+		chomp;
+		my ($key,$predition) = split;
+		if($key =~ /ENS/){
+			my @id = split /,/,$key;
+			$id = $id[0];
+			my ($pas_id,$pos) = split /\-/,$id;
+			my $position = int(substr($pos,3));
+			my $coor = $pas{$pas_id} + 100-$position;
+			$predict{$coor} = $predition;
+			$coor2pas{$coor} = $key;
+		}
+		else{
+			my ($chr,$start) = split /\:|\-/,$key;
+			my $coor = $start+100;
+			$predict{$coor} = $predition;
+			$coor2pas{$coor} = $key;
+		}
+	}
+
+	my $sum = 0;
+	$predict{100000000000000} = 1;
+	$coor2pas{100000000000000} = "chr";
+	my @coor = sort{$a<=>$b} keys %predict;
+	my $start = $coor[0];
+	my $end = $coor[0];
+	my $maxPos = $coor[0];
+	my $maxPoint = 0;
+	foreach my $coor (@coor){
+		my $predition = $predict{$coor};
+		if($coor-$end>1){
+			if($sum >0){
+				my $plus_length = floor(-$sum/$penality);
+				if($maxPoint > $maxLength){
+					my $pass = $coor2pas{$maxPos};
+					my $length = $end-$start+$plus_length;
+					my ($pas_id,$diff) = &Attach_Pas($pass);
+					print OUT "$pas_id\t$maxPoint\t$diff\t$maxPos\t$start\t$end\t$length\n";
+					$start = $coor;
+					$sum = 0;
+					$end = $coor;
+				}
+				$maxPoint = 0;
+			}
+			else{
+				$start = $coor;
+				$sum = 0;
+				$end = $coor;
+				$maxPoint = 0;
+			}	
+		}
+		elsif($predition ==1){
+			$sum += $penality;
+			if($sum <= 0){
+				my $length = $end-$start;
+				if($maxPoint > $maxLength){
+					my $pass = $coor2pas{$maxPos};
+					my ($pas_id,$diff) = &Attach_Pas($pass);
+					print OUT "$pas_id\t$maxPoint\t$diff\t$maxPos\t$start\t$end\t$length\n";
+				}
+				$start = $coor;
+				$sum = 0;
+				$maxPoint = 0;
+				$end = $coor;
+			}
+		}
+		else{
+			$sum++;
+			if($maxPoint < $sum){
+				$maxPoint = $sum;
+				$maxPos = $coor;
+			}
+			if($sum <= 1){
+				$start = $coor;
+				$maxPoint = $sum;
+				$maxPos = $coor;				}
+			}
+		$end = $coor;
+	}
+}
+
+sub Attach_Pas{
+	my ($pass) = @_;
+	if($pass =~ /ENS/){
+		my $nearestPas = '';;
+		my $minDiff = 10000000000;;
+		my %usage;
+		my %all;
+		if($pass !~ /,/){
+			 my ($pas_id,$pos) = split /\-/,$pass;
+			 $usage{$pas_id} = $pos;
+		 }
+		else{
+			my @pasAndpos = split /,/,$pass;
+			my $usage_ind = 0;
+			foreach my $pasandpos (@pasAndpos){
+				my ($pas_id,$pos) = split /\-/,$pasandpos;
+				$all{$pas_id} = $pos;
+				if(exists $correct{$pas_id}){
+					$usage{$pas_id} = $pos;
+					$usage_ind++;
+				}
+			}
+			if($usage_ind ==0){
+				%usage = %all;
+			}
+		}
+		while(my ($pas_id,$pos) = each %usage){
+			my $position = int(substr($pos,3));
+			my $diff = 100-$position;
+			if($diff<$minDiff){
+				$minDiff = $diff;
+				$nearestPas = $pas_id;
+			}
+		}
+		return ($nearestPas,$minDiff);
+	}
+	else{
+		return ($pass,0);
+	}
+}
+	
+
+system("perl scanGenome.check5.pl $maxLength $penality $sample");

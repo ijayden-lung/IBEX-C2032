@@ -1,0 +1,28 @@
+#2019.11 New Hfq Data
+
+for i in {1..12}
+do
+
+cat>tmp.sh<<EOF
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J fastqc2_SunWei-${i}
+#SBATCH --output /home/zhouj0d/zhouj0d/sunwei_hfp/log/fastqc2_SunWei-${i}.out
+#SBATCH --mail-user=juexiao.zhou@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --time=72:00:00
+
+cd /home/zhouj0d/zhouj0d/sunwei_hfp/cutadapt
+module load fastqc
+
+fastqc -o .  SunWei-${i}_1.clean.fq.gz
+fastqc -o .  SunWei-${i}_2.clean.fq.gz
+
+EOF
+
+sbatch tmp.sh
+done
+
+
+

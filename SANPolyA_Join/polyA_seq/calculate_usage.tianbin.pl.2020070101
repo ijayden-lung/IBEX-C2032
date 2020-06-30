@@ -1,0 +1,73 @@
+#!/usr/bin/perl -w
+my %pas_type;
+my %filter;
+my ($data,$inp,$out) = @ARGV;
+open FILE,"$data";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$motif) = split;
+	if($pas_type eq "3'UTR(M)" || $pas_type eq "3'UTR(F)"){
+		$pas_type = "tandemUTR";
+	}
+	elsif($pas_type eq "3'UTR(L)" || $pas_type eq "3'UTR(S)"){
+		$pas_type = "terminal";
+	}
+	else{
+		$pas_type = "Non_tandemUTR";
+	}
+	my @data = split;
+	my $before = &TrimmedMean(@data[8..108]);
+	my $after = &TrimmedMean(@data[109..$#data]);
+	my $ave = ($before+$after)/2;
+	my $diff = $before-$after;
+	my $ave_diff = $diff/$ave;
+	$pas_type{$pas_id} = "$pas_type\t$chr\t$pos\t$strand\t$symbol";
+	$filter{$pas_id} = "$motif\t$ave_diff";
+}
+
+open FILE,"$inp";
+<FILE>;
+my %total;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$chr,$pos,$strand,$rep1,$rep2) = (split)[0,1,4,5,6,7];
+	my $ave = ($rep1+$rep2)/2;
+	next if $pas_id =~ /na/;
+	next if $pas_id =~ /NO/;
+	my ($gene_id) = split /\./,$pas_id;
+	$total{$gene_id} += $ave;
+}
+
+
+
+open INP,"$inp";
+<INP>;
+open OUT,">$out";
+print OUT "pas_id\tpas_type\tchr\tposition\tstrand\tsymbol\tusage\treadCount\tmotif\tave_diff\n";
+while(<INP>){
+	chomp;
+	my ($pas_id,$chr,$pos,$strand,$rep1,$rep2) = (split)[0,1,4,5,6,7];
+	my $ave = ($rep1+$rep2)/2;
+	#next if $pas_id =~ /na/;
+	#next if $pas_id =~ /NO/;
+	#next if !exists $pas_type{"$chr:$pos:$strand"};
+	next if $ave <=0;
+	my ($gene_id) = split /\./,$pas_id;
+	my $usage = $total{$gene_id}>0 ? $ave/$total{$gene_id} : 0;;
+	print OUT "$pas_id\t$pas_type{$pas_id}\t$usage\t$ave\t$filter{$pas_id}\n";
+}
+
+
+sub TrimmedMean{
+	my @data = @_;
+	my $sum = 0;
+	my $count = 0;
+	foreach my $ele (@data){
+		if($ele>0){
+			$sum += $ele;
+			$count++;
+		}
+	}
+	my $ave = $count>0 ? $sum/$count : 0;
+	return $ave;
+}

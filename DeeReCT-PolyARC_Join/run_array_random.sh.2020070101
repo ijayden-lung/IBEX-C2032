@@ -1,0 +1,53 @@
+#!/bin/bash
+#SBATCH --job-name=DeeRect
+#SBATCH --partition=batch
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --output=log.%J
+#SBATCH --time=01:00:00
+#SBATCH --mem=50G
+#SBATCH -a 1-50
+
+##SBATCH --dependency afterok:6686802_[1-100] 
+
+#source activate ML
+
+echo "This is job #${SLURM_ARRAY_JOB_ID}, task id ${SLURM_ARRAY_TASK_ID}"
+name=${base}${SLURM_ARRAY_TASK_ID}
+
+#evaluate="f1score"
+#evaluate="precision"
+evaluate="accuracy"
+
+distribute="sameDistribute"
+#distribute="allmotif"
+#distribute="totalRandom"
+
+
+##########PREP
+####March 2
+testid="usage"
+python3 prep_data.py train_data/bl6.pAs.merge.fibroblast.randomSelect.txt train_data/bl6.pAs.merge.fibroblast.negative.trimmed25.txt --out Data/bl6.merge.$testid.npz
+
+#python3 prep_data.py data/bl6.merge.usage0.2.txt data/bl6.pAs.random.negative.txt --out Data/bl6.merge.usage0.2.npz
+#python3 prep_data.py data/human.brain.merge.usage0.2.txt data/human.pAs.brain.negative.txt --out Data/human.brain.merge.usage0.2.npz
+
+#########TRAIN
+####March 2
+#python3 train.accuracy.py Data/bl6.merge.$testid.npz --out Model/bl6.merge.$testid.${SLURM_ARRAY_TASK_ID}.npz --hparam  ../DeeReCT-PolyARC_Data/para/BL_hparamIn5.npz --trainid bl6.merge.$testid.${SLURM_ARRAY_TASK_ID}
+
+
+#python3 train.accuracy.py Data/bl6.merge.usage0.2.npz --out Model/bl6.merge.usage0.2.npz.${SLURM_ARRAY_TASK_ID}.npz --hparam ../DeeReCT-PolyARC_Data/para/BL_hparamIn5.npz --trainid bl6.merge.usage0.2.npz.${SLURM_ARRAY_TASK_ID}
+#python3 train.accuracy.py Data/human.brain.merge.usage0.2.npz --out Model/human.brain.merge.usage0.2.npz.${SLURM_ARRAY_TASK_ID}.npz --hparam ../DeeReCT-PolyARC_Data/para/BL_hparamIn5.npz --trainid human.brain.merge.usage0.2.npz.${SLURM_ARRAY_TASK_ID}
+
+#modelid=bl6.pAs.zhangbin.fibroblast
+#python3 prep_data.py ../DeeReCT-PolyARC_Data/data/bl6.pAs.positive.all.usage0.20.trimmed10.txt ../DeeReCT-PolyARC_Data/data/bl6.pAs.negative.trimmed10.txt  --out Data/${modelid}.${distribute}.npz
+#python3 train.${evaluate}.py Data/${modelid}.${distribute}.npz --out Model/${modelid}.${distribute}.${evaluate}.${SLURM_ARRAY_TASK_ID}.npz --hparam ../DeeReCT-PolyARC_Data/para/BL_hparamIn5.npz --trainid ${modelid}.${distribute}.${evaluate}.${SLURM_ARRAY_TASK_ID}
+
+testid=neg.${modelid}
+#python3 prep_test_data.py  ../DeeReCT-PolyARC_Data/data/bl6.pAs.genome.trimmed10.small.txt --out Data/$testid 
+#python3 test.py Data/${testid}.npz Model/${modelid}.${distribute}.${evaluate}.${SLURM_ARRAY_TASK_ID}.npz --testid ${testid}.${distribute}.${evaluate}.${SLURM_ARRAY_TASK_ID}
+#python3 test.scanGenome.py Data/positive.${testid}.npz Model/Optimize_UP100_DOWN75_USAGE0.2_TRIMMED10_50_3.npz --testid positive.$testid

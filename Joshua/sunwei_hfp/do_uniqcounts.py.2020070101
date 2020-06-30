@@ -1,0 +1,40 @@
+#2019.11 New Hfq Data
+
+# raw counts for each region
+
+import pandas as pd
+from collections import  Counter
+
+annot={'1':'20190925-input--','2':'20190925-input-WT','3':'20190925-input-9FSY','4':'20190925-input-25FSY','5':'20190925-IP--','6':'20190925-IP-WT','7':'20190925-IP-9FSY','8':'20190925-IP-25FSY','9':'20190927-IP--','10':'20190927-IP-WT','11':'20190927-IP-9FSY','12':'20190927-IP-25FSY'}
+
+df=pd.read_csv('tophat/SunWei-1/accepted_hits_overlap_with_TSS.bed',sep='\t',header=None)
+df.columns=['chr','1','2','id','3','strand','4','5','6','name','7','8']
+df=df.drop_duplicates(subset=['id'],keep='first')
+df=df.reset_index()
+
+genes=[]
+counts=[]
+a=Counter(df.name)
+for i in set(a.keys()):
+    genes.append(i)
+    counts.append(a[i])
+da=pd.DataFrame({'genes':genes,'WT1':counts})
+
+for j in range(2,13):
+    df=pd.read_csv('tophat/SunWei-%s/accepted_hits_overlap_with_TSS.bed'%str(j),sep='\t',header=None)
+    df.columns=['chr','1','2','id','3','strand','4','5','6','name','7','8']
+    df=df.drop_duplicates(subset=['id'],keep='first')
+    df=df.reset_index()
+
+    genes=[]
+    counts=[]
+    a=Counter(df.name)
+    for i in set(a.keys()):
+        genes.append(i)
+        counts.append(a[i])
+        
+    dt=pd.DataFrame({'genes':genes,'%s'%annot['%s'%str(j)]:counts})
+    da=pd.merge(da,dt,how='outer',on='genes')
+    print(j)
+    
+da.to_csv('uniq_counts.csv',index=False)

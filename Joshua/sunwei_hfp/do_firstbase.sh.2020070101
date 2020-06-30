@@ -1,0 +1,44 @@
+#2019.11 New Hfq Data
+
+#bed to get the first base
+
+for i in {1..12}
+do
+
+cd /home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-${i}/
+
+cat>tmp.py<<EOF
+
+with open('/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-${i}/accepted_hits_firstbase.bed','w') as w:
+    with open('/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-${i}/accepted_hits.bed','r') as f:
+        for line in f:
+            line=line.rstrip('\n').split('\t')
+            chromosome=line[0]
+            start=int(line[1])
+            end=int(line[2])
+            ID=line[3]
+            strand=line[5]
+            if strand=='+':
+                w.write(chromosome+'\t'+str(start)+'\t'+str(start+1)+'\t'+ID+'\t'+'50'+'\t'+strand+'\n')
+            elif strand=='-':
+                w.write(chromosome+'\t'+str(end-1)+'\t'+str(end)+'\t'+ID+'\t'+'50'+'\t'+strand+'\n')
+
+EOF
+
+cat>tmp.sh<<EOF
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J get1stbase_SunWei-${i}
+#SBATCH --output /home/zhouj0d/zhouj0d/sunwei_hfp/log/get1stbase_SunWei-${i}.out
+#SBATCH --mail-user=juexiao.zhou@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --time=72:00:00
+#SBATCH --mem=30G
+
+python /home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-${i}/tmp.py
+
+EOF
+
+sbatch tmp.sh
+done

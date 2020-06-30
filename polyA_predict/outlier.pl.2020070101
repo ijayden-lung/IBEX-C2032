@@ -1,0 +1,16 @@
+#!/usr/bin/perl -w
+
+open FILE,"result/testset_In.txt";
+open OUT1,">result/FP_In.txt";
+open OUT2,">result/FN_In.txt";
+while(<FILE>){
+	chomp;
+	my ($id,$predict) = split /\t/;
+	if($id =~ /Neg/ && $predict eq "T"){
+		print OUT1 "$id\n";
+	}
+	if($id =~ /Pos/ && $predict eq "F"){
+		print OUT2 "$id\n";
+	}
+}
+

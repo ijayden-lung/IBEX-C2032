@@ -1,0 +1,36 @@
+#!/usr/bin/perl -w
+
+use List::Util qw(first max maxstr min minstr reduce shuffle sum);
+open FILE,"train_data/bl6.pAs.scanGenome.step1.str2.REP1.chr2.Trimmed10.txt.negative";
+my $header = <FILE>;
+my @ave;
+my $pass = 0;
+my $total = 0;
+while(<FILE>){
+	chomp;
+	my @data = split /\t/;
+	my @coverage  = @data[8..$#data];
+	my $sum = 0;
+	my $count=0;
+	for(my$i=0;$i<@coverage;$i++){
+		if($coverage[$i]>0){
+			$sum+= $coverage[$i];
+			$count++;
+		}
+	}
+	if($count>0){
+		my $ave = $sum/$count;
+		$total++;
+		if($ave>10){
+			$pass++;
+			#print "$_\n";
+		}
+		push @ave,$ave;
+	}
+}
+
+print "total number: $total, pass number: $pass\n";
+my $min = &min(@ave);
+my $max = &max(@ave);
+print "minimum average coverage: $min\n";
+print "maximum average coverage: $max\n";

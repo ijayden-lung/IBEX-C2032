@@ -1,0 +1,47 @@
+#2019.11 New Hfq Data
+
+# reads number
+import pandas as pd
+
+X=['total_mapped_reads','accepted_hits (uniq)','accepted_hits_no_overlap_with_TSS (uniq)','accepted_hits_overlap_with_TSS','accepted_hits_overlap_with_TSS (uniq)']
+annot={'1':'20190925-input--','2':'20190925-input-WT','3':'20190925-input-9FSY','4':'20190925-input-25FSY','5':'20190925-IP--','6':'20190925-IP-WT','7':'20190925-IP-9FSY','8':'20190925-IP-25FSY','9':'20190927-IP--','10':'20190927-IP-WT','11':'20190927-IP-9FSY','12':'20190927-IP-25FSY'}
+df=pd.DataFrame({'X':X})
+
+for i in range(1,13):
+    
+    Y=[]
+
+    data=[]
+    with open('/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-%s/accepted_hits.bed'%str(i),'r') as f:
+        for line in f:
+            data.append(line.split('\t')[3])
+    print('Total mapped Reads: ',str(len(set(data))))
+    Y.append(len(data))
+    Y.append(len(set(data)))
+
+    data=[]
+    with open('/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-%s/accepted_hits_no_overlap_with_TSS.bed'%str(i),'r') as f:
+        for line in f:
+            data.append(line.split('\t')[3])
+    print('Reads without overlap with TSS and CDS: ',str(len(set(data))))
+    Y.append(len(set(data)))
+
+    data=[]
+    with open('/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-%s/accepted_hits_overlap_with_TSS.bed'%str(i),'r') as f:
+        for line in f:
+            data.append(line.split('\t')[3])
+    print('Reads overlap with TSS and CDS: ',str(len(data)))
+    Y.append(len(data))
+
+    data=[]
+    with open('/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-%s/accepted_hits_overlap_with_TSS_uniq.bed'%str(i),'r') as f:
+        for line in f:
+            data.append(line.split('\t')[3])
+    print('Reads overlap with TSS and CDS uniq: ',str(len(set(data))))
+    Y.append(len(set(data)))
+    
+    df['%s'%annot['%s'%str(i)]]=Y
+df.to_csv('reads.csv',index=False)
+
+
+

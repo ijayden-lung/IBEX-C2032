@@ -1,0 +1,23 @@
+# download all data
+
+import pandas as pd
+import os
+
+df=pd.read_csv('All_selected.tsv',sep='\t')
+
+for i in range(len(df)):
+    ID=df.loc[i,'id']
+    CELL=df.loc[i,'cell']
+    TARGET=df.loc[i,'target']
+    dirs='/home/zhouj0d/zhouj0d/apa_ml/ENCODE/data/%s_%s'%(CELL,TARGET)
+
+    if not os.path.exists(dirs):
+        os.makedirs(dirs)
+    
+    try:
+        link='https://www.encodeproject.org/files/%s/@@download/%s.fastq.gz'%(ID,ID)
+        print(ID,CELL,TARGET,'Downloading ',link)
+        os.system('wget %s -O %s/%s.fastq.gz'%(link,dirs,ID))
+        print(ID,CELL,TARGET,'Downloaded! ')
+    except:
+        print('%s wrong'%ID)

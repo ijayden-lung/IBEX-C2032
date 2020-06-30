@@ -1,0 +1,7 @@
+#!/usr/bin/perl -w
+
+open FILE,'out/sep_tandem9_neg.txt';
+<FILE>;
+my $line  = <FILE>;
+my($epoch,undef,$tp,$fp,$tn,$fn)= split /\t/,$line;
+print " my ($epoch,$tp,$fp,$tn,$fn);\n";

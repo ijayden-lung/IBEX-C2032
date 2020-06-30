@@ -1,0 +1,38 @@
+#!/usr/bin/perl -w
+
+my $width = 100;
+my @chr = (1..19,"X");
+my %chr;
+foreach my $chr (@chr){
+	open REF,"/ibex/scratch/longy/cnda/ensembl/oneLine/mm10.$chr.fa";
+	$chr{"chr$chr"} = <REF>;
+}
+
+
+my @motif = qw/AAGAAA AATAAA AATACA AATAGA AATATA AATGAA ACTAAA AGTAAA ATTAAA CATAAA CATAAA GATAAA TATAAA TTTAAA/;
+
+open FILE,"/ibex/scratch/longy/workspace/apa_predict/pas_dataset/bl6.pAs.zhangbin.fibroblast.txt";
+open OUT,">/ibex/scratch/longy/workspace/polyA_predict/bl6.pAs.zhangbin.fibroblast.txt";
+my $header = <FILE>;
+print OUT $header;;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$srd,$symbol,$usage,$seq) = split;
+	my $str = $pos-$width;
+	my $end = $pos+$width;
+	my $sequence = substr($chr{$chr},$str-1,$end-$str+1);
+	if($srd eq "-"){
+		$sequence =~ tr/ATCG/TAGC/;
+		$sequence = reverse $sequence;
+	}
+	my $subseq = substr($sequence,65,31);
+	my $motifNum = 0;
+	foreach my $motif(@motif){
+		if($subseq =~ /$motif/){
+			$motifNum += 1;
+		}
+	}
+	$pas_type = $pas_type."_motif=$motifNum";
+	print OUT "$pas_id\t$pas_type\t$chr\t$pos\t$srd\t$symbol\t$usage\t$sequence\n";
+}
+

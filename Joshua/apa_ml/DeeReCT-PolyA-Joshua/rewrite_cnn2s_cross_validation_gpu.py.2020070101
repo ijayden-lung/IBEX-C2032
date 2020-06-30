@@ -1,0 +1,439 @@
+import numpy as np
+import resnet_2s2a
+import pickle
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+from torch.utils.data import Dataset
+import pandas as pd
+import os
+import time
+import copy
+from tqdm import tqdm
+from torch.autograd import Variable
+from sklearn import metrics
+import random
+import cnn_2s
+
+class GenomeDataset(Dataset):
+
+    def __init__(self, positive_path, negative_path, train_or_val="train",encode_mode="N_2_zero"):
+        super(GenomeDataset,self).__init__()
+        all_data=[]
+
+
+        if train_or_val=="train":
+            for data_file in os.listdir(positive_path):
+                data_path = os.path.join(positive_path,data_file)
+                with open(data_path, 'r') as f:
+                    for line in f:
+                        all_data.append((self.encode(line),1))
+            for data_file in os.listdir(negative_path):
+                data_path = os.path.join(negative_path,data_file)
+                with open(data_path, 'r') as f:
+                    for line in f:
+                        all_data.append((self.encode(line),0))
+
+        random.shuffle(all_data)
+        self.all_data=all_data
+        """
+
+        if train_or_val=="train":
+            for data_file in os.listdir(positive_path):
+                if data_file[-5::]!="5.txt":
+                    data_path = os.path.join(positive_path,data_file)
+                    with open(data_path, 'r') as f:
+                        for line in f:
+                            all_data.append((self.encode(line),1))
+            for data_file in os.listdir(negative_path):
+                if data_file[-5::]!="5.txt":
+                    data_path = os.path.join(negative_path,data_file)
+                    with open(data_path, 'r') as f:
+                        for line in f:
+                            all_data.append((self.encode(line),0))
+        else:
+            for data_file in os.listdir(positive_path):
+                if data_file[-5::]=="5.txt":
+                    data_path = os.path.join(positive_path,data_file)
+                    with open(data_path, 'r') as f:
+                        for line in f:
+                            all_data.append((self.encode(line),1))
+            for data_file in os.listdir(negative_path):
+                if data_file[-5::]=="5.txt":
+                    data_path = os.path.join(negative_path,data_file)
+                    with open(data_path, 'r') as f:
+                        for line in f:
+                            all_data.append((self.encode(line),0))
+
+        random.shuffle(all_data)
+        self.all_data=all_data
+        """
+
+
+    def __len__(self):
+        return len(self.all_data)
+
+    def __getitem__(self, index):
+        fn, label= self.all_data[index]
+        return fn,label
+
+    def get_cross_data(self,index):
+        return np.array(self.all_data)[index]
+
+    def encode(self, input, encode_mode='N_2_zero'):
+        """ Encode string input to a numerical matrix. Sequence after encoding has two modes:
+            N_2_zero: "N" encodes to [0,0,0,0]
+            N_2_quarter: "N" encodes to [1/4, 1/4, 1/4, 1/4]
+        """
+
+        if encode_mode == "N_2_zero":
+            # output 1*4*n numpy binary matrix in "A, C, G, T" order
+            # nucleotide "N" encoded as [0, 0, 0, 0]
+            n = len(input)
+            output = np.zeros((4, n), dtype="f")
+            for i in range(n):
+                if input[i] == "A" or input[i] == "a":
+                    output[0, i] = 1.0
+                elif input[i] == "C" or input[i] == "c":
+                    output[1, i] = 1.0
+                elif input[i] == "G" or input[i] == "g":
+                    output[2, i] = 1.0
+                elif input[i] == "T" or input[i] == "t":
+                    output[3, i] = 1.0
+                else:
+                    pass
+
+        elif encode_mode == "N_2_quarter":
+            # output 1*4*n numpy integer matrix in "A, C, G, T" order
+            # nucleotide "N" encoded as [1/4, 1/4, 1/4, 1/4]
+            n = len(input)
+            output = np.zeros((4, n), dtype="f")
+            for i in range(n):
+                if input[i] == "A" or input[i] == "a":
+                    output[0, i] = 1.0
+                elif input[i] == "C" or input[i] == "c":
+                    output[1, i] = 2.0
+                elif input[i] == "G" or input[i] == "g":
+                    output[2, i] = 3.0
+                elif input[i] == "T" or input[i] == "t":
+                    output[3, i] = 4.0
+                else:
+                    output[0, i] = 0.25
+                    output[1, i] = 0.25
+                    output[2, i] = 0.25
+                    output[3, i] = 0.25
+
+        return output
+
+class CrossValidationDataset(Dataset):
+    """total dataset."""
+
+    def __init__(self, data):
+        self.data= data
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        fn, label= self.data[index]
+        return fn,label
+
+def partitions(number, k):
+    '''
+    Distribution of the folds
+    Args:
+        number: number of patients
+        k: folds number
+    '''
+    n_partitions = np.ones(k) * int(number/k)
+    n_partitions[0:(number % k)] += 1
+    return n_partitions
+
+def get_indices(n_splits = 3, subjects = 145):
+    '''
+    Indices of the set test
+    Args:
+        n_splits: folds number
+        subjects: number of patients
+    '''
+    l = partitions(subjects, n_splits)
+    fold_sizes = l
+    indices = np.arange(subjects).astype(int)
+    current = 0
+    for fold_size in fold_sizes:
+        start = current
+        stop =  current + fold_size
+        current = stop
+        yield(indices[int(start):int(stop)])
+
+def k_folds(n_splits = 3, subjects = 145):
+    '''
+    Generates folds for cross validation
+    Args:
+        n_splits: folds number
+        subjects: number of patients
+    '''
+    indices = np.arange(subjects).astype(int)
+    for test_idx in get_indices(n_splits, subjects):
+        train_idx = np.setdiff1d(indices, test_idx)
+        yield train_idx, test_idx
+
+
+def make_kwargs(filename_model_kwargs, filename_train_kwargs):
+    # model_kwargs, cnn_2s
+    model_kwargs_cnn_2s = {}
+    seqlen = 206
+    conv1 = {'in_channels': 4, 'out_channels': 16, 'kernel_size': 3,
+             'stride': 1, 'padding': 0, 'dilation': 1, 'groups': 1, 'bias': True}
+    conv2 = {'in_channels': 16, 'out_channels': 32, 'kernel_size': 5,
+             'stride': 1, 'padding': 0, 'dilation': 1, 'groups': 1, 'bias': True}
+    conv3 = {'in_channels': 32, 'out_channels': 64, 'kernel_size': 7,
+             'stride': 1, 'padding': 0, 'dilation': 1, 'groups': 1, 'bias': True}
+    maxpool1 = {'kernel_size': 4, 'stride': 4}
+    maxpool2 = {'kernel_size': 4, 'stride': 4}
+    dropout1 = {'p': 0.2}
+    dropout2 = {'p': 0.3}
+    dropout3 = {'p': 0.5}
+    fc1 = {'out_channels': 100}
+    fc2 = {'out_channels': 2}
+    model_kwargs_cnn_2s = {'conv1': conv1, 'conv2': conv2, 'conv3': conv3, \
+                       'maxpool1': maxpool1, 'maxpool2': maxpool2, \
+                       'dropout1': dropout1, 'dropout2': dropout2, \
+                       'dropout3': dropout3, 'fc1': fc1, 'fc2': fc2, \
+                       'seqlen': seqlen}
+    pickle.dump(model_kwargs_cnn_2s, open(filename_model_kwargs, 'wb'))
+    print('[INFO] {} dumped!'.format(filename_model_kwargs))
+
+    # train_kwargs, cnn_1s
+    train_kwargs_cnn_2s = {}
+    train_kwargs_cnn_2s['tune_metric'] = 'auprc' # ['auroc', 'auprc', 'avgrank']
+    train_kwargs_cnn_2s['random_seed'] = 1337
+    train_kwargs_cnn_2s['optim'] = 'Adam' # ['SGD', 'Adam', 'Adagrad', 'RMSProp']
+    train_kwargs_cnn_2s['optim_param'] = {'betas': [0.9, 0.999], 'lr': 0.0001, 'weight_decay': 1e-5}
+    train_kwargs_cnn_2s['scheduler'] = 'StepLR' # ['StepLR', 'MultiStepLR', 'ReduceLROnPlateau']
+    train_kwargs_cnn_2s['scheduler_param'] = {'step_size': 10, 'gamma': 0.1}
+    train_kwargs_cnn_2s['loss'] = 'CrossEntropyLoss' # ['CrossEntropyLoss', 'NLLLoss', 'MSELoss']
+    train_kwargs_cnn_2s['cudnn'] = True
+    train_kwargs_cnn_2s['imbalance'] = [1.0, 10.0]
+    train_kwargs_cnn_2s['batch_size'] = 128
+    train_kwargs_cnn_2s['encode_mode'] = 'N_2_zero'
+    # train_kwargs_cnn_2s['num_epochs'] = 40
+    train_kwargs_cnn_2s['num_epochs'] = 20
+    train_kwargs_cnn_2s['shuffle'] = True
+    train_kwargs_cnn_2s['num_workers'] = 8
+    pickle.dump(train_kwargs_cnn_2s, open(filename_train_kwargs, 'wb'))
+    print('[INFO] {} dumped!'.format(filename_train_kwargs))
+
+    return model_kwargs_cnn_2s, train_kwargs_cnn_2s
+
+#sample="dragon_human"
+sample="omni_human"
+#sample="bl_mouse"
+#sample="sp_mouse"
+root="data/human/"+sample+"/"
+
+filename_model=sample+"_model"
+filename_train=sample+"_data"
+filename_log=sample+"_log"
+filename_output=sample+"_output"
+positive_path=root+"positive"
+negative_path=root+"negative"
+
+# read datasets
+all_dataset = GenomeDataset(positive_path,negative_path,train_or_val="train")
+
+
+print("[INFO] dataloaders generated")
+print('[INFO] start to train and tune')
+print('-' * 10)
+
+
+num_sequences=all_dataset.__len__()
+crossvalidation_count=0
+
+for train_idx, test_idx in k_folds(n_splits = 5,subjects=num_sequences):
+
+    model_kwargs, train_kwargs = make_kwargs(filename_model, filename_train)
+    random_seed = train_kwargs['random_seed']
+    optim = train_kwargs['optim'] # ['SGD', 'Adam', 'Adagrad', 'RMSProp']
+    optim_param = train_kwargs['optim_param'] # {'betas': [0.9, 0.999], 'lr': 0.001, 'weight_decay': 1e-5}
+    scheduler =  train_kwargs['scheduler'] # ['StepLR', 'MultiStepLR', 'ReduceLROnPlateau']
+    scheduler_param = train_kwargs['scheduler_param'] # {'step_size': 10, 'gamma': 0.1}
+    loss = train_kwargs['loss'] # ['CrossEntropyLoss', 'NLLLoss', 'MSELoss']
+    cudnn = train_kwargs['cudnn'] # [True, False]
+    imbalance = train_kwargs['imbalance'] # 10.0
+    batch_size = train_kwargs['batch_size'] # 16, .. 32
+    encode_mode = train_kwargs['encode_mode'] # 'N_2_zero', 'N_2_quarter'
+    num_epochs = train_kwargs['num_epochs'] # 40
+    shuffle = train_kwargs['shuffle']
+    num_workers = train_kwargs['num_workers']
+
+    gpu = torch.cuda.is_available()
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.fastest = cudnn
+    torch.manual_seed(random_seed)
+
+    if gpu:
+        model = cnn_2s.cnn_2s(model_kwargs).cuda()
+        # model = torch.nn.DataParallel(model)
+        class_imbalance = torch.FloatTensor(imbalance).cuda()
+    else:
+        model = cnn_2s.cnn_2s(model_kwargs)
+        class_imbalance = torch.FloatTensor(imbalance)
+
+    # build optimizer
+    if optim == 'SGD':
+        optimizer = torch.optim.SGD(model.parameters(), **optim_param)
+    elif optim == 'Adam':
+        optimizer = torch.optim.Adam(model.parameters(), **optim_param)
+    elif optim == 'Adagrad':
+        optimizer = torch.optim.Adagrad(model.parameters(), **optim_param)
+    elif optim == 'RMSProp':
+        optimizer = torch.optim.RMSProp(model.parameters(), **optim_param)
+
+    # build scheduler
+    if scheduler == 'StepLR':
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, **scheduler_param)
+    elif scheduler == 'MultiStepLR':
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, **scheduler_param)
+    elif scheduler == 'ReduceLROnPlateau':
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, **scheduler_param)
+
+    if loss == 'CrossEntropyLoss':
+        criterion = nn.CrossEntropyLoss(weight=class_imbalance)
+    elif loss == 'NLLLoss':
+        criterion = nn.NLLLoss(weight=class_imbalance)
+    elif loss == 'MSELoss':
+        criterion = nn.MSELoss(weight=class_imbalance)
+
+    #print(train_idx,test_idx)
+    cross_train_data=all_dataset.get_cross_data(train_idx)
+    dataset_train=CrossValidationDataset(data=cross_train_data)
+    cross_test_data=all_dataset.get_cross_data(test_idx)
+    dataset_test=CrossValidationDataset(data=cross_test_data)
+
+    trainloader = DataLoader(dataset_train, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+    valloader = DataLoader(dataset_test, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+
+    dataloaders = {'train': trainloader, 'val': valloader}
+
+    start_time = time.time()
+    best_model_wts = copy.deepcopy(model.state_dict())
+    best_acc = 0.0
+    best_sensitivity = 0.0
+    best_auroc = 0.0
+    best_auprc = 0.0
+    best_epoch = -1
+    best_labels_list = []
+    best_probs_list = []
+    epoch_loss_min = float('inf')
+    epoch_loss_prev = float('inf')
+    uptrend = 0 # num of continuous saturated epoches
+    max_uptrend = 10 # max num of continuous aturated epoches
+    early_stopping = False
+    performance_hist = pd.DataFrame(columns=["loss", "acc", "sensitivity", "auroc", "auprc", "epoch", "phase"])
+
+
+    for epoch in range(num_epochs):
+
+        print('Epoch {}/{} CrossValidation {}'.format(epoch, num_epochs - 1,crossvalidation_count))
+        print('-' * 10)
+
+        dataset_sizes = {'train': 0.0, 'val':0.0} # set to float for later division
+
+        for phase in ['train', 'val']:
+
+            if phase == 'train':
+                scheduler.step()
+                model.train(True)
+            else:
+                model.train(False)
+
+            running_loss = 0.0
+            running_corrects = 0.0
+            running_tp = 0.0 # num of true positive cases
+            labels_list = []
+            probs_list = []
+
+            for data in tqdm(dataloaders[phase]):
+                #print(data)
+                inputs,labels = data
+                if gpu:
+                    inputs, labels= Variable(inputs.cuda()),Variable(labels.cuda())
+                else:
+                    inputs, labels = Variable(inputs),Variable(labels)
+
+                optimizer.zero_grad()
+                outputs = model(inputs)
+                _, preds = torch.max(outputs.data, 1)
+                probs = outputs.data[:, 1]
+                loss = criterion(outputs, labels)
+
+                labels_list.extend(labels.data)
+                probs_list.extend(probs)
+
+                if phase == 'train':
+                    loss.backward()
+                    optimizer.step()
+
+                running_loss += loss.item() * inputs.size(0)
+                running_corrects += torch.sum(preds == labels.data)
+                running_tp += torch.sum((preds + labels.data) == 2)
+                dataset_sizes[phase] += len(labels)
+
+            epoch_loss = running_loss / dataset_sizes[phase]
+            epoch_acc = running_corrects.cpu().numpy() / dataset_sizes[phase]
+            epoch_sensitivity = running_tp.cpu().numpy() / dataset_sizes[phase]
+
+            performance = {'loss': epoch_loss, 'acc': epoch_acc, 'sensitivity': epoch_sensitivity, 'epoch': epoch, 'crossvalidation':crossvalidation_count,'phase': phase}
+            performance_hist = performance_hist.append(performance, ignore_index=True)
+            print('{} Loss: {:.4f} ACC: {:.4f}, Sensitivity:{:.4f}'.format(phase, epoch_loss, epoch_acc, epoch_sensitivity))
+
+
+            if phase == 'val':
+                if epoch_loss < epoch_loss_min:
+                    best_epoch = epoch
+                    best_crossvalidation=crossvalidation_count
+                    epoch_loss_min = epoch_loss
+                    best_acc = epoch_acc
+                    best_sensitivity = epoch_sensitivity
+                    torch.save(model, filename_model+"_%s"%str(crossvalidation_count))
+                    print('[INFO] save model after {} epoch of crossvalition {} to {}'.format(epoch,crossvalidation_count, filename_model+"_%s"%str(crossvalidation_count)))
+
+                if epoch_loss < epoch_loss_prev:
+                    uptrend = 0
+                    epoch_loss_prev = epoch_loss
+                else:
+                    uptrend += 1
+                    epoch_loss_prev = epoch_loss
+
+                if uptrend == max_uptrend:
+                    early_stopping = True
+                    print('[INFO] loss: {}, acc: {}, sensitivity: {}, AUROC: {}, AUPRC: {}, best_epoch: {}, total_epoch: {},crossvalidation: {}, phase: {}'.format(epoch_loss, best_acc, best_sensitivity, best_auroc, best_auprc, best_epoch, epoch,crossvalidation_count, phase))
+
+                if early_stopping:
+                    print('[INFO] early stop')
+                    break
+        if early_stopping:
+            break
+
+    time_elapsed = time.time()-start_time
+    print('Training completes in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
+    performance_hist.to_csv(filename_log+"_%s"%str(crossvalidation_count), sep='\t', index=False)
+    print('[INFO] performance_hist saved to {}'.format(filename_log))
+    print('[INFO] fine-tuned model saved to {}'.format(filename_model))
+
+    with open(filename_output+"_%s"%str(crossvalidation_count), 'w') as f:
+        f.write('Acc\tSensitivity\tAUROC\tAUPRC\n')
+        f.write('{:.4f}\t{:.4f}\n'.format(best_acc, best_sensitivity))
+        f.write('-'*10+'\n')
+        f.write('model_kwargs: {}\n'.format(model_kwargs))
+        f.write('train_kwargs: {}\n'.format(train_kwargs))
+        f.write('trainset: {}\n'.format(filename_train))
+        f.write('model: {}\n'.format(filename_model))
+        f.write('out: {}\n'.format(filename_output))
+        f.write('log: {}\n'.format(filename_log))
+        f.write('-'*10+'\n')
+    print('[INFO] resnet_2s2a model training output (with settings) saved to {}'.format(filename_output))
+
+    crossvalidation_count+=1

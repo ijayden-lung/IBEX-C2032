@@ -1,0 +1,12 @@
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J sequence_analysis_Hg38_GT_polyAdb3.2_K562_WT_REP2
+#SBATCH --output /ibex/scratch/projects/c2032/ENCODE/log/sequence_analysis_Hg38_GT_polyAdb3.2_K562_WT_REP2.log
+#SBATCH --time=72:00:00
+#SBATCH --mem=30G
+
+cd /home/zhouj0d/c2032/ENCODE
+
+python sequence_analysis.py --cell1 Hg38 --target1 GT --rep1 polyAdb3.2 --cell2 K562 --target2 WT --rep2 REP2
+

@@ -1,0 +1,54 @@
+#!/bin/bash
+#SBATCH --job-name=Join_Test
+#SBATCH --partition=batch
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --output=log.%J
+#SBATCH --time=1:00:00
+#SBATCH --mem=400G
+#SBATCH -a 0-39
+
+##SBATCH --dependency afterok:6686802_[1-100] 
+
+#source activate ML
+
+echo "This is job #${SLURM_ARRAY_JOB_ID}, task id ${SLURM_ARRAY_TASK_ID}"
+allsteps=(1 1 1 1 1 1)
+allstrands=("str2" "str1" "str2" "str1" "str2" "str1")
+allsigns=("+" "-" "+" "-" "+" "-")
+#allreps=("REP1" "REP1" "REP2" "REP2" "REP3" "REP3")
+allreps=("MERGE" "MERGE" "REP2" "REP2" "REP3" "REP3")
+#allchrs=("chr1" "chr2" "chr3" "chr4" "chr5" "chr6" "chr7" "chr8" "chr9" "chr10" "chr11" "chr12" "chr13" "chr14" "chr15" "chr16" "chr17" "chr18"  "chr19" "chrX")  
+allchrs=("chr1" "chr2" "chr3" "chr4" "chr5" "chr6" "chr7" "chr8" "chr9" "chr10" "chr11" "chr12" "chr13" "chr14" "chr15" "chr16" "chr17" "chr18"  "chr19" "chrX" "chr20" "chr21" "chr22")  
+#allchrs=("chr1" "chr2" "chr7" "chr11" "chr9" "chr5")
+for ((i=0;i<=119;i++))
+do
+	b=$(( $i % 2 ))
+	c=$(( $i / 2))
+	steps[$i]=${allsteps[$b]}
+	strands[$i]=${allstrands[$b]}
+	signs[$i]=${allsigns[$b]}
+	reps[$i]=${allreps[$b]}
+	chrs[$i]=${allchrs[$c]}
+done
+
+window=176
+step=${steps[$SLURM_ARRAY_TASK_ID]}
+strand=${strands[$SLURM_ARRAY_TASK_ID]}
+sign=${signs[$SLURM_ARRAY_TASK_ID]}
+rep=${reps[$SLURM_ARRAY_TASK_ID]}
+chr=${chrs[$SLURM_ARRAY_TASK_ID]}
+
+#ScanGenome=data/humanBrain.pAs.scanGenome.step${step}.${strand}.${rep}.${chr}.txt
+Trim="../DeeReCT-PolyARC_Join/data/bl6.pAs.scanGenome.step${step}.${strand}.${rep}.${chr}.Trimmed25.txt"
+#perl prepare_scanGenome.pl $ScanGenome $Trim $window $sign $chr $spe
+
+Data="Data/bl6.pAs.scanGenome.step${step}.${strand}.${rep}.${chr}.Trimmed25"
+Testid="bl6.pAs.scanGenome.step${step}.${strand}.${rep}.${chr}.Trimmed25.usage.37"
+
+#perl extract_coverage_from_scanGenome.pl $Trim 
+#python3 prep_test_data.py $Trim --out $Data
+python3 test.scanGenome.py ${Data}.npz Model/bl6.merge.usage.37.npz --testid $Testid

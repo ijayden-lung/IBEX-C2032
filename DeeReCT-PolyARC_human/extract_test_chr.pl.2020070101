@@ -1,0 +1,40 @@
+#!/usr/bin/perl -w
+
+my ($file) = @ARGV;
+#my $file = "data_bk/bl6.pAs.scanGenome.step1.str1.REP1.chr1.Trimmed10.txt";
+
+my $output = `wc -l $file`;
+my ($line_num) = split / /,$output;
+print "$line_num\n";
+open FILE,"$file" or die;
+<FILE>;
+my $previous_position = 0;
+while(<FILE>){
+	if($. > $line_num/2){
+		my (undef,undef,undef,$position) = split;
+		if($previous_position>0 && $position-$previous_position>200){
+			print "$position\n";
+			last;
+		}
+		$previous_position  = $position;
+	}
+}
+print "$previous_position\n";
+
+open ORI,"$file" or die;
+my $header = <ORI>;
+
+open TEST,">$file.test.txt" or die; 
+print TEST "$header";
+open TRAIN,">$file.train.txt" or die;
+print TRAIN "$header"; 
+while(<ORI>){
+	chomp;
+	my (undef,undef,undef,$position) = split;
+	if($position <= $previous_position){
+		print TRAIN "$_\n";
+	}
+	else{
+		print TEST "$_\n";
+	}
+}

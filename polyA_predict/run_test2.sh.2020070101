@@ -1,0 +1,32 @@
+#!/bin/bash
+#SBATCH --job-name=DeeReCT_PolyA
+#SBATCH --partition=batch
+#SBATCH --time=24:00:00
+#SBATCH --output=log.RcPara5
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --dependency=afterok:2499340
+#SBATCH --gres=gpu:1
+#SBATCH --constraint=[gpu]
+
+#source ~/.bash_aliases
+#rna_seq3
+#cd /home/longy/script/polyA_predict/
+
+
+for i in {401..500}
+do
+	name="Rc${i}"
+	#python3 train2.py model/Data_bl6.pAs.fibroblast.Rc.npz --out model/Train_$name --hparam model/BL_hparamRc1.npz #--newpara para/$name
+	#python3 train2.py model/Data_bl6.pAs.fibroblast.Rc.npz --out model/Train_$name  --newpara para/$name
+	python3 test2.py model/Data_bl6.pAs.fibroblast.Rc.npz model/Train_$name.npz --out model/Test_$name.txt
+	#python3 test2.py model/Data_all_negative.Rc.npz model/Train_$name.npz --out model/Test_neg_$name.txt
+	#rm model/Train_$name.npz
+done
+name='bl6.pAs.fibroblast.Rc'
+
+#python3 prep_data.py data/bl6.pAs.zhangbin.fibroblast.txt data/bl6.pAs.random.negative.txt model/Data_$name
+#python3 train.py model/Data_$name.npz --out model/Train_$name --hparam model/BLprop1_hparam.npz
+#python3 test.py model/Data_$name.npz model/Train_$name.npz #--out model/Test_$name.txt
+
+#python3 test.py /home/longy/workspace/DeeReCT-PolyA/original.npz   /home/longy/workspace/DeeReCT-PolyA/original.npz --out Test_origin.txt

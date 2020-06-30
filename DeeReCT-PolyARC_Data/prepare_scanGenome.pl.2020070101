@@ -1,0 +1,72 @@
+#!/usr/bin/perl -w
+
+my ($ScanGeomome,$Trim,$window,$srd,$chr,$spe) = @ARGV;
+$window--;
+my %chr;
+$chr = substr($chr,3);
+open REF,"/ibex/scratch/longy/cnda/ensembl/oneLine/$spe.$chr.fa";
+print "/ibex/scratch/longy/cnda/ensembl/oneLine/$spe.$chr.fa\n";
+$chr{"chr$chr"} = <REF>;
+
+=pod
+my %real_pas;
+open FILE,$Pas;
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$chr,$pos,$srd) = (split)[0,2,3,4];
+	for(my$i=0;$i<=$window;$i++){
+		my $down = $i;
+		$down = $window-$i if $srd eq "-";
+		if(exists $real_pas{"$chr:$srd"}->{$pos-$i}){
+			$real_pas{"$chr:$srd"}->{$pos-$i} .= ",$pas_id-pos$down";
+		}
+		else{
+			$real_pas{"$chr:$srd"}->{$pos-$i} = "$pas_id-pos$down";
+		}
+	}
+}
+=cut
+
+my @motif;
+if($spe eq "mm10"){
+	@motif = qw/AAGAAA AATAAA AATACA AATAGA AATATA AATGAA ACTAAA AGTAAA ATTAAA CATAAA GATAAA TATAAA TTTAAA/;
+}
+elsif($spe eq "hg38"){
+	@motif = qw/AAGAAA AATAAA AATACA AATAGA AATATA ACTAAA AGTAAA ATTAAA CATAAA  GATAAA TATAAA AAAAAG/;
+}
+
+open FILE,$ScanGeomome;
+open OUT,">$Trim";
+print OUT "pas_id\tpas_type\tchr\tpos\tstrand\tsymbol\tusage\tsequence\n";
+while(<FILE>){
+	chomp;
+	my @data = split;
+	my $trimMean = $data[1];
+	next if $trimMean < 10;
+	my $coor = $data[2];
+	my @cov = @data[3..$#data];
+	my ($chr,$str,$end) = split /\:|\-/,$coor;
+	next if !defined $chr{$chr};
+	my $pos = $str+100;
+	my $sequence = substr($chr{$chr},$str-1,$end-$str); ####$end-$str original. Here $end is open
+	next if !defined $sequence;
+	my $pas_id = $coor;
+	#if(exists $real_pas{"$chr:$srd"}->{$str}){
+	#	$pas_id = $real_pas{"$chr:$srd"}->{$str};
+	#}
+	if($srd eq "-"){
+		$sequence =~ tr/ATCG/TAGC/;
+		$sequence = reverse $sequence;
+		@cov = reverse @cov;
+		$pos = $end-100;
+	}
+	my $motifNum = 0;
+	my $subseq = substr($sequence,63,32);
+	foreach my $motif(@motif){
+		$motifNum += ($subseq =~ s/$motif/$motif/g);
+	}
+	$pas_type = "motif=$motifNum";
+	print OUT "$pas_id\t$pas_type\t$chr\t$pos\t$srd\tNone\t1\t$sequence\t",join("\t",@cov),"\n";
+}
+

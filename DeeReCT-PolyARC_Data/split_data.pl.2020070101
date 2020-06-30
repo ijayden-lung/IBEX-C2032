@@ -1,0 +1,47 @@
+#!/usr/bin/perl -w
+
+open FILE,"data/bl6.pAs.scanGenome.step1.merge.Trimmed10.txt";
+my $header = <FILE>;
+open OUT1,">data/bl6.pAs.scanGenome.step1.Trimmed10.merge.split1.txt";
+open OUT2,">data/bl6.pAs.scanGenome.step1.Trimmed10.merge.split2.txt";
+open OUT3,">data/bl6.pAs.scanGenome.step1.Trimmed10.merge.split3.txt";
+open OUT4,">data/bl6.pAs.scanGenome.step1.Trimmed10.merge.split4.txt";
+open OUT5,">data/bl6.pAs.scanGenome.step1.Trimmed10.merge.split5.txt";
+open OUT6,">data/bl6.pAs.scanGenome.step1.Trimmed10.merge.split6.txt";
+open OUT7,">data/bl6.pAs.scanGenome.step1.Trimmed10.merge.split7.txt";
+open OUT8,">data/bl6.pAs.scanGenome.step1.Trimmed10.merge.split8.txt";
+open OUT9,">data/bl6.pAs.scanGenome.step1.Trimmed10.merge.split9.txt";
+open OUT10,">data/bl6.pAs.scanGenome.step1.Trimmed10.merge.split10.txt";
+
+while(<FILE>){
+	if($.<1238964){
+		print OUT1 $_;
+	}
+	elsif($.<2*1238964){
+		print OUT2 $_;
+	}
+	elsif($.<3*1238964){
+		print OUT3 $_;
+	}
+	elsif($.<4*1238964){
+		print OUT4 $_;
+	}
+	elsif($.<5*1238964){
+		print OUT5 $_;
+	}
+	elsif($.<6*1238964){
+		print OUT6 $_;
+	}
+	elsif($.<7*1238964){
+		print OUT7 $_;
+	}
+	elsif($.<8*1238964){
+		print OUT8 $_;
+	}
+	elsif($.<9*1238964){
+		print OUT9 $_;
+	}
+	else{
+		print OUT10 $_;
+	}
+}

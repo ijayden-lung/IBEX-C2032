@@ -1,0 +1,56 @@
+#!/usr/bin/perl -w
+use List::Util qw(first max maxstr min minstr reduce shuffle sum shuffle) ;
+
+my $file = "train_data/bl6.pAs.positive.REP1.newround0.txt.bk";
+open $file,"$file" or die;
+<$file>;
+my %pas_id;
+my %real_pas;
+while(<$file>){
+	chomp;
+	my ($pas_id,undef,undef,undef,undef,$symbol) = split;
+	my ($chr,$start,$end) = split /\:|\-/,$pas_id;
+	my @data = split;
+	my $sum=0;
+	my $count=0;
+	for(my$i=8;$i<@data;$i++){
+		if($data[$i]>0){
+			$sum += $data[$i];
+			$count++;
+		}
+	}
+	my $trimMean = $sum/$count;
+	if($symbol =~ /Dn/){
+		my $num = substr($symbol,2);
+		$start += $num;
+		$end += $num;
+	}
+	elsif($symbol =~ /Up/){
+		my $num = substr($symbol,2);
+		$start -= $num;
+		$end -= $num;
+	}
+	$pas_id{$pas_id} = "$chr:$start-$end";
+	next if $trimMean < 10;
+	$real_pas{"$chr:$start-$end"}  = 0;
+}
+
+
+
+
+open $file,"$file" or die;
+my $header = <$file>;
+open OUT,">train_data/bl6.pAs.positive.REP1.newround0.txt";
+print OUT "$header";
+while(<$file>){
+	chomp;
+	my ($pas_id,undef,undef,undef,undef,$symbol) = split;
+	my ($chr,$start,$end) = split /\:|\-/,$pas_id;
+	if(exists $real_pas{$pas_id{$pas_id}}){
+		print OUT "$_\n";
+	}
+}
+
+
+
+

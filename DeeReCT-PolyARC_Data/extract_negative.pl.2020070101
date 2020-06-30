@@ -1,0 +1,47 @@
+#!/usr/bin/perl -w
+
+my %pas;
+open FILE,"awk '(\$3 == \"three_prime_utr\")' /home/longy/cnda/ensembl/Homo_sapiens.GRCh38.95.gtf |";
+while(<FILE>){
+	chomp;
+	my ($chr,$source,$type,$start,$end,undef,$strand) = split;
+	if($strand eq "+"){
+		$pas{"chr$chr"}->{$strand}->{$end} = '';
+	}
+	else{
+		$pas{"chr$chr"}->{$strand}->{$start} = '';
+	}
+}
+
+
+
+sub overlap{
+	my ($pos,$ground_truth) = @_;
+	my $overlap=0;;
+	foreach my $turth_pos ( keys %$ground_truth){
+		if(abs($pos-$turth_pos)<100){
+			$overlap++;
+		}
+	}
+	return $overlap;
+}
+
+
+
+open FILE,"human.pAs.brain.scanGenome.stepp11.all.txt";
+my $header = <FILE>;
+open OUT,">human.pAs.brain.negative.txt";
+print OUT "$header";
+while(<FILE>){
+	chomp;
+	if(rand()<0.0033){
+		my ($pas_id,$motif,$chr,$pos,$strand) = split;
+		next if $pas_id =~ /ENS/;
+		if($motif eq "motif=0"){
+			print OUT "$_\n" if rand()<0.1 &&  &overlap($pos,$pas{$chr}->{$strand}) ==0;
+		}
+		else{
+			print OUT "$_\n" if &overlap($pos,$pas{$chr}->{$strand}) ==0;
+		}
+	}
+}

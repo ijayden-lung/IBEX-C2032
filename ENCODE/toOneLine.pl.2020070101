@@ -1,0 +1,16 @@
+#!/usr/bin/perl -w
+open FILE, "Homo_sapiens.GRCh38.dna.primary_assembly.fa";
+my $sequence;
+my $chr;
+while(<FILE>){
+	chomp;
+	if($_ =~ />/){
+		($chr) = split;
+		print "$chr\n";
+		$chr =~ s/\>//g;
+		open OUT,">oneLine/hg38.$chr.fa";
+	}
+	else{
+		print OUT;
+	}
+}
