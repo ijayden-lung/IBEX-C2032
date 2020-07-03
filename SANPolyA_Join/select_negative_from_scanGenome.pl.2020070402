@@ -1,0 +1,74 @@
+#!/usr/bin/perl -w
+
+#my $file = "data/bl6.pAs.scanGenome.step1.str1.MERGE.chr2.Trimmed10.txt";
+#my $CHR = "chr2";
+#my $STR = "-";
+my ($file,$CHR,$SRD) = @ARGV;
+
+my %true_pas;
+open FILE,"usage_data/bl6.pAs.tianbin.usage.train.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$srd) = split;
+	next if $chr ne $CHR;
+	next if $srd ne $SRD;
+	$true_pas{$pos} = '';
+}
+
+open FILE,"usage_data/bl6.pAs.zhangbin.usage.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$srd) = split;
+	next if $chr ne $CHR;
+	next if $srd ne $SRD;
+	$true_pas{$pos} = '';
+}
+my @sort_true_pas = sort{$a<=>$b} keys %true_pas;
+
+open FILE,"$file";
+my $header = <FILE>;
+
+($file) = (split /\//,$file)[-1];
+$file = "data/$file";
+open OUT,">$file.negative";
+#print OUT "$header";
+my $index = 0;
+while(<FILE>){
+	chomp;
+	my @data = split /\t/;
+	my ($pas_id,$pas_type,$chr,$pos,$srd) =  @data[0..4];
+	my $p = 0.00097;
+	if(rand() < $p){
+		my $accept = 1;
+		my $sum = 0;
+		my $count=0;
+		for(my$i=8;$i<@data;$i++){
+			if($data[$i]>0){
+				$sum+= $data[$i];
+				$count++;
+			}
+		}
+		my $trimMean = $sum/$count;
+		next if $trimMean < 10;
+		for(my$i=$index;$i<@sort_true_pas;$i++){
+			if($sort_true_pas[$i] - $pos < -50){
+				$index = $i;
+				next;
+			}
+			elsif($sort_true_pas[$i] - $pos < 50){
+				$accept = 0;
+			}
+			else{
+				last;
+			}
+		}
+		if($accept == 1){
+			print OUT "$_\n";
+		}
+	}
+}
+
+
+
