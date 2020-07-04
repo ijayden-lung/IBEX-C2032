@@ -1,0 +1,7 @@
+#!/bin/bash
+
+SAMPLE="BL6_REP1"
+BAM="/home/longy/workspace/polyA_predict/STAR/BL6_REP1/Aligned.sortedByCoord.out.bam"
+
+#./src/get_junction_counts.py -i $BAM -s fr-secondstrand -o ./junctions/$SAMPLE.bed
+bedtools genomecov -trackline -bg -split -ibam $BAM -g /home/longy/cnda/ensembl/Mus_musculus.GRCm38.dna.primary_assembly.fa > ./bedgraph/$SAMPLE.bedgraph
