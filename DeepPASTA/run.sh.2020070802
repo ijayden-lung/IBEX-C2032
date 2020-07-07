@@ -1,0 +1,37 @@
+#!/bin/bash
+#SBATCH --job-name=RNA_Shape
+#SBATCH --partition=batch
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --output=LOG/log.%J
+#SBATCH --time=1:00:00
+#SBATCH --mem=10G
+#SBATCH --gres=gpu:1
+######SBATCH -a 0-39
+##SBATCH --dependency afterok:6686802_[1-100] 
+
+#source activate ML
+
+file1="data/bl6.pAs.negative.REP1.newround0.txt"
+file2="data/bl6.pAs.negative.REP1.newround0.fa"
+file3="data/bl6.pAs.negative.REP1.newround0.secondart.txt"
+file4="data/bl6.pAs.negative.REP1.newround0.combine.txt"
+file5="data/bl6.pAs.negative.REP1.newround0.filter.txt"
+file6="data/bl6.pAs.negative.REP1.newround0.shape.txt"
+
+#perl generate_fa.pl $file1 $file2
+
+./RNAshapes -f $file2 -s -c 5 -t 1 -w 100 -W 100 -O 'D{%s\n}' >$file3
+#rm $file2
+
+python combining_substructure.py -i $file3 -o $file4
+rm $file3
+
+python filtering_number_of_ss.py -n 3 -i $file4 -o $file5
+rm $file4
+
+python shape_assign_per_nucleotide.py -c 3 -i $file5 -o $file6
+rm  $file5

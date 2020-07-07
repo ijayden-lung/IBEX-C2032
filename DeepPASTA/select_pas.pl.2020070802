@@ -1,0 +1,28 @@
+#!/usr/bin/perl -w
+
+my ($input,$CHR,$SRD) = @ARGV;
+
+my %hash;
+open FILE,"/home/longy/project/SANPolyA_Join/data/bl6.pAs.positive.REP1.newround0.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand) = split;
+	if($chr eq "$CHR" && $strand eq "$SRD"){
+		$hash{$pos} = '';
+	}
+}
+
+open FILE,"$input";
+<FILE>;
+my $output = $input;
+$output =~ s/scanGenome_data/data/g;
+open OUT,">$output";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand) = split;
+	if(exists $hash{$pos}){
+		print OUT "$_\n";
+	}
+}
+
