@@ -1,0 +1,82 @@
+#!/bin/bash
+#SBATCH --job-name=TB_Train
+#SBATCH --partition=batch
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --output=LOG/log.%J
+#SBATCH --time=3:00:00
+#SBATCH --mem=14G
+#SBATCH --gres=gpu:1
+#SBATCH -a 0-5
+##SBATCH --dependency afterok:6686802_[1-100] 
+
+#source activate ML
+
+echo "This is job #${SLURM_ARRAY_JOB_ID}, task id ${SLURM_ARRAY_TASK_ID}"
+rep="REP1"
+allsteps=(1 1 1 1 1 1)
+allstrands=("str2" "str1" "str2" "str1" "str2" "str1")
+allsigns=("+" "-" "+" "-" "+" "-")
+#allchrs=("chr1" "chr2" "chr3"  "chr5" "chr7" "chr8" "chr9" "chr10" "chr11" "chr12" "chr13" "chr14" "chr15" "chr16" "chr17" "chr18"  "chr19" "chrX")  
+allchrs=("chr1" "chr2" "chr3" "chr4" "chr5" "chr6" "chr7" "chr8" "chr9" "chr10" "chr11" "chr12" "chr13" "chr14" "chr15" "chr16" "chr17" "chr18"  "chr19" "chrX")  
+#allchrs=("chr1" "chr2" "chr3" "chr4" "chr5" "chr6" "chr7" "chr8" "chr9" "chr10" "chr11" "chr12" "chr13" "chr14" "chr15" "chr16" "chr17" "chr18"  "chr19" "chrX" "chr20" "chr21" "chr22")  
+#allchrs=("chr1" "chr5" "chr9" "chr11" "chr7" "chr2")
+allchrs=("chr2" "chr7" "chr11")
+for ((i=0;i<=119;i++))
+do
+	b=$(( $i % 2 ))
+	c=$(( $i / 2))
+	steps[$i]=${allsteps[$b]}
+	strands[$i]=${allstrands[$b]}
+	signs[$i]=${allsigns[$b]}
+	chrs[$i]=${allchrs[$c]}
+done
+
+window=176
+step=${steps[$SLURM_ARRAY_TASK_ID]}
+strand=${strands[$SLURM_ARRAY_TASK_ID]}
+sign=${signs[$SLURM_ARRAY_TASK_ID]}
+chr=${chrs[$SLURM_ARRAY_TASK_ID]}
+
+
+WIG="/home/longy/workspace/polyA_predict/STAR/BL6_${rep}/Signal.Unique.${strand}.out.${chr}.wig"
+ScanGenome="scanGenome_data/bl6.pAs.scanGenome.step${step}.${strand}.${rep}.${chr}.Trimmed10.txt"
+
+#perl extract_test_chr.pl data_bk/bl6.pAs.scanGenome.step${step}.${strand}.${rep}.${chr}.Trimmed10.txt
+
+spe=mm10
+#perl generate_slidingWidnows.pl $WIG $ScanGenome $window $step $sign $chr $spe
+
+
+Trim="scanGenome_data/bl6.pAs.scanGenome.step${step}.${strand}.${rep}.${chr}.UpstreamTrimmed10.txt.test.txt"
+
+#perl trimed_upstream_readcount.pl ../DeeReCT-PolyARC_Join/data_bk/bl6.pAs.scanGenome.step${step}.${strand}.${rep}.${chr}.Trimmed10.txt.test.txt $Trim
+
+
+
+perl extract_coverage_from_scanGenome.db.pl $Trim
+#perl extract_coverage_from_scanGenome.pl $Trim 
+#perl select_negative_from_scanGenome.pl $Trim $chr $sign
+#perl select_exon_from_scanGenome.pl $Trim $chr $sign
+#perl select_utr_from_scanGenome.pl $Trim $chr $sign
+
+
+
+#########TRAIN
+####May 13
+round='newround0'
+round2='newround1'
+#python3 prep_data.py data/bl6.pAs.positive.REP1.${round}.txt data/bl6.pAs.negative.REP1.${round}.txt --out Data/bl6.pAs.${rep}.${round}.npz
+
+#python3 train.py Data/bl6.pAs.${rep}.${round}.npz  --trainid bl6.pAs.${rep}.${round}
+
+
+bestEpoch=0097
+#python3 evaluate.py --model Model/bl6.pAs.REP1.${round}-${bestEpoch}.ckpt  --data data/bl6.pAs.positive.REP1.${round}.txt  --out predict/bl6.pAs.positive.REP1.${round}.txt
+
+#perl change_positive.pl data/bl6.pAs.positive.REP1.${round}.txt predict/bl6.pAs.positive.REP1.${round}.txt data/bl6.pAs.positive.REP1.${round2}.txt data/bl6.pAs.positive.REP1.abondon.${round1}.txt
+
+
