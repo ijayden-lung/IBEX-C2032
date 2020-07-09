@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+
+import numpy as np
+import os
+import sys
+import argparse
+#from supporting import *
+
+def get_data(data_root, label):
+	"""
+	Process all files in the input directory to read sequences.
+	Sequences are encoded with one-hot.
+	data_root: input directory
+	label: the label (True or False) for the sequences in the input directory
+	"""
+	data1 = [] # seq
+	data2 = [] # shape1
+	data3 = [] # shape2
+	data4 = [] # shape3
+
+	with open(data_root,'r') as f:
+		for line in f:
+			line=line.rstrip('\n').split('\t')
+			if (line[0]!='#pas_id')&(line[0]!='pas_id'):
+				SEQUENCE=list(line[7])
+				SEQUENCE=SEQUENCE[0:176]
+				alphabet = np.array(['A', 'T', 'C', 'G'])
+				seq = np.array(SEQUENCE, dtype = '|U1').reshape(-1, 1)
+				seq_data = (seq == alphabet).astype(np.float32)
+				data1.append(seq_data)
+				COVERAGE=[int(float(x)) for x in line[8:184]]
+				data2.append(COVERAGE)
+
+	data1 = np.stack(data1).reshape([-1, 176, 4])
+	data2 = np.stack(data2).reshape([-1, 176, 1])
+
+	if label == "Positive":
+		labels = np.ones(data1.shape[0])
+	else:
+		labels = np.zeros(data1.shape[0])
+	return data1, data2,labels
+
+
+def shuffle(dataset1, dataset2,labels, randomState=None):
+	"""
+	Shuffle sequences and labels jointly
+	"""
+	if randomState is None:
+		permutation = np.random.permutation(labels.shape[0])
+	else:
+		permutation = randomState.permutation(labels.shape[0])
+	shuffled_data1 = dataset1[permutation,:,:]
+	shuffled_data2 = dataset2[permutation,:,:]
+	shuffled_labels = labels[permutation]
+	return shuffled_data1, shuffled_data2,  shuffled_labels
+
+
+def data_split(pos_data1, pos_data2, pos_labels, neg_data1, neg_data2, neg_labels, num_folds, split):
+	"""
+	Split the dataset into num_folds folds.
+	Then split train, valid, and test sets according to the input dict split.
+	"""
+	pos_data1_folds = np.array_split(pos_data1, num_folds)
+	pos_data2_folds = np.array_split(pos_data2, num_folds)
+	neg_data1_folds = np.array_split(neg_data1, num_folds)
+	neg_data2_folds = np.array_split(neg_data2, num_folds)
+	pos_label_folds = np.array_split(pos_labels, num_folds)
+	neg_label_folds = np.array_split(neg_labels, num_folds)
+
+	train_pos_data1 = np.concatenate([pos_data1_folds[i] for i in split['train']], axis=0)
+	train_pos_data2 = np.concatenate([pos_data2_folds[i] for i in split['train']], axis=0)
+	train_pos_labels = np.concatenate([pos_label_folds[i] for i in split['train']], axis=0)
+	valid_pos_data1 = np.concatenate([pos_data1_folds[i] for i in split['valid']], axis=0)
+	valid_pos_data2 = np.concatenate([pos_data2_folds[i] for i in split['valid']], axis=0)
+	valid_pos_labels = np.concatenate([pos_label_folds[i] for i in split['valid']], axis=0)
+
+	train_neg_data1 = np.concatenate([neg_data1_folds[i] for i in split['train']], axis=0)
+	train_neg_data2 = np.concatenate([neg_data2_folds[i] for i in split['train']], axis=0)
+	train_neg_labels = np.concatenate([neg_label_folds[i] for i in split['train']], axis=0)
+	valid_neg_data1 = np.concatenate([neg_data1_folds[i] for i in split['valid']], axis=0)
+	valid_neg_data2 = np.concatenate([neg_data2_folds[i] for i in split['valid']], axis=0)
+	valid_neg_labels = np.concatenate([neg_label_folds[i] for i in split['valid']], axis=0)
+
+	train_data1 = np.concatenate((train_pos_data1, train_neg_data1), axis=0)
+	train_data2 = np.concatenate((train_pos_data2, train_neg_data2), axis=0)
+	valid_data1 = np.concatenate((valid_pos_data1, valid_neg_data1), axis=0)
+	valid_data2 = np.concatenate((valid_pos_data2, valid_neg_data2), axis=0)
+	train_labels = np.concatenate((train_pos_labels, train_neg_labels), axis=0)
+	valid_labels = np.concatenate((valid_pos_labels, valid_neg_labels), axis=0)
+
+	data = {}
+	data['train_dataset1'],data['train_dataset2'], data['train_labels'] = shuffle(train_data1, train_data2, train_labels)
+	data['valid_dataset1'],data['valid_dataset2'], data['valid_labels'] = shuffle(valid_data1, valid_data2, valid_labels)
+
+	if 'test' in split:
+		test_pos_data1 = np.concatenate([pos_data1_folds[i] for i in split['test']], axis=0)
+		test_pos_data2 = np.concatenate([pos_data2_folds[i] for i in split['test']], axis=0)
+		test_pos_labels = np.concatenate([pos_label_folds[i] for i in split['test']], axis=0)
+		test_neg_data1 = np.concatenate([neg_data1_folds[i] for i in split['test']], axis=0)
+		test_neg_data2 = np.concatenate([neg_data2_folds[i] for i in split['test']], axis=0)
+		test_neg_labels = np.concatenate([neg_label_folds[i] for i in split['test']], axis=0)
+		test_data1 = np.concatenate((test_pos_data1, test_neg_data1), axis=0)
+		test_data2 = np.concatenate((test_pos_data2, test_neg_data2), axis=0)
+		test_labels = np.concatenate((test_pos_labels, test_neg_labels), axis=0)
+		data['test_dataset1'], data['test_dataset2'], data['test_labels'] = shuffle(test_data1, test_data2, test_labels)
+
+	return data
+
+
+def produce_dataset(pos_path, neg_path, seed=0):
+	pos_data, pos_labels = get_data(pos_path, True)
+	neg_data, neg_labels = get_data(neg_path, False)
+	randomState = np.random.RandomState(seed)
+	pos_data, pos_labels = shuffle(pos_data, pos_labels, randomState)
+	neg_data, neg_labels = shuffle(neg_data, neg_labels, randomState)
+	print('Positive:', pos_data.shape, pos_labels.shape)
+	print('Negative:', neg_data.shape, neg_labels.shape)
+	return pos_data, pos_labels, neg_data, neg_labels
+
+
+
+### Argument Parser
+parser = argparse.ArgumentParser()
+parser.add_argument('pos_path', help='Directory of files containing positive data')
+parser.add_argument('neg_path', help='Directory of files containing negative data')
+parser.add_argument('--out', help='Save the processed dataset to')
+parser.add_argument('--nfolds', default=5, type=int, help='Seperate the data into how many folds')
+opts = parser.parse_args()
+
+############Global Parameters ############
+NUM_FOLDS = opts.nfolds
+SPLIT_DICT = {
+	'train': [i for i in range(NUM_FOLDS-1)],
+	'valid': [NUM_FOLDS-1],
+}
+############Global  Parameters ############
+
+pos_data1, pos_data2, pos_labels = get_data(opts.pos_path, 'Positive')
+neg_data1, neg_data2, neg_labels = get_data(opts.neg_path, 'Negative')
+randomState = np.random.RandomState(0)
+pos_data1, pos_data2,pos_labels = shuffle(pos_data1,pos_data2, pos_labels, randomState)
+neg_data1, neg_data2,neg_labels = shuffle(neg_data1,neg_data2, neg_labels, randomState)
+
+dataset = data_split(pos_data1, pos_data2,pos_labels,  neg_data1,neg_data2, neg_labels, NUM_FOLDS, SPLIT_DICT)
+print('Size of training dataset: %d'%dataset['train_labels'].shape[0])
+print('Size of validation dataset: %d'%dataset['valid_labels'].shape[0])
+#print('Size of test dataset: %d\n'%dataset['test_labels'].shape[0])
+
+
+np.savez(opts.out, **dataset)
+print('Finish writing dataset to %s'%opts.out)
+

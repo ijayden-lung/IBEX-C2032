@@ -1,0 +1,21 @@
+#!/usr/bin/perl -w
+
+open FILE,"bl6.pAs.raw2.tianbin.txt";
+<FILE>;
+my %hash;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif,$ave_diff) = split;
+	$hash{$pas_id} = '' if $usage>0.2;
+}
+
+open FILE,"bl6.pAs.tianbin.usage.train.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif,$ave_diff) = split;
+	if($usage>0.2 && !exists $hash{$pas_id}){
+		print "$_\n";
+	}
+}
+
