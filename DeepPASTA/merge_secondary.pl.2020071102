@@ -1,0 +1,26 @@
+#!/usr/bin/perl -w
+my $pas_id = '';
+my %hash;
+open FILE,"data/bl6.pAs.negative.REP1.newround0.shape.txt";
+while(<FILE>){
+	chomp;
+	if($_ =~ />/){
+		$pas_id = $_;
+		$pas_id =~ s/>//g;
+	}
+	else{
+		$hash{$pas_id} .= "\t$_";
+	}
+}
+
+open FILE,"data/bl6.pAs.negative.REP1.newround0.txt2";
+my $header = <FILE>;
+chomp $header;
+open OUT,">data/bl6.pAs.negative.REP1.secround0.txt";
+print OUT "$header\tshape1\tshape2\tshape3\n";
+while(<FILE>){
+	chomp;
+	my @data = split;
+	print OUT join("\t",@data[0..7]),$hash{$data[0]},"\n";
+}
+

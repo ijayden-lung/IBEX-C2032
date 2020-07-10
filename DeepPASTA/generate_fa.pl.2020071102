@@ -1,0 +1,11 @@
+#!/usr/bin/perl -w
+
+my ($INP,$OUT) = @ARGV;
+open FILE,"$INP";
+open OUT,">$OUT";
+while(<FILE>){
+	chomp;
+	next if $_ =~ /pas/;
+	my ($pas_id,$sequence) = (split)[0,7];
+	print OUT ">$pas_id\n$sequence\n";
+}
