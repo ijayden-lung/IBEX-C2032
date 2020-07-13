@@ -1,0 +1,31 @@
+#!/bin/bash
+#SBATCH --job-name=mountainClimber
+#SBATCH --partition=batch
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --output=LOG/log.%J
+#SBATCH --time=1:00:00
+#SBATCH --mem=140G
+
+
+####SBATCH --gres=gpu:1
+######SBATCH -a 0-39
+##SBATCH --dependency afterok:6686802_[1-100] 
+
+SAMPLE="BL6_REP1.NORM"
+BAM="/home/longy/workspace/polyA_predict/STAR/BL6_REP1/Aligned.sortedByCoord.out.bam"
+CHROM="hg38.chrom.sizes"
+GTF="/home/longy/cnda/gencode/gencode.vM25.primary_assembly.annotation.gtf"
+
+#./src/get_junction_counts.py -i $BAM -s fr-secondstrand -o ./junctions/$SAMPLE.bed
+#bedtools genomecov -trackline -bg -split -ibam $BAM -g /home/longy/cnda/STAR_INDEX/mm10len100/chrNameLength.txt -strand +  > ./bedgraph/$SAMPLE.+.bedgraph
+#bedtools genomecov -trackline -bg -split -ibam $BAM -g $CHROM -strand -  > ./bedgraph/$SAMPLE.-.bedgraph
+
+#python ./src/mountainClimberTU.py -b ./bedgraph/$SAMPLE.+.bedgraph -j ./junctions/$SAMPLE.bed -s 1 -g $CHROM  -o mountainClimberTU/${SAMPLE}_tu.+.bed
+
+#python ./src/mountainClimberTU.py -b ./bedgraph/$SAMPLE.-.bedgraph -j ./junctions/$SAMPLE.bed -s -1 -g $CHROM  -o mountainClimberTU/${SAMPLE}_tu.-.bed
+
+python ./src/merge_tus.py -i ./mountainClimberTU/BL6_REP1.NORM_tu.+.bed --ss y -g $GTF  -o tus_merged
