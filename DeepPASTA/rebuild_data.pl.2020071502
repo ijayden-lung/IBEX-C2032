@@ -1,0 +1,25 @@
+#!/usr/bin/perl -w
+my ($data,$secondary,$out) = @ARGV;
+
+
+my %hash;
+open FILE,"$secondary";
+my $pas_id = '';
+while(<FILE>){
+	chomp;
+	if($_ =~ />/){
+		$pas_id = substr($_,1);
+	}
+	else{
+		$hash{$pas_id} .= "\t$_";
+	}
+}
+
+
+
+
+open FILE,"$data";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$seq) = split;
+	$hash{$pas_id} = $
