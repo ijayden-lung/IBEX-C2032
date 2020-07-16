@@ -1,0 +1,92 @@
+#!/bin/bash
+#SBATCH --job-name=RNA_Shape
+#SBATCH --partition=batch
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --output=LOG/log.%J
+#SBATCH --time=24:00:00
+#SBATCH --mem=1000G
+#SBATCH -a 0-39
+##SBATCH --gres=gpu:1
+##SBATCH --dependency afterok:6686802_[1-100] 
+
+:<<BL
+str1 chr1:172201350-172201549   #Finished remove
+str1 chr5:139775472-139775671   #Finished remove
+str2 chr1:195036816-195037015	#Finished remove
+str2 chr4:152050577-152050776	#Finished remove
+str2 chr5:135641375-135641574   #Finished remove
+str2 chr6:140549145-140549344   #Finished remove
+str2 chr8:125745334-125745533	#Fished remove
+str2 chr9:121734135-121734334 #Finished Remove
+BL
+
+echo "This is job #${SLURM_ARRAY_JOB_ID}, task id ${SLURM_ARRAY_TASK_ID}"
+rep="REP1"
+allsteps=(1 1 1 1 1 1)
+allstrands=("str2" "str1" "str2" "str1" "str2" "str1")
+allsigns=("+" "-" "+" "-" "+" "-")
+allchrs=("chr1" "chr2" "chr3" "chr4" "chr5" "chr6" "chr7" "chr8" "chr9" "chr10" "chr11" "chr12" "chr13" "chr14" "chr15" "chr16" "chr17" "chr18"  "chr19" "chrX")  
+#allchrs=("chr2" "chr3" "chr7" "chr10" "chr11" "chr12" "chr13" "chr14" "chr15" "chr16" "chr17" "chr18"  "chr19" "chrX")  
+
+#allchrs=("chr1" "chr4" "chr5" "chr6" "chr8" "chr9") 
+#allchrs=("chr2" "chr7" "chr11")
+for ((i=0;i<=119;i++))
+do
+	b=$(( $i % 2 ))
+	c=$(( $i / 2))
+	steps[$i]=${allsteps[$b]}
+	strands[$i]=${allstrands[$b]}
+	signs[$i]=${allsigns[$b]}
+	chrs[$i]=${allchrs[$c]}
+done
+
+window=200
+step=${steps[$SLURM_ARRAY_TASK_ID]}
+strand=${strands[$SLURM_ARRAY_TASK_ID]}
+sign=${signs[$SLURM_ARRAY_TASK_ID]}
+chr=${chrs[$SLURM_ARRAY_TASK_ID]}
+
+
+ScanGenome="scanGenome_data/bl6.pAs.scanGenome.step${step}.${strand}.${rep}.${chr}.UpstreamTrimmed10.txt"
+#ScanGenome="scanGenome_data/bl6.pAs.scanGenome.step1.str1.REP1.chr5.UpstreamTrimmed10.txt"
+
+#ScanGenome="data/bl6.pAs.negative.REP1.newround0.txt"
+
+file1=${ScanGenome}
+file2=${ScanGenome}.fa
+file3=${ScanGenome}.secondary
+file4=${ScanGenome}.combine
+file5=${ScanGenome}.filter
+file6=${ScanGenome}.shape
+file7=${ScanGenome}.merge
+
+
+#perl generate_fa.pl $file1 $file2
+
+#./RNAshapes -f $file2 -s -c 5 -t 1 -w 100 -W 100 -O 'D{%s\n}' >$file3
+#rm $file2
+
+
+#python combining_substructure.pipline.py -i $file3 | python filtering_number_of_ss.pipeline.py -o $file5 -n 3
+#rm $file3
+
+#python combining_substructure.py -i $file3 -o $file4
+#rm $file3
+
+#python filtering_number_of_ss.py -n 3 -i $file4 -o $file5
+#rm $file4
+
+#python shape_assign_per_nucleotide.py -c 3 -i $file5 -o $file6
+#rm  $file5
+
+#cat scanGenome_data/bl6.pAs.scanGenome.step1.str2.REP1.chr9.UpstreamTrimmed10.txt.shape scanGenome_data_supp/bl6.pAs.scanGenome.step1.str2.REP1.chr9.UpstreamTrimmed10.txt.shape >bl6.pAs.scanGenome.step1.str2.REP1.chr9.UpstreamTrimmed10.txt.shape 
+#wc -l scanGenome_data/bl6.pAs.scanGenome.step1.str2.REP1.chr9.UpstreamTrimmed10.txt
+#wc -l bl6.pAs.scanGenome.step1.str2.REP1.chr9.UpstreamTrimmed10.txt.shape
+
+
+
+perl rebuild_data.pl $file1 $file6 $file7
