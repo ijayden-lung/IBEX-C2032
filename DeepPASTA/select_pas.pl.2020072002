@@ -1,0 +1,30 @@
+#!/usr/bin/perl -w
+
+my ($previous,$input,$CHR,$SRD,$type) = @ARGV;
+
+my %hash;
+open FILE,"$previous";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol) = split;
+	if($chr eq "$CHR" && $strand eq "$SRD"){
+		$hash{$pos} = $symbol;
+	}
+}
+
+open FILE,"$input";
+<FILE>;
+my $output = $input;
+$output =~ s/scanGenome_data/data/g;
+#$output =~ s/Trimmed10/UpstreamTrimmed10/g;
+open OUT,">$output.$type";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand) = split;
+	if(exists $hash{$pos}){
+		$_ =~ s/None/$hash{$pos}/;
+		print OUT "$_\n";
+	}
+}
+
