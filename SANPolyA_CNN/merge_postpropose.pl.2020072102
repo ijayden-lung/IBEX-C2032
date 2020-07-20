@@ -1,0 +1,50 @@
+#!/usr/bin/perl -w
+#my ($stat) = @ARGV;
+
+my $RealNum25=0;
+my $RealNum50=0;
+my $RealNum100=0;
+my $ground_truth=0;
+my $precise25=0;
+my $precise50=0;
+my $precise100=0;
+my $predict=0;
+foreach my $file (glob "Stat/bl6.pAs.scanGenome.step1.str*.REP1.chr*.UpstreamTrimmed10.txt.upround2.txt.bidirection.12.1.txt"){
+#foreach my $file (glob "Stat/bl6.pAs.scanGenome.step1.str*.REP1.chr*.UpstreamTrimmed10.txt.test.txt.newround5.txt.bidirection.12.1.txt"){
+	open FILE,"$file" or die;
+	while(<FILE>){
+		chomp;
+		if($_ =~ /ground/){
+			my (undef,undef,undef,undef,$tp25,$tp50,$tp100,$all) = split;
+			$RealNum25+= $tp25;
+			$RealNum50+= $tp50;
+			$RealNum100+= $tp100;
+			$ground_truth += $all;
+		}
+		elsif($_ =~ /precis:/){
+			my (undef,$pre25,$pre50,$pre100,$pre) = split;
+			$precise25 += $pre25;
+			$precise50 += $pre50;
+			$precise100 += $pre100;
+			$predict += $pre;
+		}
+	}
+}
+
+my $recall25 = sprintf("%.3f",$RealNum25/$ground_truth);
+my $recall50 = sprintf("%.3f",$RealNum50/$ground_truth);
+my $recall100 = sprintf("%.3f",$RealNum100/$ground_truth);
+print  "groundTruth: $RealNum25,$RealNum50,$RealNum100,$ground_truth\n";
+print  "recall: $recall25,$recall50,$recall100\n";
+
+my $precision25 = sprintf("%.3f",$RealNum25/$predict);
+my $precision50 = sprintf("%.3f",$RealNum50/$predict);
+my $precision100 = sprintf("%.3f",$RealNum100/$predict);
+print "Real precision: $precision25,$precision50,$precision100\n";
+
+
+my $percent25 = sprintf("%.3f",$precise25/$predict);
+my $percent50 = sprintf("%.3f",$precise50/$predict);
+my $percent100 = sprintf("%.3f",$precise100/$predict);
+print "precise: $precise25,$precise50,$precise100,$predict\n";
+print "precision: $percent25,$percent50,$percent100\n";
