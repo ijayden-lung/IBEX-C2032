@@ -1,0 +1,4842 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import os\n",
+    "import numpy as np\n",
+    "import pickle\n",
+    "\n",
+    "def save_obj(obj, name):\n",
+    "    with open('data/'+ name + '.pkl', 'wb') as f:\n",
+    "        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)\n",
+    "\n",
+    "def load_obj(name):\n",
+    "    with open('data/' + name + '.pkl', 'rb') as f:\n",
+    "        return pickle.load(f)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Data Preparation"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "['RAWDATA.pkl',\n",
+       " 'bl6.pAs.random.negative.txt',\n",
+       " 'parental.pAs.usage.txt',\n",
+       " 'bl.pAs.sequence.txt',\n",
+       " 'Coverage_BL6_REP1.zhangbin.txt',\n",
+       " 'bl6.pAs.zhangbin.fibroblast.txt']"
+      ]
+     },
+     "execution_count": 24,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "os.listdir('data/')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "DATA={}\n",
+    "\n",
+    "\"\"\"\n",
+    "with open('data/bl.pAs.sequence.txt','r') as f:\n",
+    "    for line in f:\n",
+    "        line=line.rstrip('\\n').split('\\t')\n",
+    "        if line[0]!='#pas_type':\n",
+    "            ID=line[0]\n",
+    "            PAS_TYPE=line[1]\n",
+    "            COORDINATE1=line[2]\n",
+    "            SEQUENCE=line[3]\n",
+    "            DATA[ID]={}\n",
+    "            DATA[ID]['PAS_TYPE']=PAS_TYPE\n",
+    "            DATA[ID]['COORDINATE1']=COORDINATE1\n",
+    "            DATA[ID]['SEQUENCE']=SEQUENCE\n",
+    "            DATA[ID]['TYPE']='POSITIVE'\n",
+    "            \n",
+    "with open('data/Coverage_BL6_REP1.zhangbin.txt','r') as f:\n",
+    "    for line in f:\n",
+    "        line=line.rstrip('\\n').split('\\t')\n",
+    "        ID=line[0]\n",
+    "        PAS_TYPE=line[1]\n",
+    "        STRAND=line[2]\n",
+    "        COORDINATE2=line[3]\n",
+    "        COVERAGE=[int(x) for x in line[4::]]\n",
+    "        DATA[ID]['STRAND']=STRAND\n",
+    "        DATA[ID]['COORDINATE2']=COORDINATE2\n",
+    "        DATA[ID]['COVERAGE']=COVERAGE\n",
+    "        DATA[ID]['TYPE']='POSITIVE'\n",
+    "    \n",
+    "with open('data/parental.pAs.usage.txt','r') as f:\n",
+    "    for line in f:\n",
+    "        line=line.rstrip('\\n').split('\\t')\n",
+    "        if line[0]!='':\n",
+    "            ID=line[0]\n",
+    "            PASUSAGE=float(line[1])\n",
+    "            DATA[ID]['PASUSAGE']=PASUSAGE\n",
+    "            DATA[ID]['TYPE']='POSITIVE'\n",
+    "            \n",
+    "\"\"\"\n",
+    "\n",
+    "with open('data/bl6.pAs.zhangbin.fibroblast.txt','r') as f:\n",
+    "    for line in f:\n",
+    "        line=line.rstrip('\\n').split('\\t')\n",
+    "        if line[0]!='#pas_id':\n",
+    "            ID=line[0]\n",
+    "            PAS_TYPE=line[1].split('=')[0]\n",
+    "            STRAND=line[4]\n",
+    "            PASUSAGE=float(line[6])\n",
+    "            SEQUENCE=line[7]\n",
+    "            COVERAGE=[int(x) for x in line[8::]]\n",
+    "            COVERAGE=np.array(COVERAGE)\n",
+    "            \n",
+    "            DATA[ID]={}\n",
+    "            DATA[ID]['PAS_TYPE']=PAS_TYPE\n",
+    "            DATA[ID]['STRAND']=STRAND\n",
+    "            DATA[ID]['SEQUENCE']=SEQUENCE\n",
+    "            DATA[ID]['PASUSAGE']=PASUSAGE\n",
+    "            DATA[ID]['COVERAGE']=COVERAGE\n",
+    "            DATA[ID]['TYPE']='POSITIVE'\n",
+    "    \n",
+    "with open('data/bl6.pAs.random.negative.txt','r') as f:\n",
+    "    for line in f:\n",
+    "        line=line.rstrip('\\n').split('\\t')\n",
+    "        if line[0]!='pas_id':\n",
+    "            ID=line[0]\n",
+    "            STRAND=line[4]\n",
+    "            SEQUENCE=line[7]\n",
+    "            COVERAGE=[int(float(x)) for x in line[8::]]\n",
+    "            COVERAGE=np.array(COVERAGE)\n",
+    "            \n",
+    "            DATA[ID]={}\n",
+    "            DATA[ID]['STRAND']=STRAND\n",
+    "            DATA[ID]['SEQUENCE']=SEQUENCE\n",
+    "            DATA[ID]['COVERAGE']=COVERAGE\n",
+    "            DATA[ID]['TYPE']='NEGATIVE'"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 26,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "save_obj(DATA,'RAWDATA')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Data Processing"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "DATA=load_obj('RAWDATA')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Data Size:  43354\n",
+      "Positive Data Size:  21677\n",
+      "Negative Data Size:  21677\n"
+     ]
+    }
+   ],
+   "source": [
+    "print('Data Size: ',len(DATA))\n",
+    "print('Positive Data Size: ',len([x for x in DATA.keys() if DATA[x]['TYPE']=='POSITIVE']))\n",
+    "print('Negative Data Size: ',len([x for x in DATA.keys() if DATA[x]['TYPE']=='NEGATIVE']))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 29,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "{'PAS_TYPE': 'tandemUTR_motif',\n",
+       " 'STRAND': '+',\n",
+       " 'SEQUENCE': 'GCCCTACTTTAATATTAGTTATTTATGTAAAGTGTATTTTTCCCATGATGATACGTTATGTATATATAATGTACATAAAAGCCCTGATTATTGGTTTCTAATTGTATAGAATTATTTTTGCAATTTTGCTATGGGTGGTAATGAACTCTTGATTGAGCTACCGTATGTGCATTAAAATGTGCTTGCCATTAAGAGGTGGTG',\n",
+       " 'PASUSAGE': 0.00615599132596,\n",
+       " 'COVERAGE': array([285, 289, 281, 279, 270, 246, 241, 244, 245, 244, 244, 243, 244,\n",
+       "        244, 238, 238, 240, 240, 231, 234, 234, 232, 232, 230, 230, 229,\n",
+       "        234, 232, 232, 233, 232, 228, 227, 231, 242, 243, 247, 250, 248,\n",
+       "        250, 248, 248, 246, 245, 225, 224, 221, 221, 225, 224, 217, 218,\n",
+       "        217, 221, 223, 222, 224, 230, 227, 227, 226, 229, 232, 235, 239,\n",
+       "        237, 235, 239, 242, 246, 243, 243, 242, 246, 245, 249, 249, 241,\n",
+       "        241, 241, 240, 234, 234, 231, 213, 205, 192, 194, 198, 205, 205,\n",
+       "        204, 203, 211, 214, 220, 221, 223, 224, 225, 224, 223, 215, 208,\n",
+       "        207, 208, 209, 205, 209, 213, 216, 217, 219, 221, 221, 222, 222,\n",
+       "        220, 225, 226, 228, 229, 234, 234, 239, 239, 235, 230, 235, 235,\n",
+       "        241, 244, 246, 248, 250, 242, 241, 238, 242, 254, 264, 278, 297,\n",
+       "        297, 297, 318, 316, 317, 317, 312, 311, 311, 310, 310, 308, 309,\n",
+       "        321, 327, 321, 320, 319, 321, 317, 314, 314, 311, 315, 315, 313,\n",
+       "        318, 322, 327, 368, 372, 377, 378, 374, 376, 376, 376, 376, 380,\n",
+       "        378, 391, 402, 431, 443, 446, 450, 451, 446, 449, 452, 452, 447,\n",
+       "        447, 441, 440, 437, 439, 440]),\n",
+       " 'TYPE': 'POSITIVE'}"
+      ]
+     },
+     "execution_count": 29,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "DATA['ENSMUSG00000056763.13:2']"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 30,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[[0. 0. 0. 1.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [0. 0. 1. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [1. 0. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 0. 0. 1.]\n",
+      " [0. 1. 0. 0.]\n",
+      " [0. 0. 0. 1.]] [285 289 281 279 270 246 241 244 245 244 244 243 244 244 238 238 240 240\n",
+      " 231 234 234 232 232 230 230 229 234 232 232 233 232 228 227 231 242 243\n",
+      " 247 250 248 250 248 248 246 245 225 224 221 221 225 224 217 218 217 221\n",
+      " 223 222 224 230 227 227 226 229 232 235 239 237 235 239 242 246 243 243\n",
+      " 242 246 245 249 249 241 241 241 240 234 234 231 213 205 192 194 198 205\n",
+      " 205 204 203 211 214 220 221 223 224 225 224 223 215 208 207 208 209 205\n",
+      " 209 213 216 217 219 221 221 222 222 220 225 226 228 229 234 234 239 239\n",
+      " 235 230 235 235 241 244 246 248 250 242 241 238 242 254 264 278 297 297\n",
+      " 297 318 316 317 317 312 311 311 310 310 308 309 321 327 321 320 319 321\n",
+      " 317 314 314 311 315 315 313 318 322 327 368 372 377 378 374 376 376 376\n",
+      " 376 380 378 391 402 431 443 446 450 451 446 449 452 452 447 447 441 440\n",
+      " 437 439 440] POSITIVE\n"
+     ]
+    }
+   ],
+   "source": [
+    "data=[]\n",
+    "labels=[]\n",
+    "\n",
+    "ID='ENSMUSG00000056763.13:2'\n",
+    "SEQUENCE=list(DATA[ID]['SEQUENCE'])\n",
+    "COVERAGE=DATA[ID]['COVERAGE']\n",
+    "TYPE=DATA[ID]['TYPE']\n",
+    "\n",
+    "alphabet = np.array(['A', 'T', 'C', 'G'])\n",
+    "seq = np.array(SEQUENCE, dtype = '|U1').reshape(-1, 1)\n",
+    "ONEHOT_SEQUENCE = (seq == alphabet).astype(np.float32)\n",
+    "print(ONEHOT_SEQUENCE,COVERAGE,TYPE)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "201 201\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(len(SEQUENCE),len(COVERAGE))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Train"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Data Size:  43354\n",
+      "Positive Data Size:  21677\n",
+      "Positive Data Size:  21677\n",
+      "[INFO] dataloaders generated\n",
+      "[INFO] start to train and tune\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "\r",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Epoch 0/19 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:19<00:00, 13.53it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.2065 ACC: 0.6324, Sensitivity:0.4915\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:02<00:00, 25.69it/s]\n",
+      "/Users/joshuachou/anaconda3/lib/python3.7/site-packages/torch/serialization.py:256: UserWarning: Couldn't retrieve source code for container of type cnn_2s. It won't be checked for correctness upon loading.\n",
+      "  \"type \" + obj.__name__ + \". It won't be checked \"\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 4.7798 ACC: 0.2737, Sensitivity:0.1108\n",
+      "[INFO] save model after 0 epoch of crossvalition 0 to BL6_SEQUENCE_COVERAGE_0\n",
+      "Epoch 1/19 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:22<00:00, 16.26it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.1658 ACC: 0.7279, Sensitivity:0.4921\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:03<00:00, 21.03it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 181.6729 ACC: 0.4933, Sensitivity:0.0000\n",
+      "Epoch 2/19 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:21<00:00, 15.20it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.1528 ACC: 0.7547, Sensitivity:0.4921\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 37.58it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 137.5687 ACC: 0.4933, Sensitivity:0.0000\n",
+      "Epoch 3/19 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      " 39%|███▉      | 107/271 [00:07<00:13, 12.20it/s]Traceback (most recent call last):\n",
+      "Traceback (most recent call last):\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/queues.py\", line 242, in _feed\n",
+      "    send_bytes(obj)\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/connection.py\", line 200, in send_bytes\n",
+      "    self._send_bytes(m[offset:offset + size])\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/connection.py\", line 404, in _send_bytes\n",
+      "    self._send(header + buf)\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/connection.py\", line 368, in _send\n",
+      "    n = write(self._handle, buf)\n",
+      "BrokenPipeError: [Errno 32] Broken pipe\n",
+      "Traceback (most recent call last):\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/queues.py\", line 242, in _feed\n",
+      "    send_bytes(obj)\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/connection.py\", line 200, in send_bytes\n",
+      "    self._send_bytes(m[offset:offset + size])\n",
+      "Traceback (most recent call last):\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/queues.py\", line 242, in _feed\n",
+      "    send_bytes(obj)\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/connection.py\", line 200, in send_bytes\n",
+      "    self._send_bytes(m[offset:offset + size])\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/connection.py\", line 404, in _send_bytes\n",
+      "    self._send(header + buf)\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/connection.py\", line 368, in _send\n",
+      "    n = write(self._handle, buf)\n",
+      "BrokenPipeError: [Errno 32] Broken pipe\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/connection.py\", line 404, in _send_bytes\n",
+      "    self._send(header + buf)\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/queues.py\", line 242, in _feed\n",
+      "    send_bytes(obj)\n",
+      "Traceback (most recent call last):\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/connection.py\", line 200, in send_bytes\n",
+      "    self._send_bytes(m[offset:offset + size])\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/connection.py\", line 404, in _send_bytes\n",
+      "    self._send(header + buf)\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/connection.py\", line 368, in _send\n",
+      "    n = write(self._handle, buf)\n",
+      "BrokenPipeError: [Errno 32] Broken pipe\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/connection.py\", line 368, in _send\n",
+      "    n = write(self._handle, buf)\n",
+      "BrokenPipeError: [Errno 32] Broken pipe\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/queues.py\", line 242, in _feed\n",
+      "    send_bytes(obj)\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/connection.py\", line 200, in send_bytes\n",
+      "    self._send_bytes(m[offset:offset + size])\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/connection.py\", line 404, in _send_bytes\n",
+      "    self._send(header + buf)\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/connection.py\", line 368, in _send\n",
+      "    n = write(self._handle, buf)\n",
+      "BrokenPipeError: [Errno 32] Broken pipe\n",
+      "Traceback (most recent call last):\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/queues.py\", line 242, in _feed\n",
+      "    send_bytes(obj)\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/connection.py\", line 200, in send_bytes\n",
+      "    self._send_bytes(m[offset:offset + size])\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/connection.py\", line 404, in _send_bytes\n",
+      "    self._send(header + buf)\n",
+      "  File \"/Users/joshuachou/anaconda3/lib/python3.7/multiprocessing/connection.py\", line 368, in _send\n",
+      "    n = write(self._handle, buf)\n",
+      "BrokenPipeError: [Errno 32] Broken pipe\n",
+      "\n"
+     ]
+    },
+    {
+     "ename": "KeyboardInterrupt",
+     "evalue": "",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mKeyboardInterrupt\u001b[0m                         Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-12-762e8ce9febf>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m()\u001b[0m\n\u001b[1;32m    389\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    390\u001b[0m                 \u001b[0;32mif\u001b[0m \u001b[0mphase\u001b[0m \u001b[0;34m==\u001b[0m \u001b[0;34m'train'\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 391\u001b[0;31m                     \u001b[0mloss\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mbackward\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    392\u001b[0m                     \u001b[0moptimizer\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mstep\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    393\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/anaconda3/lib/python3.7/site-packages/torch/tensor.py\u001b[0m in \u001b[0;36mbackward\u001b[0;34m(self, gradient, retain_graph, create_graph)\u001b[0m\n\u001b[1;32m    105\u001b[0m                 \u001b[0mproducts\u001b[0m\u001b[0;34m.\u001b[0m \u001b[0mDefaults\u001b[0m \u001b[0mto\u001b[0m\u001b[0;31m \u001b[0m\u001b[0;31m`\u001b[0m\u001b[0;31m`\u001b[0m\u001b[0;32mFalse\u001b[0m\u001b[0;31m`\u001b[0m\u001b[0;31m`\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    106\u001b[0m         \"\"\"\n\u001b[0;32m--> 107\u001b[0;31m         \u001b[0mtorch\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mautograd\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mbackward\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mgradient\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mretain_graph\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mcreate_graph\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    108\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    109\u001b[0m     \u001b[0;32mdef\u001b[0m \u001b[0mregister_hook\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mhook\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/anaconda3/lib/python3.7/site-packages/torch/autograd/__init__.py\u001b[0m in \u001b[0;36mbackward\u001b[0;34m(tensors, grad_tensors, retain_graph, create_graph, grad_variables)\u001b[0m\n\u001b[1;32m     91\u001b[0m     Variable._execution_engine.run_backward(\n\u001b[1;32m     92\u001b[0m         \u001b[0mtensors\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mgrad_tensors\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mretain_graph\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mcreate_graph\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 93\u001b[0;31m         allow_unreachable=True)  # allow_unreachable flag\n\u001b[0m\u001b[1;32m     94\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     95\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mKeyboardInterrupt\u001b[0m: "
+     ]
+    }
+   ],
+   "source": [
+    "import numpy as np\n",
+    "import numpy\n",
+    "import pickle\n",
+    "import torch\n",
+    "import torch.nn as nn\n",
+    "from torch.utils.data import DataLoader\n",
+    "from torch.utils.data import Dataset\n",
+    "import pandas as pd\n",
+    "import os\n",
+    "import time\n",
+    "import copy\n",
+    "from tqdm import tqdm\n",
+    "from torch.autograd import Variable\n",
+    "from sklearn import metrics\n",
+    "import random\n",
+    "import math\n",
+    "import torch.nn.functional as F\n",
+    "import torch.optim as optim\n",
+    "\n",
+    "def save_obj(obj, name):\n",
+    "    with open('data/'+ name + '.pkl', 'wb') as f:\n",
+    "        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)\n",
+    "\n",
+    "def load_obj(name):\n",
+    "    with open('data/' + name + '.pkl', 'rb') as f:\n",
+    "        return pickle.load(f)\n",
+    "    \n",
+    "DATA=load_obj('RAWDATA')\n",
+    "print('Data Size: ',len(DATA))\n",
+    "print('Positive Data Size: ',len([x for x in DATA.keys() if DATA[x]['TYPE']=='POSITIVE']))\n",
+    "print('Negative Data Size: ',len([x for x in DATA.keys() if DATA[x]['TYPE']=='NEGATIVE']))\n",
+    "    \n",
+    "class cnn_2s(nn.Module):\n",
+    "    \"\"\" Hyperparameters:\n",
+    "        - conv out_channels (filter number)\n",
+    "        - conv kernel_size (kernel size)\n",
+    "        - conv stride\n",
+    "        - conv padding\n",
+    "        - conv dilation\n",
+    "        - conv groups (separate the conv layers towards output)\n",
+    "    \"\"\"\n",
+    "    def __init__(self):\n",
+    "        super(cnn_2s, self).__init__()\n",
+    "        \n",
+    "        # x1\n",
+    "        \n",
+    "        self.conv1 = nn.Conv1d(in_channels=4, out_channels=16, \\\n",
+    "            kernel_size=3, stride=1,padding=0, dilation=1,groups=1, bias=True)\n",
+    "        self.conv2 = nn.Conv1d(in_channels=16, out_channels=32, \\\n",
+    "            kernel_size=5, stride=1,padding=0, dilation=1,groups=1, bias=True)\n",
+    "        self.conv3 = nn.Conv1d(in_channels=32, out_channels=64, \\\n",
+    "            kernel_size=7, stride=1,padding=0, dilation=1, groups=1,bias=True)\n",
+    "        self.relu1 = nn.ReLU(inplace=False)\n",
+    "        self.relu2 = nn.ReLU(inplace=False)\n",
+    "        self.relu3 = nn.ReLU(inplace=False)\n",
+    "        self.maxpool1 = nn.MaxPool1d(kernel_size=4, stride=4)\n",
+    "        self.maxpool2 = nn.MaxPool1d(kernel_size=4, stride=4)\n",
+    "        self.dropout1 = nn.Dropout(p=0.2, inplace=False)\n",
+    "        self.dropout2 = nn.Dropout(p=0.3, inplace=False)\n",
+    "        self.dropout3 = nn.Dropout(p=0.5, inplace=False)\n",
+    "        self.bn1 = nn.BatchNorm1d(self.conv1.out_channels) # conv1.out_channels\n",
+    "        self.bn2 = nn.BatchNorm1d(self.conv2.out_channels) # conv2.out_channels\n",
+    "        self.bn3 = nn.BatchNorm1d(self.conv3.out_channels) # conv3.out_channels\n",
+    "        self.seqlength = 201\n",
+    "        self.fc1_in_channels = (math.floor( \\\n",
+    "                               (math.floor((self.seqlength - self.conv1.kernel_size[0] + 1) / (self.maxpool1.kernel_size * 1.0)) - \\\n",
+    "                               self.conv2.kernel_size[0] + 1 ) / (self.maxpool2.kernel_size * 1.0)) - \\\n",
+    "                               self.conv3.kernel_size[0] + 1) * self.conv3.out_channels\n",
+    "        self.fc1 = nn.Linear(self.fc1_in_channels, 2)\n",
+    "        \n",
+    "        # x2\n",
+    "        \n",
+    "        self.conv2_1 = nn.Conv1d(in_channels=1, out_channels=16, \\\n",
+    "            kernel_size=5, stride=1,padding=0, dilation=1,groups=1, bias=True)\n",
+    "        self.relu2_1 = nn.ReLU(inplace=False)\n",
+    "        self.maxpool2_1 = nn.MaxPool1d(kernel_size=4, stride=4)\n",
+    "        self.dropout2_1 = nn.Dropout(p=0.2, inplace=False)\n",
+    "        self.bn2_1 = nn.BatchNorm1d(self.conv2_1.out_channels) # conv1.out_channels\n",
+    "        self.seqlength = 201\n",
+    "        self.fc2_in_channels = (math.floor((self.seqlength - self.conv2_1.kernel_size[0] + 1) / (self.maxpool2_1.kernel_size * 1.0)) - \\\n",
+    "                               self.conv2_1.kernel_size[0] + 1) * self.conv2_1.out_channels + 2 \n",
+    "        self.fc2 = nn.Linear(784, 2)\n",
+    "\n",
+    "        # init weights\n",
+    "        for m in self.modules():\n",
+    "            if isinstance(m, nn.Conv1d):\n",
+    "                n = m.kernel_size[0] * m.out_channels\n",
+    "                m.weight.data.normal_(0, math.sqrt(2.0 / n))\n",
+    "                # m.weight.data.normal_(0, kwargs['stdv'])\n",
+    "\n",
+    "            # if isinstance(m, nn.BatchNorm1d):\n",
+    "            #     m.weight.data.fill_(1)\n",
+    "            #     m.bias.data.zero_()\n",
+    "\n",
+    "    def forward(self,x1,x2):\n",
+    "        \n",
+    "        # x1\n",
+    "        #print(x1,x1.shape)\n",
+    "        x1 = self.conv1(x1)\n",
+    "        x1 = self.bn1(x1)\n",
+    "        x1 = self.maxpool1(x1)\n",
+    "        x1 = self.relu1(x1)\n",
+    "        x1 = self.dropout1(x1)\n",
+    "\n",
+    "        x1 = self.conv2(x1)\n",
+    "        x1 = self.bn2(x1)\n",
+    "        x1 = self.maxpool2(x1)\n",
+    "        x1 = self.relu2(x1)\n",
+    "        x1 = self.dropout2(x1)\n",
+    "\n",
+    "        x1 = self.conv3(x1)\n",
+    "        x1 = self.relu3(x1)\n",
+    "        x1 = self.dropout3(x1)\n",
+    "\n",
+    "        x1 = x1.view(-1, self.num_flat_features(x1))\n",
+    "        \n",
+    "        #print(x1,x1.shape)\n",
+    "        x1 = self.fc1(x1) # 100\n",
+    "        #print(x1,x1.shape)\n",
+    "        \n",
+    "        # x2\n",
+    "        \n",
+    "        #print(x2,x2.shape)\n",
+    "        x2 = self.conv2_1(x2)\n",
+    "        x2 = self.bn2_1(x2)\n",
+    "        x2 = self.maxpool2_1(x2)\n",
+    "        x2 = self.relu2_1(x2)\n",
+    "        x2 = self.dropout2_1(x2)\n",
+    "        #print(x2,x2.shape)\n",
+    "        x2 = x2.view(-1, self.num_flat_features(x2))\n",
+    "        x2 = self.fc2(x2)\n",
+    "        #print(x2,x2.shape)\n",
+    "        \n",
+    "        # x1+x2\n",
+    "        \n",
+    "        x=torch.mul(x1,x2)\n",
+    "        \n",
+    "        # Attention: there is no need to add softmax layer since it is included in CrossEntropyLoss!\n",
+    "        # x = self.sigmoid(x)\n",
+    "        #x = self.softmax(x)\n",
+    "        return x\n",
+    "\n",
+    "    def num_flat_features(self, x):\n",
+    "        size = x.size()[1:]\n",
+    "        num_features = 1\n",
+    "        for s in size:\n",
+    "            num_features *= s\n",
+    "        return num_features\n",
+    "\n",
+    "\n",
+    "class MyDataset(Dataset):\n",
+    "\n",
+    "    def __init__(self):\n",
+    "        super(MyDataset,self).__init__()\n",
+    "        \n",
+    "        all_data=[]\n",
+    "\n",
+    "        for ID in DATA.keys():\n",
+    "            SEQUENCE=list(DATA[ID]['SEQUENCE'])\n",
+    "            COVERAGE=DATA[ID]['COVERAGE']\n",
+    "            TYPE=DATA[ID]['TYPE']\n",
+    "            alphabet = np.array(['A', 'T', 'C', 'G'])\n",
+    "            seq = np.array(SEQUENCE, dtype = '|U1').reshape(-1, 1)\n",
+    "            ONEHOT_SEQUENCE = (seq == alphabet).astype(np.float32)\n",
+    "            ONEHOT_SEQUENCE=ONEHOT_SEQUENCE.T\n",
+    "            \n",
+    "            if TYPE=='POSITIVE':\n",
+    "                all_data.append((ONEHOT_SEQUENCE,COVERAGE,1))\n",
+    "            elif TYPE=='NEGATIVE':\n",
+    "                all_data.append((ONEHOT_SEQUENCE,COVERAGE,0))\n",
+    "\n",
+    "        random.shuffle(all_data)\n",
+    "        self.all_data=all_data\n",
+    "\n",
+    "    def __len__(self):\n",
+    "        return len(self.all_data)\n",
+    "\n",
+    "    def __getitem__(self, index):\n",
+    "        x1,x2,label= self.all_data[index]\n",
+    "        return x1,x2,label\n",
+    "\n",
+    "    def get_cross_data(self,index):\n",
+    "        return np.array(self.all_data)[index]\n",
+    "\n",
+    "class CrossValidationDataset(Dataset):\n",
+    "    \"\"\"total dataset.\"\"\"\n",
+    "\n",
+    "    def __init__(self, data):\n",
+    "        self.data= data\n",
+    "\n",
+    "    def __len__(self):\n",
+    "        return len(self.data)\n",
+    "\n",
+    "    def __getitem__(self, index):\n",
+    "        x1,x2,label= self.data[index]\n",
+    "        return x1,x2,label\n",
+    "\n",
+    "def partitions(number, k):\n",
+    "    '''\n",
+    "    Distribution of the folds\n",
+    "    Args:\n",
+    "        number: number of patients\n",
+    "        k: folds number\n",
+    "    '''\n",
+    "    n_partitions = np.ones(k) * int(number/k)\n",
+    "    n_partitions[0:(number % k)] += 1\n",
+    "    return n_partitions\n",
+    "\n",
+    "def get_indices(n_splits = 3, subjects = 145):\n",
+    "    '''\n",
+    "    Indices of the set test\n",
+    "    Args:\n",
+    "        n_splits: folds number\n",
+    "        subjects: number of patients\n",
+    "    '''\n",
+    "    l = partitions(subjects, n_splits)\n",
+    "    fold_sizes = l\n",
+    "    indices = np.arange(subjects).astype(int)\n",
+    "    current = 0\n",
+    "    for fold_size in fold_sizes:\n",
+    "        start = current\n",
+    "        stop =  current + fold_size\n",
+    "        current = stop\n",
+    "        yield(indices[int(start):int(stop)])\n",
+    "\n",
+    "def k_folds(n_splits = 3, subjects = 145):\n",
+    "    '''\n",
+    "    Generates folds for cross validation\n",
+    "    Args:\n",
+    "        n_splits: folds number\n",
+    "        subjects: number of patients\n",
+    "    '''\n",
+    "    indices = np.arange(subjects).astype(int)\n",
+    "    for test_idx in get_indices(n_splits, subjects):\n",
+    "        train_idx = np.setdiff1d(indices, test_idx)\n",
+    "        yield train_idx, test_idx\n",
+    "\n",
+    "\n",
+    "# train_kwargs, cnn_1s\n",
+    "train_kwargs = {}\n",
+    "train_kwargs['tune_metric'] = 'auprc' # ['auroc', 'auprc', 'avgrank']\n",
+    "train_kwargs['random_seed'] = 1337\n",
+    "train_kwargs['optim'] = 'Adam' # ['SGD', 'Adam', 'Adagrad', 'RMSProp']\n",
+    "train_kwargs['optim_param'] = {'betas': [0.9, 0.999], 'lr': 0.005, 'weight_decay': 1e-5}\n",
+    "train_kwargs['scheduler'] = 'StepLR' # ['StepLR', 'MultiStepLR', 'ReduceLROnPlateau']\n",
+    "train_kwargs['scheduler_param'] = {'step_size': 10, 'gamma': 0.1}\n",
+    "train_kwargs['loss'] = 'CrossEntropyLoss' # ['CrossEntropyLoss', 'NLLLoss', 'MSELoss']\n",
+    "train_kwargs['cudnn'] = False\n",
+    "train_kwargs['imbalance'] = [1.0, 10.0]\n",
+    "train_kwargs['batch_size'] = 128\n",
+    "train_kwargs['encode_mode'] = 'N_2_zero'\n",
+    "# train_kwargs_cnn_2s['num_epochs'] = 40\n",
+    "train_kwargs['num_epochs'] = 50\n",
+    "train_kwargs['shuffle'] = True\n",
+    "train_kwargs['num_workers'] = 8\n",
+    "\n",
+    "filename_model='BL6_SEQUENCE_COVERAGE'\n",
+    "filename_output='BL6_SEQUENCE_COVERAGE_OUTPUT'\n",
+    "filename_log='BL6_SEQUENCE_COVERAGE_LOG'\n",
+    "\n",
+    "# read datasets\n",
+    "all_dataset = MyDataset()\n",
+    "\n",
+    "\n",
+    "print(\"[INFO] dataloaders generated\")\n",
+    "print('[INFO] start to train and tune')\n",
+    "print('-' * 10)\n",
+    "\n",
+    "\n",
+    "num_sequences=all_dataset.__len__()\n",
+    "crossvalidation_count=0\n",
+    "\n",
+    "count=0\n",
+    "for train_idx, test_idx in k_folds(n_splits = 5,subjects=num_sequences):\n",
+    "    if count!=0:\n",
+    "        break\n",
+    "    count+=1\n",
+    "    random_seed = train_kwargs['random_seed']\n",
+    "    optim = train_kwargs['optim'] # ['SGD', 'Adam', 'Adagrad', 'RMSProp']\n",
+    "    optim_param = train_kwargs['optim_param'] # {'betas': [0.9, 0.999], 'lr': 0.001, 'weight_decay': 1e-5}\n",
+    "    scheduler =  train_kwargs['scheduler'] # ['StepLR', 'MultiStepLR', 'ReduceLROnPlateau']\n",
+    "    scheduler_param = train_kwargs['scheduler_param'] # {'step_size': 10, 'gamma': 0.1}\n",
+    "    loss = train_kwargs['loss'] # ['CrossEntropyLoss', 'NLLLoss', 'MSELoss']\n",
+    "    cudnn = train_kwargs['cudnn'] # [True, False]\n",
+    "    imbalance = train_kwargs['imbalance'] # 10.0\n",
+    "    batch_size = train_kwargs['batch_size'] # 16, .. 32\n",
+    "    encode_mode = train_kwargs['encode_mode'] # 'N_2_zero', 'N_2_quarter'\n",
+    "    num_epochs = train_kwargs['num_epochs'] # 40\n",
+    "    shuffle = train_kwargs['shuffle']\n",
+    "    num_workers = train_kwargs['num_workers']\n",
+    "\n",
+    "    gpu = torch.cuda.is_available()\n",
+    "    torch.backends.cudnn.deterministic = True\n",
+    "    torch.backends.cudnn.fastest = cudnn\n",
+    "    torch.manual_seed(random_seed)\n",
+    "\n",
+    "    if gpu:\n",
+    "        model = cnn_2s().cuda()\n",
+    "        class_imbalance = torch.FloatTensor(imbalance).cuda()\n",
+    "    else:\n",
+    "        model = cnn_2s()\n",
+    "        class_imbalance = torch.FloatTensor(imbalance)\n",
+    "\n",
+    "    # build optimizer\n",
+    "    if optim == 'SGD':\n",
+    "        optimizer = torch.optim.SGD(model.parameters(), **optim_param)\n",
+    "    elif optim == 'Adam':\n",
+    "        optimizer = torch.optim.Adam(model.parameters(), **optim_param)\n",
+    "    elif optim == 'Adagrad':\n",
+    "        optimizer = torch.optim.Adagrad(model.parameters(), **optim_param)\n",
+    "    elif optim == 'RMSProp':\n",
+    "        optimizer = torch.optim.RMSProp(model.parameters(), **optim_param)\n",
+    "\n",
+    "    # build scheduler\n",
+    "    if scheduler == 'StepLR':\n",
+    "        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, **scheduler_param)\n",
+    "    elif scheduler == 'MultiStepLR':\n",
+    "        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, **scheduler_param)\n",
+    "    elif scheduler == 'ReduceLROnPlateau':\n",
+    "        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, **scheduler_param)\n",
+    "\n",
+    "    if loss == 'CrossEntropyLoss':\n",
+    "        criterion = nn.CrossEntropyLoss(weight=class_imbalance)\n",
+    "    elif loss == 'NLLLoss':\n",
+    "        criterion = nn.NLLLoss(weight=class_imbalance)\n",
+    "    elif loss == 'MSELoss':\n",
+    "        criterion = nn.MSELoss(weight=class_imbalance)\n",
+    "\n",
+    "    #print(train_idx,test_idx)\n",
+    "    cross_train_data=all_dataset.get_cross_data(train_idx)\n",
+    "    dataset_train=CrossValidationDataset(data=cross_train_data)\n",
+    "    cross_test_data=all_dataset.get_cross_data(test_idx)\n",
+    "    dataset_test=CrossValidationDataset(data=cross_test_data)\n",
+    "\n",
+    "    trainloader = DataLoader(dataset_train, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)\n",
+    "    valloader = DataLoader(dataset_test, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)\n",
+    "\n",
+    "    dataloaders = {'train': trainloader, 'val': valloader}\n",
+    "\n",
+    "    start_time = time.time()\n",
+    "    best_model_wts = copy.deepcopy(model.state_dict())\n",
+    "    best_acc = 0.0\n",
+    "    best_sensitivity = 0.0\n",
+    "    best_auroc = 0.0\n",
+    "    best_auprc = 0.0\n",
+    "    best_epoch = -1\n",
+    "    best_labels_list = []\n",
+    "    best_probs_list = []\n",
+    "    epoch_loss_min = float('inf')\n",
+    "    epoch_loss_prev = float('inf')\n",
+    "    uptrend = 0 # num of continuous saturated epoches\n",
+    "    max_uptrend = 10 # max num of continuous aturated epoches\n",
+    "    early_stopping = False\n",
+    "    performance_hist = pd.DataFrame(columns=[\"loss\", \"acc\", \"sensitivity\", \"auroc\", \"auprc\", \"epoch\", \"phase\"])\n",
+    "\n",
+    "\n",
+    "    for epoch in range(num_epochs):\n",
+    "\n",
+    "        print('Epoch {}/{} CrossValidation {}'.format(epoch, num_epochs - 1,crossvalidation_count))\n",
+    "        print('-' * 10)\n",
+    "\n",
+    "        dataset_sizes = {'train': 0.0, 'val':0.0} # set to float for later division\n",
+    "\n",
+    "        for phase in ['train', 'val']:\n",
+    "\n",
+    "            if phase == 'train':\n",
+    "                scheduler.step()\n",
+    "                model.train(True)\n",
+    "            else:\n",
+    "                model.train(False)\n",
+    "\n",
+    "            running_loss = 0.0\n",
+    "            running_corrects = 0.0\n",
+    "            running_tp = 0.0 # num of true positive cases\n",
+    "            labels_list = []\n",
+    "            probs_list = []\n",
+    "\n",
+    "            for data in tqdm(dataloaders[phase]):\n",
+    "                #print(data)\n",
+    "                inputs1,inputs2,labels = data\n",
+    "                inputs2=torch.from_numpy(numpy.array([x.numpy().tolist() for x in inputs2]))\n",
+    "                inputs2=inputs2.unsqueeze(1).float()\n",
+    "                #print(inputs1,inputs2,labels)\n",
+    "                if gpu:\n",
+    "                    inputs1,inputs2,labels= Variable(inputs1.cuda()),Variable(inputs2.cuda()),Variable(labels.cuda())\n",
+    "                else:\n",
+    "                    inputs1,inputs2,labels = Variable(inputs1),Variable(inputs2),Variable(labels)\n",
+    "\n",
+    "                optimizer.zero_grad()\n",
+    "                outputs = model(inputs1,inputs2)\n",
+    "                _, preds = torch.max(outputs.data, 1)\n",
+    "                probs = outputs.data[:, 1]\n",
+    "                loss = criterion(outputs, labels)\n",
+    "\n",
+    "                labels_list.extend(labels.data)\n",
+    "                probs_list.extend(probs)\n",
+    "\n",
+    "                if phase == 'train':\n",
+    "                    loss.backward()\n",
+    "                    optimizer.step()\n",
+    "\n",
+    "                running_loss += loss.item() * inputs1.size(0)\n",
+    "                running_corrects += torch.sum(preds == labels.data)\n",
+    "                running_tp += torch.sum((preds + labels.data) == 2)\n",
+    "                dataset_sizes[phase] += len(labels)\n",
+    "\n",
+    "            epoch_loss = running_loss / dataset_sizes[phase]\n",
+    "            epoch_acc = running_corrects.cpu().numpy() / dataset_sizes[phase]\n",
+    "            epoch_sensitivity = running_tp.cpu().numpy() / dataset_sizes[phase]\n",
+    "\n",
+    "            performance = {'loss': epoch_loss, 'acc': epoch_acc, 'sensitivity': epoch_sensitivity, 'epoch': epoch, 'crossvalidation':crossvalidation_count,'phase': phase}\n",
+    "            performance_hist = performance_hist.append(performance, ignore_index=True)\n",
+    "            print('{} Loss: {:.4f} ACC: {:.4f}, Sensitivity:{:.4f}'.format(phase, epoch_loss, epoch_acc, epoch_sensitivity))\n",
+    "\n",
+    "\n",
+    "            if phase == 'val':\n",
+    "                if epoch_loss < epoch_loss_min:\n",
+    "                    best_epoch = epoch\n",
+    "                    best_crossvalidation=crossvalidation_count\n",
+    "                    epoch_loss_min = epoch_loss\n",
+    "                    best_acc = epoch_acc\n",
+    "                    best_sensitivity = epoch_sensitivity\n",
+    "                    torch.save(model, filename_model+\"_%s\"%str(crossvalidation_count))\n",
+    "                    print('[INFO] save model after {} epoch of crossvalition {} to {}'.format(epoch,crossvalidation_count, filename_model+\"_%s\"%str(crossvalidation_count)))\n",
+    "\n",
+    "                if epoch_loss < epoch_loss_prev:\n",
+    "                    uptrend = 0\n",
+    "                    epoch_loss_prev = epoch_loss\n",
+    "                else:\n",
+    "                    uptrend += 1\n",
+    "                    epoch_loss_prev = epoch_loss\n",
+    "\n",
+    "                if uptrend == max_uptrend:\n",
+    "                    early_stopping = True\n",
+    "                    print('[INFO] loss: {}, acc: {}, sensitivity: {}, AUROC: {}, AUPRC: {}, best_epoch: {}, total_epoch: {},crossvalidation: {}, phase: {}'.format(epoch_loss, best_acc, best_sensitivity, best_auroc, best_auprc, best_epoch, epoch,crossvalidation_count, phase))\n",
+    "\n",
+    "                if early_stopping:\n",
+    "                    print('[INFO] early stop')\n",
+    "                    break\n",
+    "        if early_stopping:\n",
+    "            break\n",
+    "\n",
+    "    time_elapsed = time.time()-start_time\n",
+    "    print('Training completes in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))\n",
+    "    performance_hist.to_csv(filename_log+\"_%s\"%str(crossvalidation_count), sep='\\t', index=False)\n",
+    "    print('[INFO] performance_hist saved to {}'.format(filename_log))\n",
+    "    print('[INFO] fine-tuned model saved to {}'.format(filename_model))\n",
+    "\n",
+    "    with open(filename_output+\"_%s\"%str(crossvalidation_count), 'w') as f:\n",
+    "        f.write('Acc\\tSensitivity\\tAUROC\\tAUPRC\\n')\n",
+    "        f.write('{:.4f}\\t{:.4f}\\n'.format(best_acc, best_sensitivity))\n",
+    "        f.write('-'*10+'\\n')\n",
+    "        f.write('train_kwargs: {}\\n'.format(train_kwargs))\n",
+    "        f.write('model: {}\\n'.format(filename_model))\n",
+    "        f.write('-'*10+'\\n')\n",
+    "    print('[INFO] resnet_2s2a model training output (with settings) saved to {}'.format(filename_output))\n",
+    "\n",
+    "    crossvalidation_count+=1\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Simple Version"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Data Size:  43354\n",
+      "Positive Data Size:  21677\n",
+      "Negative Data Size:  21677\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "\r",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[INFO] dataloaders generated\n",
+      "[INFO] start to train and tune\n",
+      "----------\n",
+      "Epoch 0/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 58.15it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.1828 ACC: 0.7010, Sensitivity:0.4923\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 58.39it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 101.8138 ACC: 0.5013, Sensitivity:0.0000\n",
+      "[INFO] save model after 0 epoch of crossvalition 0 to BL6_SEQUENCE_COVERAGE_0\n",
+      "Epoch 1/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 59.87it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.1388 ACC: 0.7895, Sensitivity:0.4931\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 63.03it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 1.5369 ACC: 0.7623, Sensitivity:0.2697\n",
+      "[INFO] save model after 1 epoch of crossvalition 0 to BL6_SEQUENCE_COVERAGE_0\n",
+      "Epoch 2/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 55.86it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.1258 ACC: 0.8131, Sensitivity:0.4936\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 55.92it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 6.1828 ACC: 0.6756, Sensitivity:0.1813\n",
+      "Epoch 3/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.66it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.1177 ACC: 0.8255, Sensitivity:0.4931\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 55.54it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 60.9021 ACC: 0.5013, Sensitivity:0.0000\n",
+      "Epoch 4/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 52.29it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.1144 ACC: 0.8304, Sensitivity:0.4939\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 56.50it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 22.0846 ACC: 0.5017, Sensitivity:0.0003\n",
+      "Epoch 5/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 52.45it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.1098 ACC: 0.8373, Sensitivity:0.4940\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 56.71it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 37.3011 ACC: 0.5014, Sensitivity:0.0001\n",
+      "Epoch 6/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 53.07it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.1095 ACC: 0.8396, Sensitivity:0.4940\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 55.59it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 43.2407 ACC: 0.5016, Sensitivity:0.0002\n",
+      "Epoch 7/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 53.82it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.1085 ACC: 0.8435, Sensitivity:0.4946\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.38it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 100.7014 ACC: 0.5014, Sensitivity:0.0001\n",
+      "Epoch 8/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 55.89it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.1075 ACC: 0.8436, Sensitivity:0.4943\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 54.68it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 87.4285 ACC: 0.5031, Sensitivity:0.0017\n",
+      "Epoch 9/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 55.22it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.1056 ACC: 0.8479, Sensitivity:0.4945\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 54.60it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 54.6505 ACC: 0.5051, Sensitivity:0.0048\n",
+      "Epoch 10/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 52.55it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0975 ACC: 0.8556, Sensitivity:0.4953\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 54.69it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.9660 ACC: 0.8177, Sensitivity:0.3258\n",
+      "[INFO] save model after 10 epoch of crossvalition 0 to BL6_SEQUENCE_COVERAGE_0\n",
+      "Epoch 11/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 52.31it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0939 ACC: 0.8600, Sensitivity:0.4949\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.97it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 2.3923 ACC: 0.7021, Sensitivity:0.2039\n",
+      "Epoch 12/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 52.02it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0932 ACC: 0.8619, Sensitivity:0.4952\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 54.79it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1150 ACC: 0.8364, Sensitivity:0.4929\n",
+      "[INFO] save model after 12 epoch of crossvalition 0 to BL6_SEQUENCE_COVERAGE_0\n",
+      "Epoch 13/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 46.13it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0941 ACC: 0.8611, Sensitivity:0.4948\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 57.41it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.2131 ACC: 0.9164, Sensitivity:0.4607\n",
+      "Epoch 14/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 56.39it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0932 ACC: 0.8643, Sensitivity:0.4953\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.04it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 3.7474 ACC: 0.6604, Sensitivity:0.1602\n",
+      "Epoch 15/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 53.06it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0930 ACC: 0.8610, Sensitivity:0.4953\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.97it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 5.0344 ACC: 0.6435, Sensitivity:0.1446\n",
+      "Epoch 16/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 59.58it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0932 ACC: 0.8649, Sensitivity:0.4954\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.33it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.5758 ACC: 0.8682, Sensitivity:0.3859\n",
+      "Epoch 17/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.58it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0930 ACC: 0.8632, Sensitivity:0.4955\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 51.44it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 9.8485 ACC: 0.5295, Sensitivity:0.0286\n",
+      "Epoch 18/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 52.90it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0919 ACC: 0.8658, Sensitivity:0.4952\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.35it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.6838 ACC: 0.8645, Sensitivity:0.3850\n",
+      "Epoch 19/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 52.53it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0905 ACC: 0.8676, Sensitivity:0.4955\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 51.89it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 1.6000 ACC: 0.7469, Sensitivity:0.2498\n",
+      "Epoch 20/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.44it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0888 ACC: 0.8709, Sensitivity:0.4962\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.09it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1114 ACC: 0.8541, Sensitivity:0.4915\n",
+      "[INFO] save model after 20 epoch of crossvalition 0 to BL6_SEQUENCE_COVERAGE_0\n",
+      "Epoch 21/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 62.83it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0898 ACC: 0.8682, Sensitivity:0.4959\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.04it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1127 ACC: 0.8587, Sensitivity:0.4911\n",
+      "Epoch 22/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 58.59it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0894 ACC: 0.8682, Sensitivity:0.4955\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 51.48it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1162 ACC: 0.8715, Sensitivity:0.4892\n",
+      "Epoch 23/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 63.61it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0891 ACC: 0.8688, Sensitivity:0.4958\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 51.77it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1150 ACC: 0.8754, Sensitivity:0.4889\n",
+      "Epoch 24/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 53.56it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0893 ACC: 0.8693, Sensitivity:0.4955\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.75it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1153 ACC: 0.8766, Sensitivity:0.4885\n",
+      "Epoch 25/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.25it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0899 ACC: 0.8689, Sensitivity:0.4952\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.06it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1134 ACC: 0.8422, Sensitivity:0.4933\n",
+      "Epoch 26/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.46it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0889 ACC: 0.8697, Sensitivity:0.4958\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.86it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1124 ACC: 0.8605, Sensitivity:0.4908\n",
+      "Epoch 27/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.58it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0914 ACC: 0.8700, Sensitivity:0.4955\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.43it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1169 ACC: 0.8276, Sensitivity:0.4939\n",
+      "Epoch 28/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 59.35it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0897 ACC: 0.8678, Sensitivity:0.4957\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.73it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1310 ACC: 0.8983, Sensitivity:0.4836\n",
+      "Epoch 29/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 53.43it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0902 ACC: 0.8675, Sensitivity:0.4955\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.28it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1125 ACC: 0.8558, Sensitivity:0.4915\n",
+      "Epoch 30/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 52.51it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0906 ACC: 0.8642, Sensitivity:0.4960\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.39it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1121 ACC: 0.8586, Sensitivity:0.4911\n",
+      "Epoch 31/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.45it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0908 ACC: 0.8652, Sensitivity:0.4954\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.85it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1118 ACC: 0.8603, Sensitivity:0.4908\n",
+      "Epoch 32/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 53.33it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0898 ACC: 0.8674, Sensitivity:0.4958\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.94it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1118 ACC: 0.8620, Sensitivity:0.4908\n",
+      "Epoch 33/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 59.08it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0896 ACC: 0.8675, Sensitivity:0.4950\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.51it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1124 ACC: 0.8590, Sensitivity:0.4911\n",
+      "Epoch 34/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.36it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0913 ACC: 0.8677, Sensitivity:0.4958\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.34it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1118 ACC: 0.8610, Sensitivity:0.4908\n",
+      "Epoch 35/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 52.40it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0901 ACC: 0.8666, Sensitivity:0.4957\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.07it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1119 ACC: 0.8614, Sensitivity:0.4909\n",
+      "Epoch 36/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 53.12it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0894 ACC: 0.8675, Sensitivity:0.4957\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.74it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1123 ACC: 0.8610, Sensitivity:0.4909\n",
+      "Epoch 37/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.53it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0892 ACC: 0.8698, Sensitivity:0.4952\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.62it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1122 ACC: 0.8616, Sensitivity:0.4907\n",
+      "Epoch 38/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 52.54it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0896 ACC: 0.8694, Sensitivity:0.4957\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.41it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1124 ACC: 0.8641, Sensitivity:0.4905\n",
+      "Epoch 39/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 53.79it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0895 ACC: 0.8707, Sensitivity:0.4953\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.64it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1121 ACC: 0.8583, Sensitivity:0.4913\n",
+      "Epoch 40/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 53.42it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0890 ACC: 0.8690, Sensitivity:0.4956\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.35it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1115 ACC: 0.8599, Sensitivity:0.4911\n",
+      "Epoch 41/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.26it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0910 ACC: 0.8660, Sensitivity:0.4957\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 51.40it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1118 ACC: 0.8607, Sensitivity:0.4911\n",
+      "Epoch 42/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 52.54it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0892 ACC: 0.8692, Sensitivity:0.4959\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.71it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1118 ACC: 0.8602, Sensitivity:0.4911\n",
+      "Epoch 43/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.22it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0899 ACC: 0.8668, Sensitivity:0.4956\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.64it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1124 ACC: 0.8635, Sensitivity:0.4906\n",
+      "Epoch 44/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 53.49it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0895 ACC: 0.8687, Sensitivity:0.4957\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.31it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1116 ACC: 0.8596, Sensitivity:0.4911\n",
+      "Epoch 45/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 53.95it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0899 ACC: 0.8684, Sensitivity:0.4957\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.38it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1121 ACC: 0.8613, Sensitivity:0.4911\n",
+      "Epoch 46/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 61.95it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0905 ACC: 0.8683, Sensitivity:0.4957\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.17it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1124 ACC: 0.8592, Sensitivity:0.4911\n",
+      "Epoch 47/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 54.00it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0898 ACC: 0.8687, Sensitivity:0.4961\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.69it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1126 ACC: 0.8617, Sensitivity:0.4907\n",
+      "Epoch 48/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 53.59it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0890 ACC: 0.8681, Sensitivity:0.4960\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.06it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1120 ACC: 0.8595, Sensitivity:0.4911\n",
+      "Epoch 49/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 61.42it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0892 ACC: 0.8685, Sensitivity:0.4958\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 51.34it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1126 ACC: 0.8607, Sensitivity:0.4911\n",
+      "Epoch 50/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 52.71it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0893 ACC: 0.8681, Sensitivity:0.4958\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.76it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1127 ACC: 0.8611, Sensitivity:0.4911\n",
+      "Epoch 51/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.54it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0890 ACC: 0.8704, Sensitivity:0.4960\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 51.97it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1124 ACC: 0.8603, Sensitivity:0.4911\n",
+      "Epoch 52/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.23it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0889 ACC: 0.8683, Sensitivity:0.4959\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.97it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1127 ACC: 0.8620, Sensitivity:0.4908\n",
+      "Epoch 53/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.42it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0894 ACC: 0.8696, Sensitivity:0.4957\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 51.99it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1118 ACC: 0.8609, Sensitivity:0.4911\n",
+      "Epoch 54/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 53.41it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0881 ACC: 0.8688, Sensitivity:0.4960\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 51.06it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1124 ACC: 0.8626, Sensitivity:0.4907\n",
+      "Epoch 55/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.47it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0906 ACC: 0.8684, Sensitivity:0.4955\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.30it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1128 ACC: 0.8629, Sensitivity:0.4907\n",
+      "Epoch 56/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.28it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0905 ACC: 0.8686, Sensitivity:0.4955\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.97it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1118 ACC: 0.8620, Sensitivity:0.4907\n",
+      "Epoch 57/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 52.48it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0889 ACC: 0.8681, Sensitivity:0.4961\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.41it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1115 ACC: 0.8605, Sensitivity:0.4911\n",
+      "Epoch 58/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.53it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0886 ACC: 0.8690, Sensitivity:0.4958\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.04it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1119 ACC: 0.8602, Sensitivity:0.4911\n",
+      "Epoch 59/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 52.81it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0889 ACC: 0.8694, Sensitivity:0.4957\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.53it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1117 ACC: 0.8593, Sensitivity:0.4911\n",
+      "Epoch 60/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 52.38it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0901 ACC: 0.8678, Sensitivity:0.4953\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.19it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1123 ACC: 0.8628, Sensitivity:0.4906\n",
+      "Epoch 61/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 54.08it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0916 ACC: 0.8664, Sensitivity:0.4951\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.87it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1121 ACC: 0.8618, Sensitivity:0.4909\n",
+      "Epoch 62/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 54.17it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0902 ACC: 0.8680, Sensitivity:0.4956\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.26it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1123 ACC: 0.8620, Sensitivity:0.4906\n",
+      "Epoch 63/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 52.10it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0902 ACC: 0.8689, Sensitivity:0.4954\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.71it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1127 ACC: 0.8626, Sensitivity:0.4907\n",
+      "Epoch 64/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.40it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0885 ACC: 0.8695, Sensitivity:0.4963\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.55it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1127 ACC: 0.8618, Sensitivity:0.4908\n",
+      "Epoch 65/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 54.08it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0895 ACC: 0.8680, Sensitivity:0.4958\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.54it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1119 ACC: 0.8615, Sensitivity:0.4908\n",
+      "Epoch 66/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 53.91it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0903 ACC: 0.8684, Sensitivity:0.4955\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.77it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1119 ACC: 0.8608, Sensitivity:0.4909\n",
+      "Epoch 67/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 52.57it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0881 ACC: 0.8681, Sensitivity:0.4960\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 51.18it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1120 ACC: 0.8606, Sensitivity:0.4911\n",
+      "Epoch 68/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 59.50it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0902 ACC: 0.8678, Sensitivity:0.4955\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.46it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1121 ACC: 0.8601, Sensitivity:0.4912\n",
+      "Epoch 69/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 52.41it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0898 ACC: 0.8686, Sensitivity:0.4960\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.89it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1120 ACC: 0.8608, Sensitivity:0.4911\n",
+      "Epoch 70/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 53.40it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0895 ACC: 0.8701, Sensitivity:0.4955\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 51.77it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1117 ACC: 0.8608, Sensitivity:0.4908\n",
+      "Epoch 71/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 52.29it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0895 ACC: 0.8680, Sensitivity:0.4955\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 51.26it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1121 ACC: 0.8624, Sensitivity:0.4907\n",
+      "Epoch 72/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 59.27it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0888 ACC: 0.8696, Sensitivity:0.4957\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.29it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1117 ACC: 0.8614, Sensitivity:0.4909\n",
+      "Epoch 73/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 54.10it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0889 ACC: 0.8665, Sensitivity:0.4953\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.53it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1126 ACC: 0.8613, Sensitivity:0.4911\n",
+      "Epoch 74/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.28it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0884 ACC: 0.8698, Sensitivity:0.4958\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.31it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1112 ACC: 0.8596, Sensitivity:0.4911\n",
+      "[INFO] save model after 74 epoch of crossvalition 0 to BL6_SEQUENCE_COVERAGE_0\n",
+      "Epoch 75/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.56it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0897 ACC: 0.8667, Sensitivity:0.4953\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.99it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1120 ACC: 0.8631, Sensitivity:0.4907\n",
+      "Epoch 76/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.62it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0894 ACC: 0.8662, Sensitivity:0.4957\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.46it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1123 ACC: 0.8611, Sensitivity:0.4911\n",
+      "Epoch 77/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.26it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0902 ACC: 0.8687, Sensitivity:0.4953\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.18it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1122 ACC: 0.8618, Sensitivity:0.4907\n",
+      "Epoch 78/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 52.77it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0895 ACC: 0.8660, Sensitivity:0.4957\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.82it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1115 ACC: 0.8607, Sensitivity:0.4911\n",
+      "Epoch 79/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 55.21it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0904 ACC: 0.8669, Sensitivity:0.4958\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.08it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1124 ACC: 0.8607, Sensitivity:0.4909\n",
+      "Epoch 80/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 52.54it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0895 ACC: 0.8676, Sensitivity:0.4955\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.08it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1122 ACC: 0.8624, Sensitivity:0.4908\n",
+      "Epoch 81/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.63it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0886 ACC: 0.8708, Sensitivity:0.4963\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.47it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1124 ACC: 0.8613, Sensitivity:0.4909\n",
+      "Epoch 82/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.99it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0900 ACC: 0.8668, Sensitivity:0.4958\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 51.31it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1118 ACC: 0.8608, Sensitivity:0.4911\n",
+      "Epoch 83/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.48it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0870 ACC: 0.8687, Sensitivity:0.4964\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.71it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1126 ACC: 0.8626, Sensitivity:0.4907\n",
+      "Epoch 84/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 52.49it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0894 ACC: 0.8689, Sensitivity:0.4955\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 53.38it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1126 ACC: 0.8581, Sensitivity:0.4911\n",
+      "Epoch 85/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 62.42it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0901 ACC: 0.8684, Sensitivity:0.4953\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 51.65it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1124 ACC: 0.8618, Sensitivity:0.4909\n",
+      "Epoch 86/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:04<00:00, 54.57it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0900 ACC: 0.8671, Sensitivity:0.4954\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 68/68 [00:01<00:00, 52.23it/s]\n",
+      "  0%|          | 0/271 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "val Loss: 0.1128 ACC: 0.8607, Sensitivity:0.4911\n",
+      "Epoch 87/99 CrossValidation 0\n",
+      "----------\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "100%|██████████| 271/271 [00:05<00:00, 52.59it/s]\n",
+      "  0%|          | 0/68 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "train Loss: 0.0893 ACC: 0.8685, Sensitivity:0.4958\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "  1%|▏         | 1/68 [00:00<00:33,  1.98it/s]Process Process-1665:\n",
+      "Process Process-1667:\n",
+      "\n"
+     ]
+    },
+    {
+     "ename": "KeyboardInterrupt",
+     "evalue": "",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------\u001b[0m",
+      "\u001b[0;31mKeyboardInterrupt\u001b[0m Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-24-6a66fbd4b083>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m\u001b[0m\n\u001b[1;32m    358\u001b[0m                 \u001b[0;31m#print(data)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    359\u001b[0m                 \u001b[0minputs1\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0minputs2\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0mlabels\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mdata\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 360\u001b[0;31m                 \u001b[0minputs2\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mtorch\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mfrom_numpy\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mnumpy\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0marray\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0mx\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mnumpy\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mtolist\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;32mfor\u001b[0m \u001b[0mx\u001b[0m \u001b[0;32min\u001b[0m \u001b[0minputs2\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    361\u001b[0m                 \u001b[0minputs2\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0minputs2\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0munsqueeze\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;36m1\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mfloat\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    362\u001b[0m                 \u001b[0;31m#print(inputs1,inputs2,labels)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m<ipython-input-24-6a66fbd4b083>\u001b[0m in \u001b[0;36m<listcomp>\u001b[0;34m(.0)\u001b[0m\n\u001b[1;32m    358\u001b[0m                 \u001b[0;31m#print(data)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    359\u001b[0m                 \u001b[0minputs1\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0minputs2\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0mlabels\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mdata\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 360\u001b[0;31m                 \u001b[0minputs2\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mtorch\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mfrom_numpy\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mnumpy\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0marray\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0mx\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mnumpy\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mtolist\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;32mfor\u001b[0m \u001b[0mx\u001b[0m \u001b[0;32min\u001b[0m \u001b[0minputs2\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    361\u001b[0m                 \u001b[0minputs2\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0minputs2\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0munsqueeze\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;36m1\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mfloat\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    362\u001b[0m                 \u001b[0;31m#print(inputs1,inputs2,labels)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mKeyboardInterrupt\u001b[0m: "
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "Process Process-1666:\n",
+      "Process Process-1672:\n",
+      "Process Process-1669:\n",
+      "Process Process-1668:\n",
+      "Process Process-1671:\n",
+      "Process Process-1670:\n",
+      "Traceback (most recent call last):\n",
+      "Traceback (most recent call last):\n",
+      "Traceback (most recent call last):\n",
+      "Traceback (most recent call last):\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/process.py\", line 258, in _bootstrap\n",
+      "    self.run()\n",
+      "Traceback (most recent call last):\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/process.py\", line 258, in _bootstrap\n",
+      "    self.run()\n",
+      "Traceback (most recent call last):\n",
+      "Traceback (most recent call last):\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/process.py\", line 258, in _bootstrap\n",
+      "    self.run()\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/process.py\", line 258, in _bootstrap\n",
+      "    self.run()\n",
+      "Traceback (most recent call last):\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/process.py\", line 93, in run\n",
+      "    self._target(*self._args, **self._kwargs)\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/process.py\", line 258, in _bootstrap\n",
+      "    self.run()\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/process.py\", line 93, in run\n",
+      "    self._target(*self._args, **self._kwargs)\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/process.py\", line 258, in _bootstrap\n",
+      "    self.run()\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/process.py\", line 258, in _bootstrap\n",
+      "    self.run()\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/process.py\", line 93, in run\n",
+      "    self._target(*self._args, **self._kwargs)\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/process.py\", line 93, in run\n",
+      "    self._target(*self._args, **self._kwargs)\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/process.py\", line 258, in _bootstrap\n",
+      "    self.run()\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/site-packages/torch/utils/data/dataloader.py\", line 42, in _worker_loop\n",
+      "    samples = collate_fn([dataset[i] for i in batch_indices])\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/process.py\", line 93, in run\n",
+      "    self._target(*self._args, **self._kwargs)\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/site-packages/torch/utils/data/dataloader.py\", line 36, in _worker_loop\n",
+      "    r = index_queue.get()\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/process.py\", line 93, in run\n",
+      "    self._target(*self._args, **self._kwargs)\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/process.py\", line 93, in run\n",
+      "    self._target(*self._args, **self._kwargs)\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/site-packages/torch/utils/data/dataloader.py\", line 36, in _worker_loop\n",
+      "    r = index_queue.get()\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/site-packages/torch/utils/data/dataloader.py\", line 36, in _worker_loop\n",
+      "    r = index_queue.get()\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/process.py\", line 93, in run\n",
+      "    self._target(*self._args, **self._kwargs)\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/site-packages/torch/utils/data/dataloader.py\", line 119, in default_collate\n",
+      "    return [default_collate(samples) for samples in transposed]\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/site-packages/torch/utils/data/dataloader.py\", line 36, in _worker_loop\n",
+      "    r = index_queue.get()\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/queues.py\", line 334, in get\n",
+      "    with self._rlock:\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/site-packages/torch/utils/data/dataloader.py\", line 36, in _worker_loop\n",
+      "    r = index_queue.get()\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/site-packages/torch/utils/data/dataloader.py\", line 36, in _worker_loop\n",
+      "    r = index_queue.get()\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/queues.py\", line 334, in get\n",
+      "    with self._rlock:\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/queues.py\", line 334, in get\n",
+      "    with self._rlock:\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/site-packages/torch/utils/data/dataloader.py\", line 36, in _worker_loop\n",
+      "    r = index_queue.get()\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/site-packages/torch/utils/data/dataloader.py\", line 119, in <listcomp>\n",
+      "    return [default_collate(samples) for samples in transposed]\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/queues.py\", line 334, in get\n",
+      "    with self._rlock:\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/synchronize.py\", line 95, in __enter__\n",
+      "    return self._semlock.__enter__()\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/queues.py\", line 334, in get\n",
+      "    with self._rlock:\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/queues.py\", line 334, in get\n",
+      "    with self._rlock:\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/synchronize.py\", line 95, in __enter__\n",
+      "    return self._semlock.__enter__()\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/synchronize.py\", line 95, in __enter__\n",
+      "    return self._semlock.__enter__()\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/queues.py\", line 335, in get\n",
+      "    res = self._reader.recv_bytes()\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/site-packages/torch/utils/data/dataloader.py\", line 105, in default_collate\n",
+      "    return torch.stack([torch.from_numpy(b) for b in batch], 0)\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/synchronize.py\", line 95, in __enter__\n",
+      "    return self._semlock.__enter__()\n",
+      "KeyboardInterrupt\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/synchronize.py\", line 95, in __enter__\n",
+      "    return self._semlock.__enter__()\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/synchronize.py\", line 95, in __enter__\n",
+      "    return self._semlock.__enter__()\n",
+      "KeyboardInterrupt\n",
+      "KeyboardInterrupt\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/site-packages/torch/utils/data/dataloader.py\", line 105, in <listcomp>\n",
+      "    return torch.stack([torch.from_numpy(b) for b in batch], 0)\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/connection.py\", line 216, in recv_bytes\n",
+      "    buf = self._recv_bytes(maxlength)\n",
+      "KeyboardInterrupt\n",
+      "KeyboardInterrupt\n",
+      "KeyboardInterrupt\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/connection.py\", line 407, in _recv_bytes\n",
+      "    buf = self._recv(4)\n",
+      "KeyboardInterrupt\n",
+      "  File \"/home/joshua/anaconda3/envs/p36torch/lib/python3.6/multiprocessing/connection.py\", line 379, in _recv\n",
+      "    chunk = read(handle, remaining)\n",
+      "KeyboardInterrupt\n"
+     ]
+    }
+   ],
+   "source": [
+    "import numpy as np\n",
+    "import numpy\n",
+    "import pickle\n",
+    "import torch\n",
+    "import torch.nn as nn\n",
+    "from torch.utils.data import DataLoader\n",
+    "from torch.utils.data import Dataset\n",
+    "import pandas as pd\n",
+    "import os\n",
+    "import time\n",
+    "import copy\n",
+    "from tqdm import tqdm\n",
+    "from torch.autograd import Variable\n",
+    "from sklearn import metrics\n",
+    "import random\n",
+    "import math\n",
+    "import torch.nn.functional as F\n",
+    "import torch.optim as optim\n",
+    "\n",
+    "# train_kwargs, cnn_1s\n",
+    "train_kwargs = {}\n",
+    "train_kwargs['tune_metric'] = 'auprc' # ['auroc', 'auprc', 'avgrank']\n",
+    "train_kwargs['random_seed'] = 1337\n",
+    "train_kwargs['optim'] = 'Adam' # ['SGD', 'Adam', 'Adagrad', 'RMSProp']\n",
+    "train_kwargs['optim_param'] = {'betas': [0.9, 0.999], 'lr': 0.005, 'weight_decay': 1e-5}\n",
+    "train_kwargs['scheduler'] = 'StepLR' # ['StepLR', 'MultiStepLR', 'ReduceLROnPlateau']\n",
+    "train_kwargs['scheduler_param'] = {'step_size': 10, 'gamma': 0.1}\n",
+    "train_kwargs['loss'] = 'CrossEntropyLoss' # ['CrossEntropyLoss', 'NLLLoss', 'MSELoss']\n",
+    "train_kwargs['cudnn'] = True\n",
+    "train_kwargs['imbalance'] = [1.0, 10.0]\n",
+    "train_kwargs['batch_size'] = 128\n",
+    "train_kwargs['encode_mode'] = 'N_2_zero'\n",
+    "# train_kwargs_cnn_2s['num_epochs'] = 40\n",
+    "train_kwargs['num_epochs'] = 100\n",
+    "train_kwargs['shuffle'] = True\n",
+    "train_kwargs['num_workers'] = 8\n",
+    "\n",
+    "filename_model='BL6_SEQUENCE_COVERAGE'\n",
+    "filename_output='BL6_SEQUENCE_COVERAGE_OUTPUT'\n",
+    "filename_log='BL6_SEQUENCE_COVERAGE_LOG'\n",
+    "PATCH_SIZE=10\n",
+    "SEQ_LENGTH=201\n",
+    "\n",
+    "\n",
+    "PATCH=[[0.25,0.25,0.25,0.25] for i in range(PATCH_SIZE)]\n",
+    "\n",
+    "def save_obj(obj, name):\n",
+    "    with open('data/'+ name + '.pkl', 'wb') as f:\n",
+    "        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)\n",
+    "\n",
+    "def load_obj(name):\n",
+    "    with open('data/' + name + '.pkl', 'rb') as f:\n",
+    "        return pickle.load(f)\n",
+    "\n",
+    "DATA=load_obj('RAWDATA')\n",
+    "print('Data Size: ',len(DATA))\n",
+    "print('Positive Data Size: ',len([x for x in DATA.keys() if DATA[x]['TYPE']=='POSITIVE']))\n",
+    "print('Negative Data Size: ',len([x for x in DATA.keys() if DATA[x]['TYPE']=='NEGATIVE']))\n",
+    "\n",
+    "class cnn_2s(nn.Module):\n",
+    "    \"\"\" Hyperparameters:\n",
+    "        - conv out_channels (filter number)\n",
+    "        - conv kernel_size (kernel size)\n",
+    "        - conv stride\n",
+    "        - conv padding\n",
+    "        - conv dilation\n",
+    "        - conv groups (separate the conv layers towards output)\n",
+    "    \"\"\"\n",
+    "    def __init__(self):\n",
+    "        super(cnn_2s, self).__init__()\n",
+    "\n",
+    "        # x1\n",
+    "\n",
+    "        self.conv1 = nn.Conv1d(in_channels=4, out_channels=16, \\\n",
+    "            kernel_size=3, stride=1,padding=0, dilation=1,groups=1, bias=True)\n",
+    "        self.relu1 = nn.ReLU(inplace=False)\n",
+    "        self.maxpool1 = nn.MaxPool1d(kernel_size=4, stride=4)\n",
+    "        self.dropout1 = nn.Dropout(p=0.2, inplace=False)\n",
+    "        self.bn1 = nn.BatchNorm1d(self.conv1.out_channels) # conv1.out_channels\n",
+    "        self.fc1 = nn.Linear(864, 2)\n",
+    "\n",
+    "        # x2\n",
+    "\n",
+    "        \n",
+    "        self.conv2_1 = nn.Conv1d(in_channels=1, out_channels=16, \\\n",
+    "            kernel_size=5, stride=1,padding=0, dilation=1,groups=1, bias=True)\n",
+    "        self.relu2_1 = nn.ReLU(inplace=False)\n",
+    "        self.maxpool2_1 = nn.MaxPool1d(kernel_size=4, stride=4)\n",
+    "        self.dropout2_1 = nn.Dropout(p=0.2, inplace=False)\n",
+    "        self.bn2_1 = nn.BatchNorm1d(self.conv2_1.out_channels) # conv1.out_channels\n",
+    "        self.fc2 = nn.Linear(784, 2)\n",
+    "\n",
+    "        # init weights\n",
+    "        for m in self.modules():\n",
+    "            if isinstance(m, nn.Conv1d):\n",
+    "                n = m.kernel_size[0] * m.out_channels\n",
+    "                m.weight.data.normal_(0, math.sqrt(2.0 / n))\n",
+    "                # m.weight.data.normal_(0, kwargs['stdv'])\n",
+    "\n",
+    "            # if isinstance(m, nn.BatchNorm1d):\n",
+    "            #     m.weight.data.fill_(1)\n",
+    "            #     m.bias.data.zero_()\n",
+    "\n",
+    "    def forward(self,x1,x2):\n",
+    "\n",
+    "        # x1\n",
+    "        #print(x1,x1.shape)\n",
+    "        x1 = self.conv1(x1)\n",
+    "        x1 = self.bn1(x1)\n",
+    "        x1 = self.maxpool1(x1)\n",
+    "        x1 = self.relu1(x1)\n",
+    "        x1 = self.dropout1(x1)\n",
+    "\n",
+    "        x1 = x1.view(-1, self.num_flat_features(x1))\n",
+    "\n",
+    "        #print(x1,x1.shape)\n",
+    "        x1 = self.fc1(x1)\n",
+    "        #print(x1,x1.shape)\n",
+    "\n",
+    "        # x2\n",
+    "\n",
+    "        #print(x2,x2.shape)\n",
+    "        x2 = self.conv2_1(x2)\n",
+    "        x2 = self.bn2_1(x2)\n",
+    "        x2 = self.maxpool2_1(x2)\n",
+    "        x2 = self.relu2_1(x2)\n",
+    "        x2 = self.dropout2_1(x2)\n",
+    "        #print(x2,x2.shape)\n",
+    "        x2 = x2.view(-1, self.num_flat_features(x2))\n",
+    "        x2 = self.fc2(x2)\n",
+    "        #print(x2,x2.shape)\n",
+    "\n",
+    "        # x1+x2\n",
+    "\n",
+    "        x=torch.mul(x1,x2)\n",
+    "\n",
+    "        # Attention: there is no need to add softmax layer since it is included in CrossEntropyLoss!\n",
+    "        # x = self.sigmoid(x)\n",
+    "        #x = self.softmax(x)\n",
+    "        return x\n",
+    "\n",
+    "    def num_flat_features(self, x):\n",
+    "        size = x.size()[1:]\n",
+    "        num_features = 1\n",
+    "        for s in size:\n",
+    "            num_features *= s\n",
+    "        return num_features\n",
+    "\n",
+    "\n",
+    "class MyDataset(Dataset):\n",
+    "\n",
+    "    def __init__(self):\n",
+    "        super(MyDataset,self).__init__()\n",
+    "\n",
+    "        all_data=[]\n",
+    "\n",
+    "        for ID in DATA.keys():\n",
+    "            SEQUENCE=list(DATA[ID]['SEQUENCE'])\n",
+    "            COVERAGE=DATA[ID]['COVERAGE']\n",
+    "            TYPE=DATA[ID]['TYPE']\n",
+    "            alphabet = np.array(['A', 'T', 'C', 'G'])\n",
+    "            seq = np.array(SEQUENCE, dtype = '|U1').reshape(-1, 1)\n",
+    "            ONEHOT_SEQUENCE = (seq == alphabet).astype(np.float32)\n",
+    "            ONEHOT_SEQUENCE = np.vstack((np.vstack((PATCH,ONEHOT_SEQUENCE)),PATCH))\n",
+    "            #print(ONEHOT_SEQUENCE)\n",
+    "            ONEHOT_SEQUENCE=ONEHOT_SEQUENCE.T.astype(np.float32)\n",
+    "\n",
+    "            if TYPE=='POSITIVE':\n",
+    "                all_data.append((ONEHOT_SEQUENCE,COVERAGE,1))\n",
+    "            elif TYPE=='NEGATIVE':\n",
+    "                all_data.append((ONEHOT_SEQUENCE,COVERAGE,0))\n",
+    "\n",
+    "        random.shuffle(all_data)\n",
+    "        self.all_data=all_data\n",
+    "\n",
+    "    def __len__(self):\n",
+    "        return len(self.all_data)\n",
+    "\n",
+    "    def __getitem__(self, index):\n",
+    "        x1,x2,label= self.all_data[index]\n",
+    "        return x1,x2,label\n",
+    "\n",
+    "    def get_cross_data(self,index):\n",
+    "        return np.array(self.all_data)[index]\n",
+    "\n",
+    "class CrossValidationDataset(Dataset):\n",
+    "    \"\"\"total dataset.\"\"\"\n",
+    "\n",
+    "    def __init__(self, data):\n",
+    "        self.data= data\n",
+    "\n",
+    "    def __len__(self):\n",
+    "        return len(self.data)\n",
+    "\n",
+    "    def __getitem__(self, index):\n",
+    "        x1,x2,label= self.data[index]\n",
+    "        return x1,x2,label\n",
+    "\n",
+    "def partitions(number, k):\n",
+    "    '''\n",
+    "    Distribution of the folds\n",
+    "    Args:\n",
+    "        number: number of patients\n",
+    "        k: folds number\n",
+    "    '''\n",
+    "    n_partitions = np.ones(k) * int(number/k)\n",
+    "    n_partitions[0:(number % k)] += 1\n",
+    "    return n_partitions\n",
+    "\n",
+    "def get_indices(n_splits = 3, subjects = 145):\n",
+    "    '''\n",
+    "    Indices of the set test\n",
+    "    Args:\n",
+    "        n_splits: folds number\n",
+    "        subjects: number of patients\n",
+    "    '''\n",
+    "    l = partitions(subjects, n_splits)\n",
+    "    fold_sizes = l\n",
+    "    indices = np.arange(subjects).astype(int)\n",
+    "    current = 0\n",
+    "    for fold_size in fold_sizes:\n",
+    "        start = current\n",
+    "        stop =  current + fold_size\n",
+    "        current = stop\n",
+    "        yield(indices[int(start):int(stop)])\n",
+    "\n",
+    "def k_folds(n_splits = 3, subjects = 145):\n",
+    "    '''\n",
+    "    Generates folds for cross validation\n",
+    "    Args:\n",
+    "        n_splits: folds number\n",
+    "        subjects: number of patients\n",
+    "    '''\n",
+    "    indices = np.arange(subjects).astype(int)\n",
+    "    for test_idx in get_indices(n_splits, subjects):\n",
+    "        train_idx = np.setdiff1d(indices, test_idx)\n",
+    "        yield train_idx, test_idx\n",
+    "\n",
+    "# read datasets\n",
+    "all_dataset = MyDataset()\n",
+    "\n",
+    "\n",
+    "print(\"[INFO] dataloaders generated\")\n",
+    "print('[INFO] start to train and tune')\n",
+    "print('-' * 10)\n",
+    "\n",
+    "\n",
+    "num_sequences=all_dataset.__len__()\n",
+    "crossvalidation_count=0\n",
+    "\n",
+    "count=0\n",
+    "for train_idx, test_idx in k_folds(n_splits = 5,subjects=num_sequences):\n",
+    "    if count!=0:\n",
+    "        break\n",
+    "    count+=1\n",
+    "    random_seed = train_kwargs['random_seed']\n",
+    "    optim = train_kwargs['optim'] # ['SGD', 'Adam', 'Adagrad', 'RMSProp']\n",
+    "    optim_param = train_kwargs['optim_param'] # {'betas': [0.9, 0.999], 'lr': 0.001, 'weight_decay': 1e-5}\n",
+    "    scheduler =  train_kwargs['scheduler'] # ['StepLR', 'MultiStepLR', 'ReduceLROnPlateau']\n",
+    "    scheduler_param = train_kwargs['scheduler_param'] # {'step_size': 10, 'gamma': 0.1}\n",
+    "    loss = train_kwargs['loss'] # ['CrossEntropyLoss', 'NLLLoss', 'MSELoss']\n",
+    "    cudnn = train_kwargs['cudnn'] # [True, False]\n",
+    "    imbalance = train_kwargs['imbalance'] # 10.0\n",
+    "    batch_size = train_kwargs['batch_size'] # 16, .. 32\n",
+    "    encode_mode = train_kwargs['encode_mode'] # 'N_2_zero', 'N_2_quarter'\n",
+    "    num_epochs = train_kwargs['num_epochs'] # 40\n",
+    "    shuffle = train_kwargs['shuffle']\n",
+    "    num_workers = train_kwargs['num_workers']\n",
+    "\n",
+    "    gpu = torch.cuda.is_available()\n",
+    "    #gpu = False\n",
+    "    torch.backends.cudnn.deterministic = True\n",
+    "    torch.backends.cudnn.fastest = cudnn\n",
+    "    torch.manual_seed(random_seed)\n",
+    "\n",
+    "    if gpu:\n",
+    "        model = cnn_2s().cuda()\n",
+    "        class_imbalance = torch.FloatTensor(imbalance).cuda()\n",
+    "    else:\n",
+    "        model = cnn_2s()\n",
+    "        class_imbalance = torch.FloatTensor(imbalance)\n",
+    "\n",
+    "    # build optimizer\n",
+    "    if optim == 'SGD':\n",
+    "        optimizer = torch.optim.SGD(model.parameters(), **optim_param)\n",
+    "    elif optim == 'Adam':\n",
+    "        optimizer = torch.optim.Adam(model.parameters(), **optim_param)\n",
+    "    elif optim == 'Adagrad':\n",
+    "        optimizer = torch.optim.Adagrad(model.parameters(), **optim_param)\n",
+    "    elif optim == 'RMSProp':\n",
+    "        optimizer = torch.optim.RMSProp(model.parameters(), **optim_param)\n",
+    "\n",
+    "    # build scheduler\n",
+    "    if scheduler == 'StepLR':\n",
+    "        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, **scheduler_param)\n",
+    "    elif scheduler == 'MultiStepLR':\n",
+    "        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, **scheduler_param)\n",
+    "    elif scheduler == 'ReduceLROnPlateau':\n",
+    "        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, **scheduler_param)\n",
+    "\n",
+    "    if loss == 'CrossEntropyLoss':\n",
+    "        criterion = nn.CrossEntropyLoss(weight=class_imbalance)\n",
+    "    elif loss == 'NLLLoss':\n",
+    "        criterion = nn.NLLLoss(weight=class_imbalance)\n",
+    "    elif loss == 'MSELoss':\n",
+    "        criterion = nn.MSELoss(weight=class_imbalance)\n",
+    "\n",
+    "    #print(train_idx,test_idx)\n",
+    "    cross_train_data=all_dataset.get_cross_data(train_idx)\n",
+    "    dataset_train=CrossValidationDataset(data=cross_train_data)\n",
+    "    cross_test_data=all_dataset.get_cross_data(test_idx)\n",
+    "    dataset_test=CrossValidationDataset(data=cross_test_data)\n",
+    "\n",
+    "    trainloader = DataLoader(dataset_train, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)\n",
+    "    valloader = DataLoader(dataset_test, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)\n",
+    "\n",
+    "    dataloaders = {'train': trainloader, 'val': valloader}\n",
+    "\n",
+    "    start_time = time.time()\n",
+    "    best_model_wts = copy.deepcopy(model.state_dict())\n",
+    "    best_acc = 0.0\n",
+    "    best_sensitivity = 0.0\n",
+    "    best_auroc = 0.0\n",
+    "    best_auprc = 0.0\n",
+    "    best_epoch = -1\n",
+    "    best_labels_list = []\n",
+    "    best_probs_list = []\n",
+    "    epoch_loss_min = float('inf')\n",
+    "    epoch_loss_prev = float('inf')\n",
+    "    uptrend = 0 # num of continuous saturated epoches\n",
+    "    max_uptrend = 10 # max num of continuous aturated epoches\n",
+    "    early_stopping = False\n",
+    "    performance_hist = pd.DataFrame(columns=[\"loss\", \"acc\", \"sensitivity\", \"auroc\", \"auprc\", \"epoch\", \"phase\"])\n",
+    "\n",
+    "\n",
+    "    for epoch in range(num_epochs):\n",
+    "\n",
+    "        print('Epoch {}/{} CrossValidation {}'.format(epoch, num_epochs - 1,crossvalidation_count))\n",
+    "        print('-' * 10)\n",
+    "\n",
+    "        dataset_sizes = {'train': 0.0, 'val':0.0} # set to float for later division\n",
+    "\n",
+    "        for phase in ['train', 'val']:\n",
+    "\n",
+    "            if phase == 'train':\n",
+    "                scheduler.step()\n",
+    "                model.train(True)\n",
+    "            else:\n",
+    "                model.train(False)\n",
+    "\n",
+    "            running_loss = 0.0\n",
+    "            running_corrects = 0.0\n",
+    "            running_tp = 0.0 # num of true positive cases\n",
+    "            labels_list = []\n",
+    "            probs_list = []\n",
+    "\n",
+    "            for data in tqdm(dataloaders[phase]):\n",
+    "                #print(data)\n",
+    "                inputs1,inputs2,labels = data\n",
+    "                inputs2=torch.from_numpy(numpy.array([x.numpy().tolist() for x in inputs2]))\n",
+    "                inputs2=inputs2.unsqueeze(1).float()\n",
+    "                #print(inputs1,inputs2,labels)\n",
+    "                if gpu:\n",
+    "                    inputs1,inputs2,labels= Variable(inputs1.cuda()),Variable(inputs2.cuda()),Variable(labels.cuda())\n",
+    "                else:\n",
+    "                    inputs1,inputs2,labels = Variable(inputs1),Variable(inputs2),Variable(labels)\n",
+    "\n",
+    "                optimizer.zero_grad()\n",
+    "                outputs = model(inputs1,inputs2)\n",
+    "                _, preds = torch.max(outputs.data, 1)\n",
+    "                probs = outputs.data[:, 1]\n",
+    "                loss = criterion(outputs, labels)\n",
+    "\n",
+    "                labels_list.extend(labels.data)\n",
+    "                probs_list.extend(probs)\n",
+    "\n",
+    "                if phase == 'train':\n",
+    "                    loss.backward()\n",
+    "                    optimizer.step()\n",
+    "\n",
+    "                running_loss += loss * inputs1.size(0)\n",
+    "                running_corrects += torch.sum(preds == labels.data)\n",
+    "                running_tp += torch.sum((preds + labels.data) == 2)\n",
+    "                dataset_sizes[phase] += len(labels)\n",
+    "\n",
+    "            epoch_loss = float(running_loss / dataset_sizes[phase])\n",
+    "            epoch_acc = float(running_corrects/ dataset_sizes[phase])\n",
+    "            epoch_sensitivity = float(running_tp / dataset_sizes[phase])\n",
+    "\n",
+    "            performance = {'loss': epoch_loss, 'acc': epoch_acc, 'sensitivity': epoch_sensitivity, 'epoch': epoch, 'crossvalidation':crossvalidation_count,'phase': phase}\n",
+    "            performance_hist = performance_hist.append(performance, ignore_index=True)\n",
+    "            print('{} Loss: {:.4f} ACC: {:.4f}, Sensitivity:{:.4f}'.format(phase, epoch_loss, epoch_acc, epoch_sensitivity))\n",
+    "\n",
+    "\n",
+    "            if phase == 'val':\n",
+    "                if epoch_loss < epoch_loss_min:\n",
+    "                    best_epoch = epoch\n",
+    "                    best_crossvalidation=crossvalidation_count\n",
+    "                    epoch_loss_min = epoch_loss\n",
+    "                    best_acc = epoch_acc\n",
+    "                    best_sensitivity = epoch_sensitivity\n",
+    "                    torch.save(model, filename_model+\"_%s\"%str(crossvalidation_count))\n",
+    "                    print('[INFO] save model after {} epoch of crossvalition {} to {}'.format(epoch,crossvalidation_count, filename_model+\"_%s\"%str(crossvalidation_count)))\n",
+    "\n",
+    "                if epoch_loss < epoch_loss_prev:\n",
+    "                    uptrend = 0\n",
+    "                    epoch_loss_prev = epoch_loss\n",
+    "                else:\n",
+    "                    uptrend += 1\n",
+    "                    epoch_loss_prev = epoch_loss\n",
+    "\n",
+    "                if uptrend == max_uptrend:\n",
+    "                    early_stopping = True\n",
+    "                    print('[INFO] loss: {}, acc: {}, sensitivity: {}, AUROC: {}, AUPRC: {}, best_epoch: {}, total_epoch: {},crossvalidation: {}, phase: {}'.format(epoch_loss, best_acc, best_sensitivity, best_auroc, best_auprc, best_epoch, epoch,crossvalidation_count, phase))\n",
+    "\n",
+    "                if early_stopping:\n",
+    "                    print('[INFO] early stop')\n",
+    "                    break\n",
+    "        if early_stopping:\n",
+    "            break\n",
+    "\n",
+    "    time_elapsed = time.time()-start_time\n",
+    "    print('Training completes in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))\n",
+    "    performance_hist.to_csv(filename_log+\"_%s\"%str(crossvalidation_count), sep='\\t', index=False)\n",
+    "    print('[INFO] performance_hist saved to {}'.format(filename_log))\n",
+    "    print('[INFO] fine-tuned model saved to {}'.format(filename_model))\n",
+    "\n",
+    "    with open(filename_output+\"_%s\"%str(crossvalidation_count), 'w') as f:\n",
+    "        f.write('Acc\\tSensitivity\\tAUROC\\tAUPRC\\n')\n",
+    "        f.write('{:.4f}\\t{:.4f}\\n'.format(best_acc, best_sensitivity))\n",
+    "        f.write('-'*10+'\\n')\n",
+    "        f.write('train_kwargs: {}\\n'.format(train_kwargs))\n",
+    "        f.write('model: {}\\n'.format(filename_model))\n",
+    "        f.write('-'*10+'\\n')\n",
+    "    print('[INFO] resnet_2s2a model training output (with settings) saved to {}'.format(filename_output))\n",
+    "\n",
+    "    crossvalidation_count+=1\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Plot Acc"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import matplotlib.pyplot as plt\n",
+    "import pandas as pd"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 720x432 with 1 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    },
+    {
+     "data": {
+      "text/plain": [
+       "<Figure size 432x288 with 0 Axes>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "model='model7'\n",
+    "log=pd.read_csv('output/'+model+'_log_0',sep='\\t')\n",
+    "\n",
+    "plt.figure(figsize=[10,6])\n",
+    "plt.plot(log[log.phase=='train'].epoch,log[log.phase=='train'].acc,label='Train')\n",
+    "plt.plot(log[log.phase=='train'].epoch,log[log.phase=='val'].acc,label='Test')\n",
+    "plt.xlabel('Epoch')\n",
+    "plt.ylabel('Acc')\n",
+    "plt.xticks(log[log.phase=='train'].epoch,rotation=90)\n",
+    "plt.legend()\n",
+    "plt.show()\n",
+    "plt.savefig('output/%s.jpg'%model)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 39,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Acc</th>\n",
+       "      <th>Sensitivity</th>\n",
+       "      <th>AUROC</th>\n",
+       "      <th>AUPRC</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <td>0</td>\n",
+       "      <td>0.8878</td>\n",
+       "      <td>0.4966</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>1</td>\n",
+       "      <td>----------</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>2</td>\n",
+       "      <td>train_kwargs: {'tune_metric': 'auprc', 'random...</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>3</td>\n",
+       "      <td>model: model6</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <td>4</td>\n",
+       "      <td>----------</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "                                                 Acc  Sensitivity  AUROC  \\\n",
+       "0                                             0.8878       0.4966    NaN   \n",
+       "1                                         ----------          NaN    NaN   \n",
+       "2  train_kwargs: {'tune_metric': 'auprc', 'random...          NaN    NaN   \n",
+       "3                                      model: model6          NaN    NaN   \n",
+       "4                                         ----------          NaN    NaN   \n",
+       "\n",
+       "   AUPRC  \n",
+       "0    NaN  \n",
+       "1    NaN  \n",
+       "2    NaN  \n",
+       "3    NaN  \n",
+       "4    NaN  "
+      ]
+     },
+     "execution_count": 39,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "log"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 43,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "x=[1,2,3,4,5,6]\n",
+    "import random\n",
+    "random.shuffle(x)"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "p36torch",
+   "language": "python",
+   "name": "p36torch"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.6.3"
+  },
+  "latex_envs": {
+   "LaTeX_envs_menu_present": true,
+   "autoclose": false,
+   "autocomplete": true,
+   "bibliofile": "biblio.bib",
+   "cite_by": "apalike",
+   "current_citInitial": 1,
+   "eqLabelWithNumbers": true,
+   "eqNumInitial": 1,
+   "hotkeys": {
+    "equation": "Ctrl-E",
+    "itemize": "Ctrl-I"
+   },
+   "labels_anchors": false,
+   "latex_user_defs": false,
+   "report_style_numbering": false,
+   "user_envs_cfg": false
+  },
+  "toc": {
+   "base_numbering": 1,
+   "nav_menu": {},
+   "number_sections": true,
+   "sideBar": false,
+   "skip_h1_title": false,
+   "title_cell": "Table of Contents",
+   "title_sidebar": "Contents",
+   "toc_cell": false,
+   "toc_position": {
+    "height": "357px",
+    "left": "1586px",
+    "top": "134px",
+    "width": "231px"
+   },
+   "toc_section_display": true,
+   "toc_window_display": true
+  },
+  "varInspector": {
+   "cols": {
+    "lenName": 16,
+    "lenType": 16,
+    "lenVar": 40
+   },
+   "kernels_config": {
+    "python": {
+     "delete_cmd_postfix": "",
+     "delete_cmd_prefix": "del ",
+     "library": "var_list.py",
+     "varRefreshCmd": "print(var_dic_list())"
+    },
+    "r": {
+     "delete_cmd_postfix": ") ",
+     "delete_cmd_prefix": "rm(",
+     "library": "var_list.r",
+     "varRefreshCmd": "cat(var_dic_list()) "
+    }
+   },
+   "types_to_exclude": [
+    "module",
+    "function",
+    "builtin_function_or_method",
+    "instance",
+    "_Feature"
+   ],
+   "window_display": false
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

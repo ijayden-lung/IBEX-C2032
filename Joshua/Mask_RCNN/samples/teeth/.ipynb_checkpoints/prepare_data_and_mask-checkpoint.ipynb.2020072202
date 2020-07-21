@@ -1,0 +1,239 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Init"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 19,
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2019-10-28T13:01:03.805012Z",
+     "start_time": "2019-10-28T13:01:03.801755Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "import os\n",
+    "import pandas as pd\n",
+    "import json\n",
+    "import numpy as np"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Process Raw Fig/Mask"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 37,
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2019-10-28T13:22:26.759042Z",
+     "start_time": "2019-10-28T13:22:26.218864Z"
+    }
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "d27c491b84b3438f84129400e91b0e5d 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "d2accef65c5d4d84acb18525c2c2f16d 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "d9db6fb42b5842e5a040379683a14b2c 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "dbbfb6c444cf456488d76b3996e3316b 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "dc2d5345851f456bad4ad0849a6d6fc5 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "dc9d7fe8989f4dc8a2766d682ccad763 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "dd65f6b6c39c444781497c00a03b1fa9 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "dd81a5ef71b941ffb882292604635ef2 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "df0302bb18474031945b145bb9251a84 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "e0a0dce059e24ca3b8507dbd491b4c4e 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "e2c21fd1c252409fa66bb78f6565929e 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "e5c6b4059fbb426399f35470a071d664 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "e822e85df67a47c591495b8104010071 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "eb14bd30aeaa4aeea03923061545d018 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "ec30bc2166c248cc90ecb04a567d0aa0 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "eccd9081c1b14f47a1a472042874bf0d 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "eec165d291fb4da89ece346901b93c83 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "ef2e70f5631644e7a4e335a0e2305031 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "f11c4945d262438a893a76599d4a019c 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "f2263d10e5d547c59c3469860f948a56 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "f2d8d335327648508e20d00acd051fec 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "f456aa2a74974cefa7a6e4a28639ddc4 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "f5977fdaf1f14622ba1d5f9dd62c9641 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "f5a57bcaf2554440b4df02f7256e022f 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "f62b454b735b4308a7175c26cb8b48ce 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "f896a733ea22463aa625853cb44f6995 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n",
+      "fe292c4273814da3bc2ec1aee7a1129e 1480 2776\n",
+      "Wrong!\n",
+      "Wrong!\n"
+     ]
+    }
+   ],
+   "source": [
+    "train='val'\n",
+    "df=pd.read_csv('../../datasets/teeth/teeth_number_%s.csv'%train)\n",
+    "new_j={}\n",
+    "\n",
+    "for i in range(len(df)):\n",
+    "    fig_id=df.loc[i,'id']\n",
+    "    fig_name=fig_id+'.jpg'\n",
+    "    fig_width=int(fig_content['size']['width'])\n",
+    "    fig_height=int(fig_content['size']['height'])\n",
+    "    \n",
+    "    print(fig_id,fig_height,fig_width)\n",
+    "    \n",
+    "    fig_content=json.loads(df.loc[i,'item'])\n",
+    "    if fig_content['validate']!='0':\n",
+    "\n",
+    "        fig_text=fig_content['text']\n",
+    "        new_fig_text={}\n",
+    "        for fig_text_id in fig_text.keys():\n",
+    "            new_fig_text[fig_text[fig_text_id]['name']]=fig_text[fig_text_id]['list']\n",
+    "            \n",
+    "        new_j[fig_id]={}\n",
+    "        new_j[fig_id]['filename']=fig_name\n",
+    "        new_j[fig_id]['regions']={}\n",
+    "        \n",
+    "        os.system('cp ../../datasets/teeth/CT_data_origin/%s ../../datasets/teeth/%s'%(fig_name,train))\n",
+    "        \n",
+    "        teeth=[11,12,13,14,15,16,17,21,22,23,24,25,26,27,31,32,33,34,35,36,37,41,42,43,44,45,46,47,44]\n",
+    "        for teeth_id in new_fig_text.keys():\n",
+    "            try:\n",
+    "                int(teeth_id) in teeth\n",
+    "                new_j[fig_id]['regions'][teeth_id]={}\n",
+    "                new_j[fig_id]['regions'][teeth_id]['shape_attributes']={}\n",
+    "                new_j[fig_id]['regions'][teeth_id]['shape_attributes']['name']='polygon'\n",
+    "                new_j[fig_id]['regions'][teeth_id]['shape_attributes']['all_points_x']=[int(x) for x in np.array(new_fig_text[teeth_id])[:,0]]\n",
+    "                new_j[fig_id]['regions'][teeth_id]['shape_attributes']['all_points_y']=[int(x) for x in np.array(new_fig_text[teeth_id])[:,1]]\n",
+    "            except:\n",
+    "                print('Wrong!')\n",
+    "                \n",
+    "with open('../../datasets/teeth/%s/via_region_data.json'%train, 'w') as outfile:\n",
+    "    json.dump(new_j, outfile)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 38,
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2019-10-28T13:22:31.582202Z",
+     "start_time": "2019-10-28T13:22:31.577092Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "27"
+      ]
+     },
+     "execution_count": 38,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "len(new_j)"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "ml",
+   "language": "python",
+   "name": "ml"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.6.9"
+  },
+  "toc": {
+   "base_numbering": 1,
+   "nav_menu": {},
+   "number_sections": true,
+   "sideBar": true,
+   "skip_h1_title": false,
+   "title_cell": "Table of Contents",
+   "title_sidebar": "Contents",
+   "toc_cell": false,
+   "toc_position": {},
+   "toc_section_display": true,
+   "toc_window_display": false
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

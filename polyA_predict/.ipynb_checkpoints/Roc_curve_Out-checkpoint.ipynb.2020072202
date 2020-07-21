@@ -1,0 +1,184 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import numpy as np\n",
+    "import tensorflow as tf\n",
+    "import sys, os\n",
+    "import argparse\n",
+    "import matplotlib.pyplot as plt\n",
+    "from model4 import Net\n",
+    "from supporting import *\n",
+    "from sklearn.metrics import roc_curve\n",
+    "from sklearn.metrics import roc_auc_score\n",
+    "\n",
+    "#parser = argparse.ArgumentParser()\n",
+    "#parser.add_argument('data', help='Path to data file, can be .txt file containing sequeces or .npz file containing one-hot encoded sequences')\n",
+    "#parser.add_argument('wts', help='Trained model (.npz file)')\n",
+    "#parser.add_argument('--out', default=None, help='Save predictions to (.txt file)')\n",
+    "#opts = parser.parse_args()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def plot_roc_curve(Infpr, Intpr,Orifpr,Oritpr):\n",
+    "    plt.plot(fpr, tpr, color='orange', label='ROC')\n",
+    "    plt.plot(fpr, tpr, color='white', label='RO')\n",
+    "    plt.plot([0, 1], [0, 1], color='darkblue', linestyle='--')\n",
+    "    plt.xlabel('False Positive Rate')\n",
+    "    plt.ylabel('True Positive Rate')\n",
+    "    plt.title('Receiver Operating Characteristic (ROC) Curve')\n",
+    "    plt.legend()\n",
+    "    plt.show()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def get_predictions(datafile,modelfile):\n",
+    "    # Load and pad data\n",
+    "    data = np.load(datafile)\n",
+    "    dataset = data['test_dataset']\n",
+    "    labels = data['test_labels'] if 'test_labels' in data else []\n",
+    "    pasid = data['test_pasid'] if 'test_pasid' in data else []\n",
+    "    \n",
+    "    # Build model\n",
+    "    sess = tf.Session()\n",
+    "    model = Net()\n",
+    "\n",
+    "    # Load trained model\n",
+    "    model.load_weights(modelfile, sess)\n",
+    "\n",
+    "    dataset, labels = pad_dataset(dataset, labels)\n",
+    "    print(\"Read %d sequences and %d labels from %s.\"%(len(dataset), len(labels), datafile))    \n",
+    "    \n",
+    "    predictions = model.get_prediction(sess, dataset, istrain=False)\n",
+    "    probs = predictions[:, 1]\n",
+    "    label = labels[:,1]\n",
+    "    return probs,label"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Read 8670 sequences and 8670 labels from model/Data_bl6.pAs.fibroblast.SeqRCIn2.npz.\n",
+      "Read 8670 sequences and 8670 labels from model/Data_bl6.pAs.fibroblast.Ori.npz.\n"
+     ]
+    },
+    {
+     "ename": "InvalidArgumentError",
+     "evalue": "Assign requires shapes of both tensors to match. lhs shape= [10,1,4,16] rhs shape= [10,1,5,16]\n\t [[node Assign_75 (defined at /home/longy/polyA_predict/model4.py:119) ]]\n\nCaused by op 'Assign_75', defined at:\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/runpy.py\", line 193, in _run_module_as_main\n    \"__main__\", mod_spec)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/runpy.py\", line 85, in _run_code\n    exec(code, run_globals)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/ipykernel_launcher.py\", line 16, in <module>\n    app.launch_new_instance()\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/traitlets/config/application.py\", line 658, in launch_instance\n    app.start()\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/ipykernel/kernelapp.py\", line 563, in start\n    self.io_loop.start()\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tornado/platform/asyncio.py\", line 148, in start\n    self.asyncio_loop.run_forever()\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/asyncio/base_events.py\", line 427, in run_forever\n    self._run_once()\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/asyncio/base_events.py\", line 1440, in _run_once\n    handle._run()\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/asyncio/events.py\", line 145, in _run\n    self._callback(*self._args)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tornado/ioloop.py\", line 690, in <lambda>\n    lambda f: self._run_callback(functools.partial(callback, future))\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tornado/ioloop.py\", line 743, in _run_callback\n    ret = callback()\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tornado/gen.py\", line 787, in inner\n    self.run()\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tornado/gen.py\", line 748, in run\n    yielded = self.gen.send(value)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/ipykernel/kernelbase.py\", line 365, in process_one\n    yield gen.maybe_future(dispatch(*args))\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tornado/gen.py\", line 209, in wrapper\n    yielded = next(result)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/ipykernel/kernelbase.py\", line 272, in dispatch_shell\n    yield gen.maybe_future(handler(stream, idents, msg))\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tornado/gen.py\", line 209, in wrapper\n    yielded = next(result)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/ipykernel/kernelbase.py\", line 542, in execute_request\n    user_expressions, allow_stdin,\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tornado/gen.py\", line 209, in wrapper\n    yielded = next(result)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/ipykernel/ipkernel.py\", line 294, in do_execute\n    res = shell.run_cell(code, store_history=store_history, silent=silent)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/ipykernel/zmqshell.py\", line 536, in run_cell\n    return super(ZMQInteractiveShell, self).run_cell(*args, **kwargs)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/IPython/core/interactiveshell.py\", line 2855, in run_cell\n    raw_cell, store_history, silent, shell_futures)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/IPython/core/interactiveshell.py\", line 2881, in _run_cell\n    return runner(coro)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/IPython/core/async_helpers.py\", line 68, in _pseudo_sync_runner\n    coro.send(None)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/IPython/core/interactiveshell.py\", line 3058, in run_cell_async\n    interactivity=interactivity, compiler=compiler, result=result)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/IPython/core/interactiveshell.py\", line 3249, in run_ast_nodes\n    if (await self.run_code(code, result,  async_=asy)):\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/IPython/core/interactiveshell.py\", line 3326, in run_code\n    exec(code_obj, self.user_global_ns, self.user_ns)\n  File \"<ipython-input-9-f25b29338025>\", line 3, in <module>\n    Outprobs,Outlabel = get_predictions('model/Data_bl6.pAs.fibroblast.SeqRCOut.npz','model/Train_Out102.npz')\n  File \"<ipython-input-3-a3973192536d>\", line 13, in get_predictions\n    model.load_weights(modelfile, sess)\n  File \"/home/longy/polyA_predict/model4.py\", line 119, in load_weights\n    sess.run(tf.assign(self.weights[k], ph).op, feed_dict={ph: wts[k]})\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tensorflow/python/ops/state_ops.py\", line 223, in assign\n    validate_shape=validate_shape)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tensorflow/python/ops/gen_state_ops.py\", line 64, in assign\n    use_locking=use_locking, name=name)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tensorflow/python/framework/op_def_library.py\", line 788, in _apply_op_helper\n    op_def=op_def)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tensorflow/python/util/deprecation.py\", line 507, in new_func\n    return func(*args, **kwargs)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tensorflow/python/framework/ops.py\", line 3300, in create_op\n    op_def=op_def)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tensorflow/python/framework/ops.py\", line 1801, in __init__\n    self._traceback = tf_stack.extract_stack()\n\nInvalidArgumentError (see above for traceback): Assign requires shapes of both tensors to match. lhs shape= [10,1,4,16] rhs shape= [10,1,5,16]\n\t [[node Assign_75 (defined at /home/longy/polyA_predict/model4.py:119) ]]\n",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mInvalidArgumentError\u001b[0m                      Traceback (most recent call last)",
+      "\u001b[0;32m~/.conda/envs/python3.6/lib/python3.6/site-packages/tensorflow/python/client/session.py\u001b[0m in \u001b[0;36m_do_call\u001b[0;34m(self, fn, *args)\u001b[0m\n\u001b[1;32m   1333\u001b[0m     \u001b[0;32mtry\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 1334\u001b[0;31m       \u001b[0;32mreturn\u001b[0m \u001b[0mfn\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m*\u001b[0m\u001b[0margs\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   1335\u001b[0m     \u001b[0;32mexcept\u001b[0m \u001b[0merrors\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mOpError\u001b[0m \u001b[0;32mas\u001b[0m \u001b[0me\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/.conda/envs/python3.6/lib/python3.6/site-packages/tensorflow/python/client/session.py\u001b[0m in \u001b[0;36m_run_fn\u001b[0;34m(feed_dict, fetch_list, target_list, options, run_metadata)\u001b[0m\n\u001b[1;32m   1318\u001b[0m       return self._call_tf_sessionrun(\n\u001b[0;32m-> 1319\u001b[0;31m           options, feed_dict, fetch_list, target_list, run_metadata)\n\u001b[0m\u001b[1;32m   1320\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/.conda/envs/python3.6/lib/python3.6/site-packages/tensorflow/python/client/session.py\u001b[0m in \u001b[0;36m_call_tf_sessionrun\u001b[0;34m(self, options, feed_dict, fetch_list, target_list, run_metadata)\u001b[0m\n\u001b[1;32m   1406\u001b[0m         \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_session\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0moptions\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mfeed_dict\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mfetch_list\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtarget_list\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 1407\u001b[0;31m         run_metadata)\n\u001b[0m\u001b[1;32m   1408\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mInvalidArgumentError\u001b[0m: Assign requires shapes of both tensors to match. lhs shape= [10,1,4,16] rhs shape= [10,1,5,16]\n\t [[{{node Assign_75}}]]",
+      "\nDuring handling of the above exception, another exception occurred:\n",
+      "\u001b[0;31mInvalidArgumentError\u001b[0m                      Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-9-f25b29338025>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m\u001b[0m\n\u001b[1;32m      1\u001b[0m \u001b[0mInprobs\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0mInlabel\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mget_predictions\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m'model/Data_bl6.pAs.fibroblast.SeqRCIn2.npz'\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m'model/Train_SeqRCIn401.npz'\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      2\u001b[0m \u001b[0mOriprobs\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0mOrilabel\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mget_predictions\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m'model/Data_bl6.pAs.fibroblast.Ori.npz'\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m'model/Train_Ori101.npz'\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m----> 3\u001b[0;31m \u001b[0mOutprobs\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0mOutlabel\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mget_predictions\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m'model/Data_bl6.pAs.fibroblast.SeqRCOut.npz'\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m'model/Train_Out102.npz'\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m      4\u001b[0m \u001b[0;31m#Rcprobs,Rclabel = get_predictions('model/Data_bl6.pAs.fibroblast.Rc.npz','model/Train_Rc401.npz')\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m<ipython-input-3-a3973192536d>\u001b[0m in \u001b[0;36mget_predictions\u001b[0;34m(datafile, modelfile)\u001b[0m\n\u001b[1;32m     11\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     12\u001b[0m     \u001b[0;31m# Load trained model\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 13\u001b[0;31m     \u001b[0mmodel\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mload_weights\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mmodelfile\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0msess\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     14\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     15\u001b[0m     \u001b[0mdataset\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mlabels\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mpad_dataset\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mdataset\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mlabels\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/polyA_predict/model4.py\u001b[0m in \u001b[0;36mload_weights\u001b[0;34m(self, wts, sess)\u001b[0m\n\u001b[1;32m    117\u001b[0m         \u001b[0mph\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mtf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mplaceholder\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mtf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mfloat32\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    118\u001b[0m         \u001b[0;32mfor\u001b[0m \u001b[0mk\u001b[0m \u001b[0;32min\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mweights\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 119\u001b[0;31m             \u001b[0msess\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mrun\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mtf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0massign\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mweights\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0mk\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mph\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mop\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mfeed_dict\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0;34m{\u001b[0m\u001b[0mph\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0mwts\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0mk\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m}\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    120\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/.conda/envs/python3.6/lib/python3.6/site-packages/tensorflow/python/client/session.py\u001b[0m in \u001b[0;36mrun\u001b[0;34m(self, fetches, feed_dict, options, run_metadata)\u001b[0m\n\u001b[1;32m    927\u001b[0m     \u001b[0;32mtry\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    928\u001b[0m       result = self._run(None, fetches, feed_dict, options_ptr,\n\u001b[0;32m--> 929\u001b[0;31m                          run_metadata_ptr)\n\u001b[0m\u001b[1;32m    930\u001b[0m       \u001b[0;32mif\u001b[0m \u001b[0mrun_metadata\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    931\u001b[0m         \u001b[0mproto_data\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mtf_session\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mTF_GetBuffer\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mrun_metadata_ptr\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/.conda/envs/python3.6/lib/python3.6/site-packages/tensorflow/python/client/session.py\u001b[0m in \u001b[0;36m_run\u001b[0;34m(self, handle, fetches, feed_dict, options, run_metadata)\u001b[0m\n\u001b[1;32m   1150\u001b[0m     \u001b[0;32mif\u001b[0m \u001b[0mfinal_fetches\u001b[0m \u001b[0;32mor\u001b[0m \u001b[0mfinal_targets\u001b[0m \u001b[0;32mor\u001b[0m \u001b[0;34m(\u001b[0m\u001b[0mhandle\u001b[0m \u001b[0;32mand\u001b[0m \u001b[0mfeed_dict_tensor\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1151\u001b[0m       results = self._do_run(handle, final_targets, final_fetches,\n\u001b[0;32m-> 1152\u001b[0;31m                              feed_dict_tensor, options, run_metadata)\n\u001b[0m\u001b[1;32m   1153\u001b[0m     \u001b[0;32melse\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1154\u001b[0m       \u001b[0mresults\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0;34m[\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/.conda/envs/python3.6/lib/python3.6/site-packages/tensorflow/python/client/session.py\u001b[0m in \u001b[0;36m_do_run\u001b[0;34m(self, handle, target_list, fetch_list, feed_dict, options, run_metadata)\u001b[0m\n\u001b[1;32m   1326\u001b[0m     \u001b[0;32mif\u001b[0m \u001b[0mhandle\u001b[0m \u001b[0;32mis\u001b[0m \u001b[0;32mNone\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1327\u001b[0m       return self._do_call(_run_fn, feeds, fetches, targets, options,\n\u001b[0;32m-> 1328\u001b[0;31m                            run_metadata)\n\u001b[0m\u001b[1;32m   1329\u001b[0m     \u001b[0;32melse\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1330\u001b[0m       \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_do_call\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0m_prun_fn\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mhandle\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mfeeds\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mfetches\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/.conda/envs/python3.6/lib/python3.6/site-packages/tensorflow/python/client/session.py\u001b[0m in \u001b[0;36m_do_call\u001b[0;34m(self, fn, *args)\u001b[0m\n\u001b[1;32m   1346\u001b[0m           \u001b[0;32mpass\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1347\u001b[0m       \u001b[0mmessage\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0merror_interpolation\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0minterpolate\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mmessage\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_graph\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 1348\u001b[0;31m       \u001b[0;32mraise\u001b[0m \u001b[0mtype\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0me\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mnode_def\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mop\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mmessage\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   1349\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1350\u001b[0m   \u001b[0;32mdef\u001b[0m \u001b[0m_extend_graph\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mInvalidArgumentError\u001b[0m: Assign requires shapes of both tensors to match. lhs shape= [10,1,4,16] rhs shape= [10,1,5,16]\n\t [[node Assign_75 (defined at /home/longy/polyA_predict/model4.py:119) ]]\n\nCaused by op 'Assign_75', defined at:\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/runpy.py\", line 193, in _run_module_as_main\n    \"__main__\", mod_spec)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/runpy.py\", line 85, in _run_code\n    exec(code, run_globals)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/ipykernel_launcher.py\", line 16, in <module>\n    app.launch_new_instance()\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/traitlets/config/application.py\", line 658, in launch_instance\n    app.start()\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/ipykernel/kernelapp.py\", line 563, in start\n    self.io_loop.start()\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tornado/platform/asyncio.py\", line 148, in start\n    self.asyncio_loop.run_forever()\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/asyncio/base_events.py\", line 427, in run_forever\n    self._run_once()\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/asyncio/base_events.py\", line 1440, in _run_once\n    handle._run()\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/asyncio/events.py\", line 145, in _run\n    self._callback(*self._args)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tornado/ioloop.py\", line 690, in <lambda>\n    lambda f: self._run_callback(functools.partial(callback, future))\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tornado/ioloop.py\", line 743, in _run_callback\n    ret = callback()\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tornado/gen.py\", line 787, in inner\n    self.run()\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tornado/gen.py\", line 748, in run\n    yielded = self.gen.send(value)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/ipykernel/kernelbase.py\", line 365, in process_one\n    yield gen.maybe_future(dispatch(*args))\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tornado/gen.py\", line 209, in wrapper\n    yielded = next(result)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/ipykernel/kernelbase.py\", line 272, in dispatch_shell\n    yield gen.maybe_future(handler(stream, idents, msg))\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tornado/gen.py\", line 209, in wrapper\n    yielded = next(result)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/ipykernel/kernelbase.py\", line 542, in execute_request\n    user_expressions, allow_stdin,\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tornado/gen.py\", line 209, in wrapper\n    yielded = next(result)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/ipykernel/ipkernel.py\", line 294, in do_execute\n    res = shell.run_cell(code, store_history=store_history, silent=silent)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/ipykernel/zmqshell.py\", line 536, in run_cell\n    return super(ZMQInteractiveShell, self).run_cell(*args, **kwargs)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/IPython/core/interactiveshell.py\", line 2855, in run_cell\n    raw_cell, store_history, silent, shell_futures)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/IPython/core/interactiveshell.py\", line 2881, in _run_cell\n    return runner(coro)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/IPython/core/async_helpers.py\", line 68, in _pseudo_sync_runner\n    coro.send(None)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/IPython/core/interactiveshell.py\", line 3058, in run_cell_async\n    interactivity=interactivity, compiler=compiler, result=result)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/IPython/core/interactiveshell.py\", line 3249, in run_ast_nodes\n    if (await self.run_code(code, result,  async_=asy)):\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/IPython/core/interactiveshell.py\", line 3326, in run_code\n    exec(code_obj, self.user_global_ns, self.user_ns)\n  File \"<ipython-input-9-f25b29338025>\", line 3, in <module>\n    Outprobs,Outlabel = get_predictions('model/Data_bl6.pAs.fibroblast.SeqRCOut.npz','model/Train_Out102.npz')\n  File \"<ipython-input-3-a3973192536d>\", line 13, in get_predictions\n    model.load_weights(modelfile, sess)\n  File \"/home/longy/polyA_predict/model4.py\", line 119, in load_weights\n    sess.run(tf.assign(self.weights[k], ph).op, feed_dict={ph: wts[k]})\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tensorflow/python/ops/state_ops.py\", line 223, in assign\n    validate_shape=validate_shape)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tensorflow/python/ops/gen_state_ops.py\", line 64, in assign\n    use_locking=use_locking, name=name)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tensorflow/python/framework/op_def_library.py\", line 788, in _apply_op_helper\n    op_def=op_def)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tensorflow/python/util/deprecation.py\", line 507, in new_func\n    return func(*args, **kwargs)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tensorflow/python/framework/ops.py\", line 3300, in create_op\n    op_def=op_def)\n  File \"/home/longy/.conda/envs/python3.6/lib/python3.6/site-packages/tensorflow/python/framework/ops.py\", line 1801, in __init__\n    self._traceback = tf_stack.extract_stack()\n\nInvalidArgumentError (see above for traceback): Assign requires shapes of both tensors to match. lhs shape= [10,1,4,16] rhs shape= [10,1,5,16]\n\t [[node Assign_75 (defined at /home/longy/polyA_predict/model4.py:119) ]]\n"
+     ]
+    }
+   ],
+   "source": [
+    "Inprobs,Inlabel = get_predictions('model/Data_bl6.pAs.fibroblast.SeqRCIn2.npz','model/Train_SeqRCIn401.npz')\n",
+    "Oriprobs,Orilabel = get_predictions('model/Data_bl6.pAs.fibroblast.Ori.npz','model/Train_Ori101.npz')\n",
+    "#Outprobs,Outlabel = get_predictions('model/Data_bl6.pAs.fibroblast.SeqRCOut.npz','model/Train_Out102.npz')\n",
+    "#Rcprobs,Rclabel = get_predictions('model/Data_bl6.pAs.fibroblast.Rc.npz','model/Train_Rc401.npz')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "Inauc = roc_auc_score(Inlabel, Inprobs)\n",
+    "print('AUC: %.3f' % Inauc)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "Oriauc = roc_auc_score(Orilabel, Oriprobs)\n",
+    "print('AUC: %.3f' % Oriauc)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "Infpr, Intpr, thresholds = roc_curve(Inlabel,Inprobs)\n",
+    "Orifpr, Oritpr, thresholds = roc_curve(Orilabel,Oriprobs)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "plot_roc_curve(Infpr, Intpr,Orifpr,Oritpr)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.6.7"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
