@@ -1,0 +1,23 @@
+#!/usr/bin/perl -w
+
+open FILE,"bl6.pAs.tianbin.usage0.2.train.txt";
+<FILE>;
+my %hash;
+while(<FILE>){
+	chomp;
+	my ($symbol) = (split)[5];
+	$hash{$symbol} = '';
+}
+
+
+
+open FILE,"bl6.pAs.tianbin.usage.train.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($symbol) = (split)[5];
+	print "$_\n" if !exists $hash{$symbol};
+}
+
+
+
