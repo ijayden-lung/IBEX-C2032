@@ -1,0 +1,32 @@
+#!/usr/bin/perl -w
+
+
+
+open FILE,"bl6.pAs.tianbin.usage.test.txt";
+<FILE>;
+my %hash;
+while(<FILE>){
+	chomp;
+	my ($symbol,$readCount) = (split)[5,7];
+	if(!exists $hash{$symbol} || $hash{$symbol} < $readCount){
+		$hash{$symbol} = $readCount;
+	}
+}
+
+
+
+
+open FILE,"bl6.pAs.tianbin.usage.test.txt";
+my $header = <FILE>;
+open OUT,">bl6.pAs.tianbin.usage.test.v2.txt";
+while(<FILE>){
+	chomp;
+	my ($symbol) = (split)[5];
+	if($hash{$symbol} > 5){
+		print OUT "$_\n";
+	}
+}
+
+
+
+
