@@ -1,0 +1,35 @@
+#! /bin/bash
+#SBATCH --job-name=Bed
+#SBATCH --partition=batch
+#SBATCH --nodes=1
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --output=log.%J
+#SBATCH --time=1:00:00
+#SBATCH --mem=24G
+#SBATCH -a 0
+#SBATCH --gres=gpu:1
+
+
+data="../data/bl6.pAs.predict.REP1.newround3.txt"
+target="bl6.pAs.predict.newround3"
+
+
+#perl generate_bed.pl $data $target
+#bedtools coverage -a $target -b modMSX_021.bed -S -sorted -counts > $target.021.counts
+#bedtools coverage -a $target -b modMSX_022.bed -S -sorted -counts > $target.022.counts
+#perl merge_rep.pl $target.021.counts $target.022.counts $target.info
+
+#perl calculate_usage.predict.pl $data $target.info $target.usage.txt
+
+
+#perl calculate_usage.tianbin.pl $data $target.info $target.info.cutoff
+
+scanGenome="bl6.pAs.scanGenome.newround3.txt"
+predict="bl6.pAs.predict.newround3.usage.txt"
+data="../usage_data/bl6.pAs.tianbin.usage.train.v2.txt"
+out1="bl6.pAs.subset.predict.txt"
+out2="bl6.pAs.subset.tianbin.txt"
+
+perl subset_gene.pl $scanGenome $predict $data $out1 $out2
+perl different.pl

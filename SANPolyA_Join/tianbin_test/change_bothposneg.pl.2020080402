@@ -1,0 +1,55 @@
+#!/usr/bin/perl -w
+use List::Util qw(first max maxstr min minstr reduce shuffle sum shuffle) ;
+
+my %database;
+open FILE,"bl6.pAs.subset.tianbin.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif,$ave_diff)  = split;
+	$pas_id = "$chr:$pos:$strand";
+	$database{$pas_id} = "$motif\t$symbol";
+}
+
+open FILE,"bl6.pAs.subset.predict.txt";
+my %correct_pas;
+my %predict_pas;
+$header = <FILE>;
+open OUT,">bl6.pAs.subset.fp.txt";
+print OUT "$header";
+open OUT2,">bl6.pAs.subset.tp.txt";
+print OUT2 "$header";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif,$ave_diff,$biotype,$distance,$map_id)  = split;
+	$pos = sprintf("%.0f",$pos);
+	if(exists $database{$map_id} && abs($distance)<=25){
+		if(exists $correct_pas{$map_id}){
+			print "$map_id\t$pas_id\n";
+		}
+		$correct_pas{$map_id} = '';
+		$predict_pas{"$chr:$pos:$strand"} = '';
+		print OUT2 "$_\n";
+	}
+	else{
+		print OUT "$_\n";
+	}
+}
+
+
+my $num = keys %correct_pas;
+my $num2 = keys %predict_pas;
+print "$num\t$num2\n"; ######num1 < num2 because it's some pas mapped to two pas. in themiddle
+
+
+open FILE,"bl6.pAs.subset.tianbin.txt";
+$header = <FILE>;
+open OUT,">bl6.pAs.subset.fn.txt";
+print OUT "$header";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand) = split;
+	if (!exists $correct_pas{"$chr:$pos:$strand"}){
+		print OUT "$_\n";
+	}
+}
