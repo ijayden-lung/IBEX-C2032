@@ -1,0 +1,24 @@
+#!/usr/bin/perl -w
+
+my %pas_usage;
+my %pas_num;
+open FILE,"bl6.pAs.predict.newround3.usage.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage) = split;
+	$pas_num{$symbol}++;
+	$pas_usage{$pas_id} = $usage;
+}
+
+
+open FILE,"../data/bl6.pAs.predict.REP1.newround3.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my @data = = split;
+	my ($pas_id,$symbol) = ($data[0],$data[5]);
+	next if $pas_num{$symbol} <=1;
+	my @up_cov = @data[8..108];
+
+
