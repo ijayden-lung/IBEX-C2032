@@ -1,0 +1,42 @@
+#!/usr/bin/perl -w
+
+my @dir = qw/mVs mVm/;
+open OUT,">Different.txt";
+print OUT "gene_id\tdist_diff\tusage_diff\ttype\n";
+foreach my $dir (@dir){
+	open FILE,"$dir/bl6.pAs.subset.tianbin.txt";
+	my $pre = "No";
+	my %dist;
+	my $usage;
+	while(<FILE>){
+		chomp;
+		my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif) = split;
+		if(exists $dist{$symbol}){
+			my $dist_diff = $pos - $dist{$symbol};
+			my $usage_diff = $usage - $usage{$symbol};
+			print OUT "$symbol\t$dist_diff\t$usage_diff\tdb_$dir\n";
+		}
+		$dist{$symbol} = $pos;
+		$usage{$symbol} = $usage;
+	}
+}
+@dir = qw/sVm mVm/;
+foreach my $dir (@dir){
+	open FILE,"$dir/bl6.pAs.subset.predict.txt";
+	my $pre = "No";
+	my %dist;
+	my $usage;
+	while(<FILE>){
+		chomp;
+		my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif) = split;
+		if(exists $dist{$symbol}){
+			my $dist_diff = $pos - $dist{$symbol};
+			my $usage_diff = $usage - $usage{$symbol};
+			print OUT "$symbol\t$dist_diff\t$usage_diff\tpredict_$dir\n";
+		}
+		$dist{$symbol} = $pos;
+		$usage{$symbol} = $usage;
+	}
+}
+
+
