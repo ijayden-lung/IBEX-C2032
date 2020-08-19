@@ -1,0 +1,11 @@
+#!/usr/bin/perl -w
+
+open FILE,"bl6.pAs.tianbin.train.bed.info.cutoff";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$symbol,$new_symbol,$new_pas_type,$extension) = (split /\t/)[0,1,5,-4,-3,-2];
+	if($symbol ne $new_symbol){
+		print "$pas_id\t$symbol\t$new_symbol\n";
+	}
+}
