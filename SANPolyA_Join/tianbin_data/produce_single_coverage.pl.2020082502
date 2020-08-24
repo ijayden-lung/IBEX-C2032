@@ -1,0 +1,106 @@
+#!/usr/bin/perl -w
+#
+#=pod
+my $WIG = "/home/longy/workspace/polyA_predict/STAR/BL6_REP1/Signal.Unique.str2.out.chr17.wig";
+my $SRD  = "+";
+open OUT,">Coverage.Spaca6.txt";
+my $pos1 = 17843009;
+my $pos2 = 17870629;
+my $extend = 1000;
+#=cut
+=pod
+my $WIG = "/home/longy/workspace/polyA_predict/STAR/BL6_REP1/Signal.Unique.str2.out.chr12.wig";
+my $SRD  = "+";
+open OUT,">Coverage.Meg3.txt";
+my $pos1 = 109545836;
+my $pos2 = 109571726;
+my $extend = 1000;
+=cut
+=pod
+my $WIG = "/home/longy/workspace/polyA_predict/STAR/BL6_REP1/Signal.Unique.str2.out.chr13.wig";
+my $SRD  = "+";
+open OUT,">Coverage.Gm3325.txt";
+my $pos1 = 62048848;
+my $pos2 = 62053353;
+my $extend = 1000;
+=cut
+=pod
+my $WIG = "/home/longy/workspace/polyA_predict/STAR/BL6_REP1/Signal.Unique.str2.out.chr1.wig";
+my $SRD  = "+";
+open OUT,">Coverage.Acbd3.txt";
+my $pos1 = 180754204;
+my $pos2 = 180756086;
+my $extend = 1000;
+=cut
+=pod
+my $WIG = "/home/longy/workspace/polyA_predict/STAR/BL6_REP1/Signal.Unique.str2.out.chr2.wig";
+my $SRD  = "+";
+open OUT,">Coverage.Col5a1.txt";
+my $pos1 = 28037560;
+my $pos2 = 28039514;
+my $extend = 500;
+=cut
+=pod
+my $WIG = "/home/longy/workspace/polyA_predict/STAR/BL6_REP1/Signal.Unique.str1.out.chr4.wig";
+my $SRD  = "-";
+open OUT,">Coverage.Pdp1.txt";
+my $pos1 = 11958333;
+my $pos2 = 11959807;
+my $extend = 1000;
+=cut
+=pod
+my $WIG = "/home/longy/workspace/polyA_predict/STAR/BL6_REP1/Signal.Unique.str1.out.chr5.wig";
+my $SRD  = "-";
+open OUT,">Coverage.Ift81.txt";
+my $pos1 = 122550206;
+my $pos2 =122550496;
+my $extend = 200;
+=cut
+=pod
+my $WIG = "/home/longy/workspace/polyA_predict/STAR/BL6_REP1/Signal.Unique.str2.out.chr7.wig";
+my $SRD  = "+";
+open OUT,">Coverage.Akt2.txt";
+my $pos1 = 27639465;
+my $pos2 = 27640838;
+my $extend = 500;
+=cut
+=pod
+my $WIG = "/home/longy/workspace/polyA_predict/STAR/BL6_REP1/Signal.Unique.str1.out.chr18.wig";
+my $SRD  = "-";
+open OUT,">Coverage.Ccdc112.txt";
+my $pos1 = 46282159;
+my $pos2 = 46282765;
+my $extend = 500;
+=cut
+=pod
+my $WIG = "/home/longy/workspace/polyA_predict/STAR/BL6_REP1/Signal.Unique.str2.out.chr1.wig";
+my $SRD  = "+";
+open OUT,">Coverage.Lpgat1.txt";
+my $pos1 = 191779990;
+my $pos2 = 191784255;
+my $extend = 1000;
+=cut
+
+open FILE,$WIG;
+#print OUT "pas_id\tpas_type\tchr\tpos\tstrand\tsymbol\tusage\tsequence\n";
+my %cov;
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pos,$read) = split;
+	if($pos>$pos1-$extend){
+		$cov{$pos} = $read;
+	}
+	last if $pos > $pos2+$extend;
+}
+
+my $window = $pos2-$pos1+2*$extend;;
+my @array = (0)x($window);
+for(my $i=0;$i<$window;$i++){
+	my $each_pos = $pos1-$extend+$i;
+	if(exists $cov{$each_pos}){
+		$array[$i] = $cov{$each_pos};
+	}
+}
+@array = reverse @array if $SRD eq "-";
+print OUT join ("\t",@array),"\n";
