@@ -1,0 +1,41 @@
+#! /bin/bash
+#SBATCH --job-name=Bed
+#SBATCH --partition=batch
+#SBATCH --nodes=1
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --output=log.%J
+#SBATCH --time=1:00:00
+#SBATCH --mem=24G
+#SBATCH -a 0
+#SBATCH --gres=gpu:1
+
+cd /home/longy/project/SANPolyA_Join/polyA_seq/
+
+ENS="/home/longy/cnda/ensembl/Mus_musculus.GRCm38.101.gtf.gz";
+
+#data="../data/bl6.pAs.Predict.REP1.zbround6.txt"
+#target="bl6.pAs.predict.zbround6.txt"
+
+#data="../../DeeReCT-PolyARC_zhangnbinallprecision/zhangbin_data/bl6.pAs.raw.zhangbin.txt"
+#target="bl6.pAs.zhangbin.bed"
+
+data="../usage_data/bl6.pAs.coverage.tianbin.txt.test.v3.txt"
+target="bl6.pAs.tianbin.test.v3.bed"
+new="bl6.pAs.tianbin.test.v3.usage.txt"
+
+#data="test.5utr.txt"
+#target="test_results.bed"
+
+#perl generate_bed.pl $data $target
+#bedtools coverage -a $target -b modMSX_021.bed -S -sorted -counts > $target.021.counts
+#bedtools coverage -a $target -b modMSX_022.bed -S -sorted -counts > $target.022.counts
+#perl merge_rep.pl $target.021.counts $target.022.counts $target.info
+
+#perl calculate_usage.predict.pl $data $target.info $target.info.cutoff
+
+#perl calculate_usage.zhangbin.pl $data $target.info $target.info.cutoff
+
+perl calculate_usage.tianbin.pl $data $target.info $target.info.cutoff $ENS
+
+perl process_error_name.pl $ENS $target.info.cutoff  $new
