@@ -1,0 +1,237 @@
+#!/usr/bin/perl -w
+
+use Statistics::Descriptive;
+my ($maxLength,$penality,$CHR,$SRD,$USAGE,$PAS,$DB,$input) = @ARGV;
+
+
+my $LEFT = $input;
+$LEFT =~ s/predict/maxSum/;
+#$LEFT .= ".left.$maxLength.$penality.txt";
+$LEFT .= ".left.0.$penality.txt";
+
+my $RIGHT = $input;
+$RIGHT =~ s/predict/maxSum/;
+#$RIGHT .= ".right.$maxLength.$penality.txt";
+$RIGHT .= ".right.0.$penality.txt";
+my $OUT = $input;
+$OUT =~ s/predict/maxSum/;
+$OUT .= ".bidirection.$maxLength.$penality.txt";
+
+my $STAT = $input;
+$STAT =~ s/predict/Stat/;
+$STAT .= ".bidirection.$maxLength.$penality.txt";
+
+
+open STAT,">$STAT";
+
+my @pas_left;
+my %left_point;
+my %pas_left;
+open FILE,"$LEFT";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$maxPoint,$maxPos,$start,$end) = split;
+	next if $maxPoint < $maxLength;
+	push @pas_left,$maxPos;
+	$left_point{$maxPos} = $maxPoint;
+	$pas_left{$maxPos} = $start;
+}
+
+
+my @pas_right;
+my %right_point;
+my %pas_right;
+open FILE,"$RIGHT";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$maxPoint,$maxPos,$start,$end) = split;
+	next if $maxPoint < $maxLength;
+	push @pas_right,$maxPos;
+	$right_point{$maxPos} = $maxPoint;
+	$pas_right{$maxPos} = $start;
+}
+
+@pas_right = reverse @pas_right;
+
+
+my %pas_pos;
+for (my$i=0,$j=0;$i<@pas_left && $j<@pas_right;){
+	my $pos1 = $pas_left[$i];
+	my $pos2 = $pas_right[$j];
+	my $maxPoint1 = $left_point{$pos1};
+	my $maxPoint2 = $right_point{$pos2};
+	if($pos2>=$pos1){
+		$i++;
+	}
+	elsif($pas_left{$pos1}>$pas_right{$pos2}){
+		$j++;
+	}
+	else{
+		my $pos = ($pos1+$pos2)/2;
+		$pas_pos{$pos} = ($maxPoint2+$maxPoint1)/2;
+		$i++;
+		$j++;
+	}
+}
+
+
+
+my %nearest;
+my %nearReal;
+my %usage;
+my %usage2;
+my $ground_truth = 0 ;
+open FILE,"$USAGE";
+<FILE>;
+my $previous = 0;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$end,$srd,$symbol,$usage) = split;
+	my ($gene_id) = split /\./,$pas_id;
+	#next if $symbol ne "Origin";
+	next if $usage < 0.1;
+	next if $srd ne $SRD;
+	next if $chr ne $CHR;
+	if($end-$previous>25){
+		$ground_truth++;
+	}
+	$previous = $end;
+	while(my($pos,$val) = each %pas_pos){
+		if(!exists $nearest{$pos} || abs($pos-$end)<abs($nearest{$pos})){
+			$nearest{$pos} = $pos-$end;
+			$nearReal{$pos} = "GT.$chr:$end:$srd";
+			$usage{$pos} = "$chr:$end:$srd";
+			$usage2{$pos} = $pos-$end;
+		}
+	}
+}
+
+my $near_num = keys %nearest;
+my $pas_num = keys %pas_pos;
+print "$near_num\t$pas_num\n";
+
+
+my $RealNum25 = 0;
+my $RealNum50 = 0;
+my $RealNum100 = 0;
+while(my($pas_id,$diff) = each %nearest){
+	if(abs($diff)<100){
+		$RealNum100++;
+		if(abs($diff)<50){
+			$RealNum50++;
+			if(abs($diff)<25){
+				$RealNum25++;
+			}
+		}
+	}
+}
+$recall25 = $RealNum25/$ground_truth;
+$recall50 = $RealNum50/$ground_truth;
+$recall100 = $RealNum100/$ground_truth;
+print STAT "ground truth in $CHR, $RealNum25\t$RealNum50\t$RealNum100\t$ground_truth\n";
+print STAT "recall: $recall25\t$recall50\t$recall100\n";
+
+
+
+
+my %db;
+my %db2;
+open FILE,"$DB";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$end,$srd) = split;
+	next if $srd ne $SRD;
+	next if $chr ne $CHR;
+	while(my($pos,$val) = each %pas_pos){
+		if( abs($pos-$end)<abs($nearest{$pos})){
+			$nearest{$pos} = $pos-$end;
+			$nearReal{$pos} = "DB.$chr:$end:$srd";
+		}
+		if(!exists $db2{$pos} ||  abs($pos-$end)<abs($db2{$pos})){
+			$db{$pos} = "$chr:$end:$srd";
+			$db2{$pos} = $pos-$end;
+		}
+	}
+}
+
+open FILE,"$PAS";
+<FILE>;
+my %zb;
+my %zb2;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$end,$srd) = split;
+	next if $srd ne $SRD;
+	next if $chr ne $CHR;
+	my ($gene_id) = split /\./,$pas_id;
+	while(my($pos,$val) = each %pas_pos){
+		if( abs($pos-$end)<abs($nearest{$pos})){
+			$nearest{$pos} = $pos-$end;
+			$nearReal{$pos} = "ZB.$chr:$end:$srd";
+		}
+		if(!exists $zb2{$pos} ||  abs($pos-$end)<abs($zb2{$pos})){
+			$zb{$pos} = "$chr:$end:$srd";
+			$zb2{$pos} = $pos-$end;
+		}
+
+	}
+}
+
+
+my $precis25 = 0;
+my $precis50 = 0;
+my $precis100 = 0;
+
+open OUT,">$OUT";
+print OUT "predict_pos\tnearestPasID\tdiff\tchr\tstrand\tgt_pasid\tgt_diff\tzb_pas_id\tzb_dif\tdb_pasid\tdb_dif\tmaxPoint\n";
+my @stat;
+foreach my $key (sort{$a<=>$b} keys %nearReal){
+	my $val = $nearReal{$key};
+	my $diff = $nearest{$key};
+	my $usage = exists $usage{$key} ? $usage{$key} : "None";
+	my $usage2 = exists $usage2{$key} ? $usage2{$key} : "NaN";
+	my $db = exists $db{$key} ? $db{$key} : "None";
+	my $db2 = exists $db2{$key} ? $db2{$key} : "NaN";
+	my $zb = exists $zb{$key} ? $zb{$key} : "None";
+	my $zb2 = exists $zb2{$key} ? $zb2{$key} : "NaN";
+	print OUT "$key\t$val\t$diff\t$CHR\t$SRD\t$usage\t$usage2\t$zb\t$zb2\t$db\t$db2\t$pas_pos{$key}\n";
+	if(abs($diff)<100){
+		$precis100++;
+		#push @stat,$diff;
+		if(abs($diff)<50){
+			#push @stat,$diff;
+			$precis50++;
+			if(abs($diff)<25){
+				push @stat,$diff;
+				$precis25++;
+			}
+		}
+	}
+}
+
+my $total = keys %pas_pos;
+my $percent25 = $precis25/$total;
+my $percent50 = $precis50/$total;
+my $percent100 = $precis100/$total;
+print STAT "precis: $precis25\t$precis50\t$precis100\t$total\n";
+print STAT "precision: $percent25\t$percent50\t$percent100\n";
+
+my $stat = Statistics::Descriptive::Full->new();
+$stat->add_data(@stat);
+my $mean = $stat->mean();#平均值
+my $variance = $stat->variance();#方差
+my $num = $stat->count();#data的数目
+my $standard_deviation=$stat->standard_deviation();#标准差
+my $sum=$stat->sum();#求和
+my $min=$stat->min();#最小值
+my $mindex=$stat->mindex();#最小值的index
+my $max=$stat->max();#最大值
+my $maxdex=$stat->maxdex();#最大值的index
+my $range=$stat->sample_range();#最小值到最大值
+my $median=$stat->median();
+
+print STAT "Header\tRecall\tFPR\tMean\tMedian\tSTD\tRange\n";
+print STAT "$penality,$maxLength\t$recall25\t$percent25\t$mean\t$median\t$standard_deviation\t$min,$max\n";
