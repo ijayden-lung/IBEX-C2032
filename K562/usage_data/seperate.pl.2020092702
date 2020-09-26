@@ -1,0 +1,19 @@
+#!/usr/bin/perl -w
+
+open FILE,"hg38.pAs.tianbin.Control.usage.txt";
+open OUT1,">hg38.pAs.tianbin.Control.usage.train.txt";
+open OUT2,">hg38.pAs.tianbin.Control.usage.test.txt";
+my $header = <FILE>;
+print OUT1 $header;
+print OUT2 $header;
+
+while(<FILE>){
+	chomp;
+	my (undef,undef,$chr) = split;
+	if($chr eq "chr13" || $chr eq "chr18" || $chr eq "chr21"){
+		print OUT2 "$_\n";
+	}
+	else{
+		print OUT1 "$_\n";
+	}
+}
