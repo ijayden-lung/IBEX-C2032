@@ -1,0 +1,57 @@
+#!/usr/bin/perl -w
+
+my ($file) = @ARGV;
+print "$file\n";
+
+my $PAS = "/home/longy/workspace/apa_predict/pas_dataset/hg38.pAs.tianbin.txt";
+#my $PAS = "usage_data/hg38.pAs.tianbin.Control.usage.txt";
+open FILE,"$PAS";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$end,$srd,$symbol) = split /\t/; 
+	if($srd eq "+"){
+		$pas_plus{"$chr:$end:$srd"} = "$pas_id\t$pas_type\t$symbol";
+	}
+	else{
+		$pas_minus{"$chr:$end:$srd"} = "$pas_id\t$pas_type\t$symbol";
+	}
+}
+
+
+open FILE,"$file";
+my $header = <FILE>;
+my ($out) = (split /\//,$file)[-1];
+$out = "usage_data/$out";
+open OUT,">$out";
+while(<FILE>){
+	chomp;
+	my @data = split /\t/;
+	my $chr = $data[2];
+	my $pos = $data[3];
+	my $srd = $data[4];
+	my $pas_id = $data[0];
+	#my $pas_id = "$chr:$pos:$srd";
+	if ($file =~ /str1/){
+		if(exists $pas_minus{$pas_id}){
+			my $val = $pas_minus{$pas_id};
+			my ($old_id,$pas_type,$symbol) = split /\t/,$val;
+			#$data[0] = $old_id;
+			$data[6] = $data[1];
+			$data[1] = $pas_type;
+			$data[5] = $symbol;
+			print OUT join("\t",@data), "\n";
+		}
+	}
+	elsif ($file =~ /str2/){
+		if(exists $pas_plus{$pas_id}){
+			my $val = $pas_plus{$pas_id};
+			my ($old_id,$pas_type,$symbol) = split /\t/,$val;
+			#$data[0] = $old_id;
+			$data[6] = $data[1];
+			$data[1] = $pas_type;
+			$data[5] = $symbol;
+			print OUT join("\t",@data), "\n";
+		}
+	}
+}
