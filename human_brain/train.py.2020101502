@@ -1,0 +1,45 @@
+from SANPolyA import *
+import re
+import os, sys, copy, getopt, re, argparse
+import random
+from datetime import datetime
+import pandas as pd 
+import numpy as np
+from tensorflow.keras.callbacks import TensorBoard
+from tensorflow.keras.callbacks import ModelCheckpoint
+
+print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
+print("Num CPUs Available: ", len(tf.config.experimental.list_physical_devices('CPU')))
+
+parser = argparse.ArgumentParser()
+parser.add_argument('data', help='Path to data npz files')
+parser.add_argument('--trainid', default=None, help='Save model weights to (.npz file)')
+parser.add_argument('--model', default=None, help='Resume from previous model')
+opts = parser.parse_args()
+Data = opts.data
+trainid=opts.trainid
+
+
+data = np.load(Data)
+train_data1  = data['train_dataset1']
+train_data2  = data['train_dataset2']
+train_labels = data['train_labels']
+
+valid_data1  = data['valid_dataset1']
+valid_data2  = data['valid_dataset2']
+valid_labels = data['valid_labels']
+
+checkpoint_path = "Model/"+trainid+"-{epoch:04d}.ckpt"
+checkpoint_dir = os.path.dirname(checkpoint_path)
+# Create a callback that saves the model's weights
+cp_callback = ModelCheckpoint(filepath=checkpoint_path,save_weights_only=True,verbose=1,period=1)
+
+
+model = SANPolyA_CNN();
+Path= opts.model
+#model.load_weights(Path) ####Do not load model
+
+
+log_dir = "TensorBoard/CNN/" + trainid + "_" + datetime.now().strftime("%Y%m%d-%H%M%S")
+tensorboard_cbk = TensorBoard(log_dir=log_dir)
+model.fit({"seq_input": train_data1, "cov_input": train_data2}, train_labels,batch_size=32,epochs=120,validation_data=({"seq_input": valid_data1, "cov_input": valid_data2}, valid_labels),callbacks=[tensorboard_cbk,cp_callback])

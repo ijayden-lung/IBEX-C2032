@@ -1,0 +1,97 @@
+#!/usr/bin/perl -w
+
+my ($USAGE,$COVERAGE);
+$USAGE = "../polyA_seq/hg38.pAs.tianbin.brain.info.cutoff";
+$COVERAGE = "hg38.pAs.readCount.brain.txt";
+$OUT = "hg38.pAs.brain.usage.txt";
+
+
+open FILE,"$USAGE";
+my $header = <FILE>;
+open OUT,">$OUT";
+print OUT "$header";
+my %dist;
+my %readCount;
+my %ave_diff;
+my %pas_id;
+my %remove_id;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif,$ave_diff) = split;
+	if(exists $dist{$symbol}){
+		my $dist_diff = $pos - $dist{$symbol};
+		if($dist_diff <= 50){
+			#print "$pas_id\n" if $usage > 0.2;
+		#if($dist_diff <= 50){
+			if($readCount > $readCount{$symbol}){
+				$remove_id{$pas_id{$symbol}} = '';
+			}
+			elsif($readCount == $readCount{$symbol}){
+				if($ave_diff > $ave_diff{$symbol}){
+					$remove_id{$pas_id{$symbol}} = '';
+				}
+				else{
+					$remove_id{$pas_id} = '';
+				}
+			}
+			else{
+				$remove_id{$pas_id} = '';
+			}
+		
+		}
+			
+	}
+	$dist{$symbol} = $pos;
+	$readCount{$symbol} = $readCount;
+	$ave_diff{$symbol} = $ave_diff;
+	$pas_id{$symbol} = $pas_id;
+}
+
+
+my %total;
+open FILE,"$USAGE";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif,$ave_diff) = split;
+	if(!exists $remove_id{$pas_id}){
+		$total{$symbol} += $readCount;
+		if($readCount =~ /motif/){
+			print "$_\n";
+			last;
+		}
+	}
+}
+
+
+
+my %hasArich;
+open FILE,"$COVERAGE";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$sequence) = (split)[0,7];
+	my $seq = substr($sequence,99,25);
+	if($seq =~ /AAAAAA/){
+		$hasArich{$pas_id} = "Arich";
+	}
+	else{
+		 $hasArich{$pas_id} = "No";
+	 }
+ }
+
+
+open FILE,"$USAGE";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my @data = split;
+	if(!exists $remove_id{$data[0]}){
+		$data[6] = $data[7]/$total{$data[5]};
+		if(exists $hasArich{$data[0]}){
+			print OUT join("\t",@data),"\t$hasArich{$data[0]}","\n";
+		}
+		else{
+			print "$data[0]\n";
+		}
+	}
+}
