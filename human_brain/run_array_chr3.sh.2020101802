@@ -1,0 +1,83 @@
+#!/bin/bash
+#SBATCH --job-name=Train_HumanBrain
+#SBATCH --partition=batch
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --output=LOG/log.%J
+#SBATCH --time=3:00:00
+#SBATCH --mem=50G
+#SBATCH --gres=gpu:1
+##SBATCH -a 0-45
+##SBATCH --dependency afterok:6686802_[1-100] 
+
+#source activate ML
+
+echo "This is job #${SLURM_ARRAY_JOB_ID}, task id ${SLURM_ARRAY_TASK_ID}"
+rep="REP1"
+#rep="Control_REP2"
+allsteps=(1 1 1 1 1 1)
+allstrands=("str2" "str1" "str2" "str1" "str2" "str1")
+allsigns=("+" "-" "+" "-" "+" "-")
+allchrs=("chr20" "chr21" "chr22" "chr11" "chr12" "chr13" "chr14" "chr15" "chr16" "chr17" "chr18"  "chr19" "chr10" "chr1" "chr2" "chr3" "chr4" "chr5" "chr6" "chr7" "chr8"  "chr9" "chrX")  
+#allchrs=("chr20"  "chr22" "chr11" "chr12" "chr14" "chr15" "chr16" "chr17" "chr18"  "chr19" "chr10" "chr1" "chr2" "chr3" "chr4" "chr5" "chr6" "chr7" "chr8"  "chr9" "chrX")  
+#allchrs=("chr13"  "chr21")
+
+for ((i=0;i<=119;i++))
+do
+	b=$(( $i % 2 ))
+	c=$(( $i / 2))
+	steps[$i]=${allsteps[$b]}
+	strands[$i]=${allstrands[$b]}
+	signs[$i]=${allsigns[$b]}
+	chrs[$i]=${allchrs[$c]}
+done
+
+window=176
+step=${steps[$SLURM_ARRAY_TASK_ID]}
+strand=${strands[$SLURM_ARRAY_TASK_ID]}
+sign=${signs[$SLURM_ARRAY_TASK_ID]}
+chr=${chrs[$SLURM_ARRAY_TASK_ID]}
+
+
+WIG="/home/longy/workspace/polyA_predict/STAR/HUM_Brain_${rep}/Signal.Unique.${strand}.out.${chr}.wig"
+ScanGenome="scanGenome_data/hg38.pAs.scanGenome.step${step}.${strand}.${rep}.${chr}.UpstreamMax10.txt"
+
+#perl extract_test_chr.pl data_bk/hg38.pAs.scanGenome.step${step}.${strand}.${rep}.${chr}.Max10.txt
+
+spe=hg38
+#perl generate_slidingWidnows.pl $WIG $ScanGenome $window $step $sign $chr $spe
+
+
+Trim="scanGenome_data/hg38.pAs.scanGenome.step${step}.${strand}.${rep}.${chr}.UpstreamMax10.txt"
+#perl merge_scanGenome.pl $Trim1 $Trim2 $Trim
+
+
+#perl extract_coverage_from_scanGenome.db.pl $Trim
+
+usage="usage_data/hg38.pAs.brain.usage.txt"
+
+perl extract_coverage_from_scanGenome.pl $usage $Trim 0.2
+#perl select_negative_from_scanGenome.pl $usage $Trim $chr $sign 0.2
+#perl select_exon_from_scanGenome.pl $Trim $chr $sign
+#perl select_utr_from_scanGenome.pl $Trim $chr $sign
+
+
+
+#########TRAIN
+####July 12
+round0='round0'
+round='round1'
+bestEpoch=0033
+
+rep='brain'
+python3 evaluate.py --model Model/hg38.pAs.${rep}.${round0}-${bestEpoch}.ckpt  --data data/hg38.pAs.${rep}.positive.round0.txt  --out predict/hg38.pAs.${rep}.positive.${round0}.txt
+
+perl change_positive.pl data/hg38.pAs.${rep}.positive.round0.txt predict/hg38.pAs.${rep}.positive.${round0}.txt data/hg38.pAs.${rep}.positive.${round}.txt data/hg38.pAs.positive.${rep}.abondon.${round}.txt
+
+
+python3 prep_data.py data/hg38.pAs.brain.positive.${round}.txt data/hg38.pAs.brain.negative.${round}.txt --out Data/hg38.pAs.${rep}.${round}.npz
+
+python3 train.py Data/hg38.pAs.${rep}.${round}.npz  --trainid hg38.pAs.${rep}.${round} --model Model/hg38.pAs.${rep}.${round0}-${bestEpoch}.ckpt
