@@ -1,0 +1,11 @@
+#!/usr/bin/perl -w
+
+open FILE,"hg38.pAs.brain.negative.round3.txt";
+open OUT,">hg38.pAs.brain.negative.round3.txt.less";
+while(<FILE>){
+	chomp;
+	if(rand()<0.95){
+		print OUT "$_\n";
+	}
+}
+
