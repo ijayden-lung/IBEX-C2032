@@ -1,0 +1,861 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import os\n",
+    "import gc\n",
+    "import time\n",
+    "import datetime\n",
+    "import torch\n",
+    "import torch.nn as nn\n",
+    "import torch.nn.functional as F\n",
+    "\n",
+    "#os.environ[\"CUDA_VISIBLE_DEVICES\"] = \"0\"\n",
+    "\n",
+    "epochs = 10\n",
+    "batch_size = 8\n",
+    "learning_rate = 0.001\n",
+    "workers = 1 # The number of parallel processes used to read data\n",
+    "gpu_id = [0] # only modify if you machine has more than one GPU card"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "4"
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "torch.cuda.device_count()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   },
+   "source": [
+    "### Dataset [10 points]\n",
+    "We are going to use the [PASCAL VOC dataset](https://drive.google.com/drive/folders/1G54WDNnOQecr5T0sEvZcuyme0WT5Qje3?usp=sharing), which is a commonly used benchmark. In order to reduce the\n",
+    "computational requirements, you should downsample the dataset to 256x256, similar to the previous project."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   },
+   "source": [
+    "# Part 2\n",
+    "\n",
+    "## Semantic Segmentation\n",
+    "\n",
+    "In this part of the project, you will reuse the model you created in the previous part to perform Semantic Segmentation - instead of assigning a real number to each\n",
+    "pixel , you will assign it a class.\n",
+    "\n",
+    "The tasks are as following:\n",
+    "- Write a Dataset class that processes the segmentation data. **[10 points]**\n",
+    "    - Modify the UNet model that takes an RGB image and now outputs a single channel _label map_\n",
+    "    - Define an approprate loss function. **[5 points]**\n",
+    "- Tune the model to achieve an mIOU of **0.45** or higher on the given validation set. **[20 points]**"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   },
+   "source": [
+    "Now you have to implement the Dataset. Look at the file `loaders.py`.\n",
+    "\n",
+    "The class you will need to emulate is `class ImageDepthDataset(Dataset)`. The class is called `VOCSeg`, and it must _inherit_ from the `Dataset` class,\n",
+    "just like the `ImageDepthDataset`.\n",
+    "You need to fill in the `__len__` and the `__getitem__` methods.\n",
+    "The `__getitem__` method should yield a dict of the RGB image and the labeled segmentation map.\n",
+    "\n",
+    "Make sure you downsample the image and the labels to 256x256, otherwise the training will take too much time.\n",
+    "\n",
+    "Make sure that the labels are in the range `0..N-1`, where\n",
+    "N is the number of classes - 21 in our case. You can have one special label for unknown regions.\n",
+    "\n",
+    "We provide the map of RGB to label for convenience in `get_pascal_labels()`. The map should be read as this - if a pixel has color `[0, 0, 0]`, it has label 0. If the color is\n",
+    "`[128, 0, 0]`, the label is 1\n",
+    "\n",
+    "It is also very common to change the RGB range from 0-255 to 0-1 or -1 to 1. Take a look at [torchvision.transforms.ToTensor](https://pytorch.org/docs/stable/torchvision/transforms.html#torchvision.transforms.ToTensor)\n",
+    "and [torchvision.transforms.Normalize](https://pytorch.org/docs/stable/torchvision/transforms.html#torchvision.transforms.Normalize)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   },
+   "source": [
+    "The PASCAL VOC dataset has predefined train/val sets. Make sure your class implementation can take this _split_ as an argument. Now create train/val loaders using the `get_seg_loaders` function (look at `prep_loaders`), and we should be good to go."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import os\n",
+    "import glob\n",
+    "import torch\n",
+    "import numpy as np\n",
+    "from skimage import io, transform\n",
+    "from torchvision import transforms\n",
+    "from torchvision.utils import make_grid\n",
+    "from torch.utils.data import Dataset, DataLoader, random_split\n",
+    "\n",
+    "np.random.seed(0) \n",
+    "torch.manual_seed(0)\n",
+    "VALIDATION_SPLIT = 0.02\n",
+    "\n",
+    "class DepthHalfSize(object):\n",
+    "    def __call__(self, sample):\n",
+    "        x = sample['depth']\n",
+    "        sample['depth'] = transform.resize(x, (x.shape[0]//2, x.shape[1]//2))\n",
+    "        return sample\n",
+    "\n",
+    "class ToTensor(object):\n",
+    "    def __call__(self, sample):\n",
+    "        image, depth = sample['image'], sample['depth']\n",
+    "        # swap channel axis\n",
+    "        image = image.transpose((2, 0, 1))\n",
+    "        depth = depth.transpose((2, 0, 1))\n",
+    "        return {'image': torch.from_numpy(image), 'depth': torch.from_numpy(depth)}\n",
+    "    \n",
+    "class DepthToNormal(object):\n",
+    "    def __call__(self, sample):\n",
+    "        dx, dy = np.gradient(sample['depth'].squeeze())\n",
+    "        dx, dy, dz = dx * 2500, dy * 2500, np.ones_like(dy)\n",
+    "        n = np.linalg.norm(np.stack((dy, dx, dz), axis=-1), axis=-1)\n",
+    "        d = np.stack((dy/n, dx/n, dz/n), axis=-1)\n",
+    "        return {'image': sample['image'], 'depth': (d + 1) * 0.5} \n",
+    "        \n",
+    "class ImageDepthDataset(Dataset):\n",
+    "    def __init__(self, root_dir, transform=None):\n",
+    "        self.transform = transform \n",
+    "        self.image_files = glob.glob(root_dir + '/*.jpg')\n",
+    "        \n",
+    "    def __len__(self):\n",
+    "        return len(self.image_files)\n",
+    "\n",
+    "    def __getitem__(self, idx):\n",
+    "        image = io.imread(self.image_files[idx]) / 255.0\n",
+    "        depth = io.imread(self.image_files[idx].replace('.jpg', '.png'))[:,:,:1] / 255.0        \n",
+    "        sample = {'image': image, 'depth': depth}        \n",
+    "        return self.transform(sample) if self.transform else sample\n",
+    "    \n",
+    "def prep_loaders(root_dir=None, batch_size=1, workers=1):\n",
+    "    # Load dataset\n",
+    "    image_depth_dataset = ImageDepthDataset(root_dir=root_dir, transform=transforms.Compose([DepthHalfSize(), ToTensor()]))\n",
+    "\n",
+    "    # Split into training and validation sets\n",
+    "    train_size = int((1-VALIDATION_SPLIT) * len(image_depth_dataset))\n",
+    "    test_size = len(image_depth_dataset) - train_size\n",
+    "    train_dataset, test_dataset = torch.utils.data.random_split(image_depth_dataset, [train_size, test_size])\n",
+    "\n",
+    "    # Prepare data loaders\n",
+    "    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=workers)\n",
+    "    valid_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=workers)\n",
+    "    print('Dataset size (num. batches)', len(train_loader), len(valid_loader))\n",
+    "    \n",
+    "    return train_loader, valid_loader\n",
+    "\n",
+    "##############################################################\n",
+    "################# Segmentation Section #######################\n",
+    "##############################################################\n",
+    "\n",
+    "class SegIdentityTransform(object):\n",
+    "    # Hint: Note that our transforms work on dicts. This is an example of a transform that works\n",
+    "    # on a dict whose elements can be converted to np.arrays, and are then converted to torch.tensors\n",
+    "    # This performs the scaling of the RGB by division by 255, and puts channels first by performing the permute\n",
+    "    # for the label, we convert to long, datatype to let torch know that this is a discrete label.\n",
+    "    # You might want to change this or write different transforms depending on how you read data.\n",
+    "    def __call__(self, sample):\n",
+    "        #label_trans = transforms.Compose([transforms.Resize(256)])\n",
+    "        #sample['image'] = torch.tensor(np.array(sample['image'])/255.0).permute(2,0,1)\n",
+    "        #sample['label'] = torch.tensor(np.array(sample['label'])).long()\n",
+    "        #sample['image'] =sample['image'].resize((256, 256))\n",
+    "        #tf = transforms.Compose([transforms.Scale(size = 256),transforms.ToTensor()])\n",
+    "        #sample['image'] = tf(sample['image'])\n",
+    "        #sample['image'] = transform.resize(sample['image'],(256,256),preserve_range=True)\n",
+    "        #sample['label'] = transform.resize(sample['label'],(256,256),preserve_range=True)\n",
+    "        #sample['image'] = transforms.Normalize(sample['image'],[0.485, 0.456, 0.406],[0.229, 0.224, 0.225])\n",
+    "        #sample['image'] /= 225.0\n",
+    "        #norm = transforms.Normalize((0.485, 0.456, 0.406),(0.229, 0.224, 0.225))\n",
+    "        #sample['image'] = norm(sample['image'])\n",
+    "        #sample['image'] -= (0.485, 0.456, 0.406)\n",
+    "        #sample['image'] /= (0.485, 0.456, 0.406)\n",
+    "\n",
+    "        #return {'image': torch.tensor(np.array(sample['image']/225.0)).permute(2,0,1),\n",
+    "        #        'label': torch.tensor(np.array(sample['label'])).long()}\n",
+    "        return sample\n",
+    "\n",
+    "def get_pascal_labels():\n",
+    "    \"\"\"Load the mapping that associates pascal classes with label colors\n",
+    "    Returns:\n",
+    "        np.ndarray with dimensions (21, 3)\n",
+    "    \"\"\"\n",
+    "    return np.asarray([[0, 0, 0],\n",
+    "                       [128, 0, 0],\n",
+    "                       [0, 128, 0],\n",
+    "                       [128, 128, 0],\n",
+    "                       [0, 0, 128],\n",
+    "                       [128, 0, 128],\n",
+    "                       [0, 128, 128],\n",
+    "                       [128, 128, 128],\n",
+    "                       [64, 0, 0],\n",
+    "                       [192, 0, 0],\n",
+    "                       [64, 128, 0],\n",
+    "                       [192, 128, 0],\n",
+    "                       [64, 0, 128],\n",
+    "                       [192, 0, 128],\n",
+    "                       [64, 128, 128],\n",
+    "                       [192, 128, 128],\n",
+    "                       [0, 64, 0],\n",
+    "                       [128, 64, 0],\n",
+    "                       [0, 192, 0],\n",
+    "                       [128, 192, 0],\n",
+    "                       [0, 64, 128]])\n",
+    "\n",
+    "\n",
+    "\n",
+    "\n",
+    "def encode_segmap(mask):\n",
+    "    \"\"\"Encode segmentation label images as pascal classes\n",
+    "    Args:\n",
+    "        mask (np.ndarray): raw segmentation label image of dimension\n",
+    "          (M, N, 3), in which the Pascal classes are encoded as colours.\n",
+    "    Returns:\n",
+    "        (np.ndarray): class map with dimensions (M,N), where the value at\n",
+    "        a given location is the integer denoting the class index.\n",
+    "    \"\"\"\n",
+    "\n",
+    "    # TODO (hint: You might not need a lot of work here with some libraries, which already read in the image as a single channel label)\n",
+    "    # (hint: the said library does not return a np.ndarray object)\n",
+    "    label_mask = np.zeros((mask.shape[0], mask.shape[1]), dtype=np.int16)\n",
+    "    if isinstance(mask, np.ndarray):\n",
+    "        # TODO\n",
+    "        mask = mask.astype(int)\n",
+    "        for i, label in enumerate(get_pascal_labels()):\n",
+    "            #print(mask.shape)\n",
+    "            #print(i)\n",
+    "            #print(np.where(np.all(mask == label, axis=-1)))\n",
+    "            label_mask[np.where(np.all(mask == label, axis=-1))[:2]] = i\n",
+    "        label_mask = label_mask.astype(int)\n",
+    "    else:\n",
+    "        # TODO if the image is just single channel\n",
+    "        #  you might want to convert the single channel label to a np.ndarray\n",
+    "        pass\n",
+    "    return label_mask\n",
+    "\n",
+    "def decode_segmap(mask, unk_label=255):\n",
+    "    \"\"\"Decode segmentation label prediction as RGB images\n",
+    "    Args:\n",
+    "        mask (torch.tensor): class map with dimensions (B, M,N), where the value at\n",
+    "        a given location is the integer denoting the class index.\n",
+    "    Returns:\n",
+    "        (np.ndarray): colored image of shape (BM, BN, 3)\n",
+    "    \"\"\"\n",
+    "    mask[mask == unk_label] == 0\n",
+    "    mask = mask.numpy()\n",
+    "    cmap = get_pascal_labels()\n",
+    "    cmap_exp = cmap[..., None]\n",
+    "    colored = cmap[mask].squeeze()\n",
+    "    grid = make_grid(torch.tensor(colored).permute(0, 3, 1, 2))\n",
+    "    return np.permute(grid, (1, 2, 0))\n",
+    "\n",
+    "\n",
+    "\n",
+    "class VOCSeg(Dataset):\n",
+    "    def __init__(self, root_dir, split=None, transform=None):\n",
+    "        # Known information\n",
+    "        self.num_classes = 21\n",
+    "        self.class_names = ['Background',\n",
+    "                            'Aeroplane',\n",
+    "                            'Bicycle',\n",
+    "                            'Bird',\n",
+    "                            'Boat',\n",
+    "                            'Bottle',\n",
+    "                            'Bus',\n",
+    "                            'Car',\n",
+    "                            'Cat',\n",
+    "                            'Chair',\n",
+    "                            'Cow',\n",
+    "                            'Diningtable',\n",
+    "                            'Dog',\n",
+    "                            'Horse',\n",
+    "                            'Motorbike',\n",
+    "                            'Person',\n",
+    "                            'Pottedplant',\n",
+    "                            'Sheep',\n",
+    "                            'Sofa',\n",
+    "                            'Train',\n",
+    "                            'Tvmonitor']\n",
+    "\n",
+    "        # Set up proper paths\n",
+    "        self.root_dir = root_dir\n",
+    "        self.image_dir = os.path.join(self.root_dir, 'JPEGImages')\n",
+    "        self.label_dir = os.path.join(self.root_dir, 'SegmentationClass')\n",
+    "        \n",
+    "        self.transform = transform \n",
+    "\n",
+    "        #TODO Read the appropriate split file and save the file names\n",
+    "        self.split = split\n",
+    "        self.split_file_dir = os.path.join(self.root_dir, 'ImageSets', 'Segmentation')\n",
+    "\n",
+    "        # TODO read in ONLY files from self.split_file\n",
+    "        #self.image_files = None\n",
+    "        #self.label_files = None\n",
+    "        with open(os.path.join(os.path.join(self.split_file_dir, self.split + '.txt')), \"r\") as f:\n",
+    "            lines = f.read().splitlines()\n",
+    "            self.image_files = [os.path.join(self.root_dir, \"JPEGImages\", name + \".jpg\") for name in lines]\n",
+    "            self.label_files = [os.path.join(self.root_dir, \"SegmentationClass\", name + \".png\") for name in lines]\n",
+    "            print(len(self.image_files))\n",
+    "            \n",
+    "        \n",
+    "\n",
+    "\n",
+    "    def __len__(self):\n",
+    "        return len(self.image_files)\n",
+    "\n",
+    "    def __getitem__(self, idx):\n",
+    "\n",
+    "        # TODO Retrieve the saved file names and perform the proper processing\n",
+    "        # The images go from 0-255 to 0-1. You can also use the range -1 to 1\n",
+    "        # The labels go from a 3 channel RGB to a single channel with elements in the range 0..N-1\n",
+    "        #image = None\n",
+    "        image = io.imread(self.image_files[idx])\n",
+    "        #label_rgb = None\n",
+    "        label_rgb = io.imread(self.label_files[idx])\n",
+    "        label = label_rgb[:,:,:3]\n",
+    "        label = encode_segmap(label) # write the encode_segmap function\n",
+    "        sample = {'image': image, 'label': label}\n",
+    "        \n",
+    "        return self.transform(sample)\n",
+    "\n",
+    "\n",
+    "def get_seg_loaders(root_dir=None, batch_size=1, workers=1):\n",
+    "\n",
+    "    #TODO optionally add more augmentation\n",
+    "    tfms = transforms.Compose([\n",
+    "        #transforms.Resize(256),\n",
+    "        #transforms.Normalize(mean = [0.485, 0.456, 0.406],std = [0.229, 0.224, 0.225]),\n",
+    "        SegIdentityTransform()\n",
+    "    ])\n",
+    "\n",
+    "    train_set = VOCSeg(root_dir=root_dir, split='train', transform=tfms)\n",
+    "    val_set = VOCSeg(root_dir=root_dir, split='val', transform=tfms) # No transforms on the validation set\n",
+    "\n",
+    "    # Prepare data_loaders\n",
+    "    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=workers)\n",
+    "    valid_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False, num_workers=workers)\n",
+    "\n",
+    "    return train_loader, valid_loader\n",
+    "\n",
+    "if __name__ == '__main__':\n",
+    "    pass"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "jupyter": {
+     "outputs_hidden": false
+    },
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# Sanity check\n",
+    "\n",
+    "if __name__ == '__main__':\n",
+    "    #from loaders import get_seg_loaders\n",
+    "    train_loader, valid_loader = get_seg_loaders(root_dir='./VOC2012')\n",
+    "\n",
+    "    # we have read all files\n",
+    "    assert len(train_loader.dataset) == 1464\n",
+    "    assert len(valid_loader.dataset) == 1449\n",
+    "    "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%pylab inline\n",
+    "import torchvision\n",
+    "import torch\n",
+    "sample = iter(train_loader).next()\n",
+    "#figure(figsize=(9,9)); imshow(torchvision.utils.make_grid(sample['image'], padding=0).permute((1, 2, 0)))\n",
+    "#figure(figsize=(9,9)); imshow(torchvision.utils.make_grid(sample['label'], padding=0).permute((1, 2, 0)))\n",
+    "label = sample['label']\n",
+    "image = sample['image']\n",
+    "print(torch.sum(label))\n",
+    "print(label.max())\n",
+    "print(image.max())\n",
+    "print(label.shape)\n",
+    "print(image.shape)\n",
+    "    \n",
+    "    #print(image)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 52,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 432x288 with 1 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    },
+    {
+     "ename": "AttributeError",
+     "evalue": "'Image' object has no attribute 'shape'",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mAttributeError\u001b[0m                            Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-52-c4d0416a6d6d>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m\u001b[0m\n\u001b[1;32m      6\u001b[0m \u001b[0mimage\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mimage\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mresize\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mimage\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0msize\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;36m0\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mimage\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0msize\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;36m1\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      7\u001b[0m \u001b[0;31m#image = Variable(image)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m----> 8\u001b[0;31m \u001b[0mprint\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mimage\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mshape\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m",
+      "\u001b[0;31mAttributeError\u001b[0m: 'Image' object has no attribute 'shape'"
+     ]
+    }
+   ],
+   "source": [
+    "from PIL import Image\n",
+    "import numpy as np\n",
+    "from torchvision.transforms import ToTensor\n",
+    "image = Image.open('VOC2012/SegmentationClass/2007_000032.png')\n",
+    "plt.imshow(image); plt.show()\n",
+    "image = \n",
+    "#image = Variable(image)\n",
+    "print(image.shape)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 432x288 with 1 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "(281, 500, 4)\n",
+      "255\n",
+      "14.03376512455516\n",
+      "9.326462633451957\n",
+      "8.106818505338078\n",
+      "255.0\n"
+     ]
+    },
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 432x288 with 1 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "import os\n",
+    "from skimage import io, transform\n",
+    "import matplotlib.pyplot as plt\n",
+    "import matplotlib.image as mpimg\n",
+    "img = io.imread('2007_000032.png')\n",
+    "#img = mpimg.imread('2007_000032.png')\n",
+    "plt.imshow(img); plt.show()\n",
+    "print(img.shape)\n",
+    "print(img.max())\n",
+    "print(mean(img[:,:,0]))\n",
+    "print(mean(img[:,:,1]))\n",
+    "print(mean(img[:,:,2]))\n",
+    "print(mean(img[:,:,3]))\n",
+    "img = img[:,:,0:3]\n",
+    "plt.imshow(img); plt.show()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   },
+   "source": [
+    "You should implement a few more sanity checks - the range of data in the RGB part, the range of data in the label part, whether the dataset returns tensors,\n",
+    "whether the labels have the datatype `torch.long` etc."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   },
+   "source": [
+    "## Modifying the Loss and Architecture [5 points]\n",
+    "You will have to some form of surgery on the network you constructed in Part 1.\n",
+    "\n",
+    "1. The number of channels the last layer predicts must change to the number of classes in the dataset.\n",
+    "2. The loss function must change to reflect the fact that we are now performing per-pixel classification. (What loss did you use for classification in Project 1?)\n",
+    "3. You might get a CUDA assert error. This means that you have a label higher than the number of channels in the _logits_. This is very common with semantic segmentation, where you might want to label some region unkown as it's label might be under doubt - for example near the edges of objects. Look up how to ignore a certain label with a classification loss.\n",
+    "4. Take care of input label and logit sizes. We want predictions to be 256x256 as well."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   },
+   "source": [
+    "### !! \n",
+    "### <span style=\"color:red\"> At this point, we highly recommend restarting your notebook for part 2 and beginning modifying/training the  model</span>"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "jupyter": {
+     "outputs_hidden": false
+    },
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "import os\n",
+    "import gc\n",
+    "import time\n",
+    "import datetime\n",
+    "\n",
+    "os.environ[\"CUDA_VISIBLE_DEVICES\"] = \"0\"\n",
+    "\n",
+    "epochs = 10\n",
+    "batch_size = 8\n",
+    "learning_rate = 1\n",
+    "workers = 1 # The number of parallel processes used to read data\n",
+    "gpu_id = [0] # only modify if you machine has more than one GPU card"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "jupyter": {
+     "outputs_hidden": false
+    },
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "if __name__ == '__main__':\n",
+    "    from loaders import get_seg_loaders\n",
+    "    train_loader, valid_loader = get_seg_loaders(root_dir='./VOC2012')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "jupyter": {
+     "outputs_hidden": false
+    },
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "import torch.nn as nn\n",
+    "import torch.nn.functional as F\n",
+    "\n",
+    "# You can copy the depth model code with modifications here\n",
+    "class Model(nn.Module):\n",
+    "    def __init__(self):\n",
+    "        super(Model, self).__init__()\n",
+    "        #TODO Make sure you have the right number channels in the last layer\n",
+    "        self.A = nn.Conv2d(3, 1, kernel_size=3, padding=1, stride=2)\n",
+    "\n",
+    "    def forward(self, x):\n",
+    "        return self.A(x)\n",
+    "\n",
+    "def create_model_gpu():\n",
+    "    model = Model()\n",
+    "    model = model.cuda()\n",
+    "    model = nn.DataParallel(model, device_ids=[g for g in gpu_id])\n",
+    "    return model\n",
+    "\n",
+    "model = create_model_gpu()\n",
+    "print('Ready to train.')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "jupyter": {
+     "outputs_hidden": false
+    },
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "import torch\n",
+    "\n",
+    "def loss_fn(pred_y, y):\n",
+    "    #TODO\n",
+    "    return torch.mean(y.sub(y_pred))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "pycharm": {
+     "name": "#%% md\n"
+    }
+   },
+   "source": [
+    "## Training and Evaluation [18 points]\n",
+    "Tune the hyperparameters to get the maximum possible score on the PASCAL VOC challenge. \n",
+    "And answer the following questions:\n",
+    "1. What is the relationship between the _size_ of the class and the IOU How would you quantify this relationship?\n",
+    "2. What is the relationship between the number of instances and the IOU? how many times a class exists in an image vs the IOU?\n",
+    "3. The segmentation dataset is small. Initialize the weights of the segmentation net with the weights of the trained depth network.\n",
+    "4. Which weights can you not transfer?\n",
+    "5. Fine tune (ie train with a lower learning rate) the model in 3 for the same number of epochs as the model with a random initialization (or ImageNet initialized weights)\n",
+    "6. What trend do you observe?\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "jupyter": {
+     "outputs_hidden": false
+    },
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "from utils import Metrics"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "jupyter": {
+     "outputs_hidden": false
+    },
+    "pycharm": {
+     "name": "#%%\n"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "run_id = 'seg_model_gpu{}_n{}_bs{}_lr{}'.format(gpu_id, epochs, batch_size, learning_rate); print('\\n\\nTraining', run_id)\n",
+    "save_path = run_id + '.pkl'\n",
+    "\n",
+    "optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)\n",
+    "\n",
+    "metrics = Metrics(train_loader.dataset.num_classes, train_loader.dataset.class_names)\n",
+    "\n",
+    "# Used to keep track of statistics\n",
+    "class AverageMeter(object):\n",
+    "    def __init__(self):\n",
+    "        self.val = 0; self.avg = 0; self.sum = 0; self.count = 0\n",
+    "    def update(self, val, n=1):\n",
+    "        self.val = val\n",
+    "        self.sum += val * n\n",
+    "        self.count += n\n",
+    "        self.avg = self.sum / self.count\n",
+    "\n",
+    "REPORTS_PER_EPOCH = 10\n",
+    "ITER_PER_EPOCH = len(train_loader)\n",
+    "ITER_PER_REPORT = ITER_PER_EPOCH//REPORTS_PER_EPOCH\n",
+    "\n",
+    "\n",
+    "for epoch in range(epochs):\n",
+    "    model.train()\n",
+    "\n",
+    "    # Progress reporting\n",
+    "    batch_time = AverageMeter()\n",
+    "    losses = AverageMeter()\n",
+    "    N = len(train_loader)\n",
+    "    end = time.time()\n",
+    "\n",
+    "    for i, (sample) in enumerate(train_loader):\n",
+    "\n",
+    "        # Load a batch and send it to GPU\n",
+    "        x = sample['image'].float().cuda()\n",
+    "        y = sample['label'].float().cuda()\n",
+    "\n",
+    "        # Forward pass: compute predicted y by passing x to the model.\n",
+    "        y_pred = model(x)\n",
+    "\n",
+    "        # Compute and print loss.\n",
+    "        loss = loss_fn(y_pred, y)\n",
+    "\n",
+    "        # Record loss\n",
+    "        losses.update(loss.data.item(), x.size(0))\n",
+    "\n",
+    "        # Before the backward pass, use the optimizer object to zero all of the\n",
+    "        # gradients for the variables it will update (which are the learnable\n",
+    "        # weights of the model).\n",
+    "        optimizer.zero_grad()\n",
+    "\n",
+    "        # Backward pass: compute gradient of the loss with respect to model parameters\n",
+    "        loss.backward()\n",
+    "\n",
+    "        # Calling the step function on an Optimizer makes an update to its parameters\n",
+    "        optimizer.step()\n",
+    "\n",
+    "        # Measure elapsed time\n",
+    "        batch_time.update(time.time() - end)\n",
+    "        end = time.time()\n",
+    "        eta = str(datetime.timedelta(seconds=int(batch_time.val*(N - i))))\n",
+    "\n",
+    "        # Log training progress\n",
+    "        if i % ITER_PER_REPORT == 0:\n",
+    "            print('\\nEpoch: [{0}][{1}/{2}]\\t' 'Time {batch_time.val:.3f} ({batch_time.sum:.3f})\\t' 'ETA {eta}\\t'\n",
+    "             'Training Loss {loss.val:.4f} ({loss.avg:.4f})'.format(epoch, i, N, batch_time=batch_time, loss=losses, eta=eta))\n",
+    "        elif i % (ITER_PER_REPORT) == 0:\n",
+    "            print('.', end='')\n",
+    "\n",
+    "        #break # useful for quick debugging\n",
+    "    torch.cuda.empty_cache(); del x, y; gc.collect()\n",
+    "\n",
+    "    # Validation after each epoch\n",
+    "    model.eval()\n",
+    "    metrics.reset()\n",
+    "    for i, (sample) in enumerate(valid_loader):\n",
+    "        x, y = sample['image'].float().cuda(), sample['label'].numpy()\n",
+    "        with torch.no_grad():\n",
+    "            y_pred = model(x)\n",
+    "            y_pred = torch.argmax(y_pred, dim=1) # get the most likely prediction\n",
+    "\n",
+    "        metrics.add_batch(y, y_pred.detach().cpu().numpy())\n",
+    "        print('_', end='')\n",
+    "    print('\\nValidation stats ', metrics.get_table())\n",
+    "\n",
+    "\n",
+    "# Save model\n",
+    "torch.save(model.state_dict(), save_path)\n",
+    "print('\\nTraining done. Model saved ({}).'.format(save_path))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Visualization  [2 points]\n",
+    "Use the `decode_segmap` function to visualize images and their segmentation. The images must be from the validation set.\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Visualization  [2 points]\n",
+    "Use the `decode_segmap` function to visualize images and their segmentation. The images must be from the validation set.\n"
+   ]
+  }
+ ],
+ "metadata": {
+  "accelerator": "GPU",
+  "colab": {
+   "collapsed_sections": [],
+   "machine_shape": "hm",
+   "name": "Project_Depth_Estimate_good.ipynb",
+   "provenance": [],
+   "version": "0.3.2"
+  },
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}
