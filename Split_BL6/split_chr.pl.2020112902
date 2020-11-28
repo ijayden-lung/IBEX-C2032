@@ -1,0 +1,4 @@
+#!/usr/bin/perl -w
+
+$line_num = `wc -l scanGenome_data/bl6.pAs.scanGenome.step1.str1.REP1.chr1.UpstreamTrimmed10.txt`;
+print "$line_num\n";
