@@ -1,0 +1,51 @@
+#!/usr/bin/perl -w
+#
+#Yongkang Long 2020/12/27 Change to Block version
+#
+#
+use List::Util qw(first max maxstr min minstr reduce shuffle sum shuffle) ;
+
+my ($input,$scanTranscriptome,$negative,$out,$round) = @ARGV;
+open FILE,"$input";
+<FILE>;
+my %pas_id;
+while(<FILE>){
+	chomp;
+	my ($pos,$id,$diff,$chr,$srd,$gt_id,$gt_diff) = split;
+	next if (abs($gt_diff) <= 50);
+	my $end = sprintf("%.0f",$pos);
+	$pas_id{"$chr:$end:$srd"} = '';
+}
+
+
+my @shuffle = keys %pas_id;
+my %pas;
+
+
+open FILE,"$scanTranscriptome";
+my $header  =<FILE>;
+while(<FILE>){
+	chomp;
+	my @data = split;
+	my $pas_id = $data[0];
+	if(exists $pas_id{$pas_id}){
+		$data[5] = $round;
+		$pas{$pas_id} = join("\t",@data);
+	}
+}
+
+open FILE,"$negative";
+my $i=0;
+open OUT,">$out";
+my @line = <FILE>;
+@line = &shuffle(@line);
+foreach (@line){
+	chomp;
+	if(rand()<0.5 && $i<@shuffle){
+		print OUT "$pas{$shuffle[$i]}\n";
+		$i++;
+	}
+	else{
+		print OUT "$_\n";
+	}
+}
