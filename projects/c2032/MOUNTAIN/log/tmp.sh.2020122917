@@ -1,0 +1,12 @@
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J prediction_hm_brain_str2_chrX
+#SBATCH --output /home/zhouj0d/c2032/MOUNTAIN/log/prediction_hm_brain_str2_chrX.log
+#SBATCH --time=72:00:00
+#SBATCH --mem=100G
+
+cd /home/zhouj0d/c2032/MOUNTAIN/
+
+python predict.py --model /home/zhouj0d/c2032/ENCODE/model/HUMAN_BRAIN_UP100_DOWN75_USAGE0.2_50_31.npz --str str2 --chr chrX
+

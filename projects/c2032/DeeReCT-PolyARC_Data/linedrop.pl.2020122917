@@ -1,0 +1,51 @@
+#!/usr/bin/perl -w
+use List::Util qw(first max maxstr min minstr reduce shuffle sum);
+
+#my $DIF = "figure/diff_bl6.positive.txt";
+#open OUT,">$DIF";
+#print OUT "pas_id\tpas_type\tstrand\tcoordinate\tbefore_ave\tafter_ave\tave\tdiff\tave_diff\tlabel\n";
+#&plot("data/bl6.pAs.positive.txt","all");
+#&plot("data/bl6.pAs.positive.trimmed10.txt","trimmen10");
+#&plot("data/bl6.pAs.positive.all.usage0.20.trimmed10","usage0.2");
+#&plot("data/bl6.pAs.negative.tandem.all.trimmed10","negative");
+
+#my $DIF = "figure/diff_bl6.liver.txt";
+#open OUT,">$DIF";
+#print OUT "pas_id\tpas_type\tstrand\tcoordinate\tbefore_ave\tafter_ave\tave\tdiff\tave_diff\tlabel\n";
+#&plot("data/bl6.pAs.liver.REP1.txt","trimmen10");
+#&plot("data/bl6.pAs.liver.REP1.usage0.2.txt","usage0.2");
+#&plot("data/bl6.pAs.liver.negative.txt","negative");
+
+
+my $DIF = "figure/diff_human_brain.txt";
+open OUT,">$DIF";
+print OUT "pas_id\tpas_type\tstrand\tcoordinate\tbefore_ave\tafter_ave\tave\tdiff\tave_diff\tlabel\n";
+&plot("data/human.pAs.brain.REP1.filter.txt","trimmed10");
+&plot("data/human.pAs.brain.REP1.usage0.2.txt","usage0.2");
+&plot("data/human.pAs.brain.negative.txt","negative");
+
+sub plot{
+	my ($COV,$label) = @_;
+	open FILE,$COV;
+	<FILE>;
+	while(<FILE>){
+		chomp;
+		my @data = split;
+		my $before = &TrimmedMean(@data[8..107]);
+		my $after = &TrimmedMean(@data[109..183]);
+		my $ave = ($before+$after)/2;
+		next if $ave ==0;
+		my $diff = $before-$after;
+		my $ave_diff = $diff/$ave;
+		print OUT "$data[0]\t$data[1]\t$data[4]\t$data[3]\t$before\t$after\t$ave\t$diff\t$ave_diff\t$label\n";
+	}
+}
+
+sub TrimmedMean{
+	my @sort = sort{$a<=>$b} @_;
+	my $len = @sort;
+	my $ltrim = int($len*0.2);
+	my $utrim = $len-$ltrim-1;
+	my $ave =  &sum(@sort[$ltrim..$utrim])/($utrim-$ltrim+1);
+	return $ave;
+}

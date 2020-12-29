@@ -1,0 +1,579 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import os\n",
+    "import glob\n",
+    "from collections import OrderedDict,defaultdict\n",
+    "import pipes\n",
+    "import pprint\n",
+    "import tempfile\n",
+    "import re"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "file = 'scanGenome_data/bl6.pAs.scanGenome.step1.str1.REP1.chr19.UpstreamTrimmed10.txt'"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "root_dir = 'scanGenome_data'"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "####Fixed length 1e6 = 100 blocks. \n",
+    "####Fixed length 5e5 = 200 blocks. "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "#!genome-build GRCm38.p6\n",
+      "#!genome-version GRCm38\n",
+      "#!genome-date 2012-01\n",
+      "#!genome-build-accession NCBI:GCA_000001635.8\n",
+      "#!genebuild-last-updated 2020-02\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "from subprocess import Popen, PIPE\n",
+    "\n",
+    "cmd = 'zcat /home/longy/cnda/ensembl/Mus_musculus.GRCm38.101.gtf.gz | head -5'\n",
+    "proc = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE)\n",
+    "outs, errs = proc.communicate(input=\"\"\"\n",
+    "        Popen.communicate(input=None, timeout=None)\n",
+    "        Interact with process: Send data to stdin. Read data from stdout and stderr, until end-of-file is reached. Wait for process to terminate. The optional input argument should be data to be sent to the child process, or None, if no data should be sent to the child. The type of input must be bytes or, if universal_newlines was True, a string.\n",
+    "        communicate() returns a tuple (stdout_data, stderr_data).\n",
+    "        Note that if you want to send data to the process’s stdin, you need to create the Popen object with stdin=PIPE. Similarly, to get anything other than None in the result tuple, you need to give stdout=PIPE and/or stderr=PIPE too.\n",
+    "        If the process does not terminate after timeout seconds, a TimeoutExpired exception will be raised. Catching this exception and retrying communication will not lose any output.\n",
+    "        The child process is not killed if the timeout expires, so in order to cleanup properly a well-behaved application should kill the child process and finish communication:\n",
+    "    \"\"\".encode('UTF-8'))\n",
+    "print(outs.decode('UTF-8'))\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 81,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def binary_locate(array,ele,start,end):\n",
+    "    middle = (end+start)//2\n",
+    "    if(end-start>1):\n",
+    "        if(array[middle]<ele):\n",
+    "            return binary_locate(array,ele,middle,end)\n",
+    "        elif(array[middle+1]>ele):\n",
+    "            return binary_locate(array,ele,start,middle)\n",
+    "        else:\n",
+    "            return middle,middle+1\n",
+    "    else:\n",
+    "        return middle,middle+1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 82,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(678, 679)"
+      ]
+     },
+     "execution_count": 82,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "import sys\n",
+    "sys.setrecursionlimit(10000)\n",
+    "array = Gene_Loc['chr1+']\n",
+    "binary_locate(array,46104790,0,3505)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 80,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(46066315, 46373550)"
+      ]
+     },
+     "execution_count": 80,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "array[678],array[679]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 33,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "p = pipes.Template()\n",
+    "p.append(\"zcat\", '--')\n",
+    "Gene_Loc = defaultdict(list)\n",
+    "f = p.open('/home/longy/cnda/ensembl/Mus_musculus.GRCm38.101.gtf.gz', 'r')\n",
+    "\n",
+    "for line in f.readlines():\n",
+    "    if re.match('^#',line):\n",
+    "        continue\n",
+    "    line = line.rstrip('\\n')\n",
+    "    data = line.split('\\t')\n",
+    "    if(data[2] == 'gene'):\n",
+    "        Gene_Loc['chr'+data[0]+data[6]].append(int(data[3]))\n",
+    "        Gene_Loc['chr'+data[0]+data[6]].append(int(data[4]))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 84,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "writing file scanGenome_data/Blocks/chr1_-_0_4558183-44119358\n",
+      "writing file scanGenome_data/Blocks/chr1_-_1_45331639-72712231\n",
+      "writing file scanGenome_data/Blocks/chr1_-_2_72713410-93501659\n",
+      "writing file scanGenome_data/Blocks/chr1_-_3_93503343-134893503\n",
+      "writing file scanGenome_data/Blocks/chr1_-_4_134895736-160342171\n",
+      "writing file scanGenome_data/Blocks/chr1_-_5_160392090-180580642\n",
+      "writing file scanGenome_data/Blocks/chr1_-_6_180582666-195131566\n",
+      "writing file scanGenome_data/Blocks/chr4_+_0_3574926-43651485\n",
+      "writing file scanGenome_data/Blocks/chr4_+_1_43663934-65619511\n",
+      "writing file scanGenome_data/Blocks/chr4_+_2_66827629-116160743\n",
+      "writing file scanGenome_data/Blocks/chr4_+_3_116221734-130128225\n",
+      "writing file scanGenome_data/Blocks/chr4_+_4_130308772-141329460\n",
+      "writing file scanGenome_data/Blocks/chr4_+_5_141421869-156250329\n",
+      "writing file scanGenome_data/Blocks/chr12_-_0_3233262-69367938\n",
+      "writing file scanGenome_data/Blocks/chr12_-_1_69369402-85368166\n",
+      "writing file scanGenome_data/Blocks/chr12_-_2_85374349-119187820\n",
+      "writing file scanGenome_data/Blocks/chr17_-_0_3044042-25184107\n",
+      "writing file scanGenome_data/Blocks/chr17_-_1_25233407-32957808\n",
+      "writing file scanGenome_data/Blocks/chr17_-_2_33016832-46681818\n",
+      "writing file scanGenome_data/Blocks/chr17_-_3_46682911-71111872\n",
+      "writing file scanGenome_data/Blocks/chr17_-_4_71252117-94834758\n",
+      "writing file scanGenome_data/Blocks/chr14_+_0_4111088-25700517\n",
+      "writing file scanGenome_data/Blocks/chr14_+_1_25712137-50821355\n",
+      "writing file scanGenome_data/Blocks/chr14_+_2_50870372-69695923\n",
+      "writing file scanGenome_data/Blocks/chr14_+_3_69704105-123975699\n",
+      "writing file scanGenome_data/Blocks/chr6_+_0_3200753-34787441\n",
+      "writing file scanGenome_data/Blocks/chr6_+_1_34793912-59212082\n",
+      "writing file scanGenome_data/Blocks/chr6_+_2_59238020-86392436\n",
+      "writing file scanGenome_data/Blocks/chr6_+_3_86404297-113153462\n",
+      "writing file scanGenome_data/Blocks/chr6_+_4_113237872-128377755\n",
+      "writing file scanGenome_data/Blocks/chr6_+_5_128400003-149582189\n",
+      "writing file scanGenome_data/Blocks/chr7_-_0_3108883-25219067\n",
+      "writing file scanGenome_data/Blocks/chr7_-_1_25228179-34096945\n",
+      "writing file scanGenome_data/Blocks/chr7_-_2_34099745-47035465\n",
+      "writing file scanGenome_data/Blocks/chr7_-_3_48124099-80935143\n",
+      "writing file scanGenome_data/Blocks/chr7_-_4_80945377-101345463\n",
+      "writing file scanGenome_data/Blocks/chr7_-_5_101506695-122079195\n",
+      "writing file scanGenome_data/Blocks/chr7_-_6_122085418-134213747\n",
+      "writing file scanGenome_data/Blocks/chr7_-_7_134215700-145283915\n",
+      "writing file scanGenome_data/Blocks/chr3_-_0_5177885-66221281\n",
+      "writing file scanGenome_data/Blocks/chr3_-_1_66998807-95495784\n",
+      "writing file scanGenome_data/Blocks/chr3_-_2_95653639-116642059\n",
+      "writing file scanGenome_data/Blocks/chr3_-_3_116643941-159907175\n",
+      "writing file scanGenome_data/Blocks/chr6_-_0_3201357-39313180\n",
+      "writing file scanGenome_data/Blocks/chr6_-_1_39314412-83004295\n",
+      "writing file scanGenome_data/Blocks/chr6_-_2_83005364-99076050\n",
+      "writing file scanGenome_data/Blocks/chr6_-_3_99096060-124935173\n",
+      "writing file scanGenome_data/Blocks/chr6_-_4_124958206-149433774\n",
+      "writing file scanGenome_data/Blocks/chr1_+_0_4784002-44003181\n",
+      "writing file scanGenome_data/Blocks/chr1_+_1_44005579-74268295\n",
+      "writing file scanGenome_data/Blocks/chr1_+_2_74278551-93510318\n",
+      "writing file scanGenome_data/Blocks/chr1_+_3_93512152-136178066\n",
+      "writing file scanGenome_data/Blocks/chr1_+_4_136269522-172319909\n",
+      "writing file scanGenome_data/Blocks/chr1_+_5_172376597-195114808\n",
+      "writing file scanGenome_data/Blocks/chrX_-_0_5700820-86533903\n",
+      "writing file scanGenome_data/Blocks/chrX_-_1_86536051-170005586\n",
+      "writing file scanGenome_data/Blocks/chr11_+_0_3123989-23493545\n",
+      "writing file scanGenome_data/Blocks/chr11_+_1_23666133-51977410\n",
+      "writing file scanGenome_data/Blocks/chr11_+_2_51986373-60952881\n",
+      "writing file scanGenome_data/Blocks/chr11_+_3_60956945-72451811\n",
+      "writing file scanGenome_data/Blocks/chr11_+_4_72607292-78349219\n",
+      "writing file scanGenome_data/Blocks/chr11_+_5_78364077-94126144\n",
+      "writing file scanGenome_data/Blocks/chr11_+_6_94138546-101191637\n",
+      "writing file scanGenome_data/Blocks/chr11_+_7_101247098-115968013\n",
+      "writing file scanGenome_data/Blocks/chr11_+_8_115982877-121729613\n",
+      "writing file scanGenome_data/Blocks/chr19_-_0_3206589-6045422\n",
+      "writing file scanGenome_data/Blocks/chr19_-_1_6046466-24174094\n",
+      "writing file scanGenome_data/Blocks/chr19_-_2_24185802-43662345\n",
+      "writing file scanGenome_data/Blocks/chr19_-_3_43663742-61304916\n",
+      "writing file scanGenome_data/Blocks/chr13_-_0_3548850-46769238\n",
+      "writing file scanGenome_data/Blocks/chr13_-_1_46771125-67309772\n",
+      "writing file scanGenome_data/Blocks/chr13_-_2_67312376-98987612\n",
+      "writing file scanGenome_data/Blocks/chr13_-_3_98988821-120304528\n",
+      "writing file scanGenome_data/Blocks/chr5_-_0_3564303-33669654\n",
+      "writing file scanGenome_data/Blocks/chr5_-_1_33737505-77408047\n",
+      "writing file scanGenome_data/Blocks/chr5_-_2_85995508-113163310\n",
+      "writing file scanGenome_data/Blocks/chr5_-_3_113182862-124635197\n",
+      "writing file scanGenome_data/Blocks/chr5_-_4_124776210-139413423\n",
+      "writing file scanGenome_data/Blocks/chr5_-_5_139419887-151651199\n",
+      "writing file scanGenome_data/Blocks/chr2_+_0_3118480-28058330\n",
+      "writing file scanGenome_data/Blocks/chr2_+_1_28059749-32569827\n",
+      "writing file scanGenome_data/Blocks/chr2_+_2_32570860-71264059\n",
+      "writing file scanGenome_data/Blocks/chr2_+_3_71389253-112267184\n",
+      "writing file scanGenome_data/Blocks/chr2_+_4_112316234-128854281\n",
+      "writing file scanGenome_data/Blocks/chr2_+_5_128896532-153272699\n",
+      "writing file scanGenome_data/Blocks/chr2_+_6_153291448-166898081\n",
+      "writing file scanGenome_data/Blocks/chr2_+_7_166906067-181917785\n",
+      "writing file scanGenome_data/Blocks/chr10_+_0_3740501-41488089\n",
+      "writing file scanGenome_data/Blocks/chr10_+_1_41489167-76515919\n",
+      "writing file scanGenome_data/Blocks/chr10_+_2_76531627-82897800\n",
+      "writing file scanGenome_data/Blocks/chr10_+_3_82954741-111499108\n",
+      "writing file scanGenome_data/Blocks/chr10_+_4_111500317-130577703\n",
+      "writing file scanGenome_data/Blocks/chr5_+_0_3236403-31081550\n",
+      "writing file scanGenome_data/Blocks/chr5_+_1_31179895-52824699\n",
+      "writing file scanGenome_data/Blocks/chr5_+_2_52834066-93183211\n",
+      "writing file scanGenome_data/Blocks/chr5_+_3_93267662-114421251\n",
+      "writing file scanGenome_data/Blocks/chr5_+_4_114444290-124532499\n",
+      "writing file scanGenome_data/Blocks/chr5_+_5_124540793-139249905\n",
+      "writing file scanGenome_data/Blocks/chr5_+_6_139252383-151322151\n",
+      "writing file scanGenome_data/Blocks/chr18_-_0_3256253-46780775\n",
+      "writing file scanGenome_data/Blocks/chr18_-_1_46789805-90311178\n",
+      "writing file scanGenome_data/Blocks/chr14_-_0_6016957-46885190\n",
+      "writing file scanGenome_data/Blocks/chr14_-_1_47061510-67591859\n",
+      "writing file scanGenome_data/Blocks/chr14_-_2_67673145-123698165\n",
+      "writing file scanGenome_data/Blocks/chr19_+_0_3282997-9077809\n",
+      "writing file scanGenome_data/Blocks/chr19_+_1_9216370-41266156\n",
+      "writing file scanGenome_data/Blocks/chr19_+_2_41482689-61133283\n",
+      "writing file scanGenome_data/Blocks/chr18_+_0_3371077-34336629\n",
+      "writing file scanGenome_data/Blocks/chr18_+_1_34345430-60778630\n",
+      "writing file scanGenome_data/Blocks/chr18_+_2_60803957-90592575\n",
+      "writing file scanGenome_data/Blocks/chrX_+_0_6520945-68549438\n",
+      "writing file scanGenome_data/Blocks/chrX_+_1_68678649-108901647\n",
+      "writing file scanGenome_data/Blocks/chrX_+_2_108972114-170017314\n",
+      "writing file scanGenome_data/Blocks/chr9_-_0_3258727-25252255\n",
+      "writing file scanGenome_data/Blocks/chr9_-_1_25277571-49799001\n",
+      "writing file scanGenome_data/Blocks/chr9_-_2_50344136-64178464\n",
+      "writing file scanGenome_data/Blocks/chr9_-_3_64185449-90223554\n",
+      "writing file scanGenome_data/Blocks/chr9_-_4_90225929-108689144\n",
+      "writing file scanGenome_data/Blocks/chr9_-_5_108691647-124476880\n",
+      "writing file scanGenome_data/Blocks/chr8_+_0_3393048-25577800\n",
+      "writing file scanGenome_data/Blocks/chr8_+_1_25601706-70183683\n",
+      "writing file scanGenome_data/Blocks/chr8_+_2_70234355-84093387\n",
+      "writing file scanGenome_data/Blocks/chr8_+_3_84094732-105335506\n",
+      "writing file scanGenome_data/Blocks/chr8_+_4_105348303-119411139\n",
+      "writing file scanGenome_data/Blocks/chr8_+_5_119437158-129294184\n",
+      "writing file scanGenome_data/Blocks/chr15_-_0_3317692-44429643\n",
+      "writing file scanGenome_data/Blocks/chr15_-_1_44432346-76216441\n",
+      "writing file scanGenome_data/Blocks/chr15_-_2_76217853-82348875\n",
+      "writing file scanGenome_data/Blocks/chr15_-_3_82350054-98731510\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "writing file scanGenome_data/Blocks/chr15_-_4_98732828-103537893\n",
+      "writing file scanGenome_data/Blocks/chr12_+_0_3235644-41628921\n",
+      "writing file scanGenome_data/Blocks/chr12_+_1_41703648-80880888\n",
+      "writing file scanGenome_data/Blocks/chr12_+_2_80945508-108844606\n",
+      "writing file scanGenome_data/Blocks/chr12_+_3_108845817-119466944\n",
+      "writing file scanGenome_data/Blocks/chr16_-_0_3625009-18877065\n",
+      "writing file scanGenome_data/Blocks/chr16_-_1_20176764-51362206\n",
+      "writing file scanGenome_data/Blocks/chr16_-_2_51363271-98082273\n",
+      "writing file scanGenome_data/Blocks/chr15_+_0_3271034-62021623\n",
+      "writing file scanGenome_data/Blocks/chr15_+_1_62038034-84315752\n",
+      "writing file scanGenome_data/Blocks/chr15_+_2_84342725-103530017\n",
+      "writing file scanGenome_data/Blocks/chr3_+_0_4211573-51495983\n",
+      "writing file scanGenome_data/Blocks/chr3_+_1_51561272-88362421\n",
+      "writing file scanGenome_data/Blocks/chr3_+_2_88481226-96178004\n",
+      "writing file scanGenome_data/Blocks/chr3_+_3_96179007-121735162\n",
+      "writing file scanGenome_data/Blocks/chr3_+_4_121953320-159938737\n",
+      "writing file scanGenome_data/Blocks/chr2_-_0_3328891-26948156\n",
+      "writing file scanGenome_data/Blocks/chr2_-_1_26949564-52742183\n",
+      "writing file scanGenome_data/Blocks/chr2_-_2_53134659-93912087\n",
+      "writing file scanGenome_data/Blocks/chr2_-_3_93955802-121925732\n",
+      "writing file scanGenome_data/Blocks/chr2_-_4_121933386-147010891\n",
+      "writing file scanGenome_data/Blocks/chr2_-_5_148404390-164879695\n",
+      "writing file scanGenome_data/Blocks/chr2_-_6_164882209-181864193\n",
+      "writing file scanGenome_data/Blocks/chr17_+_0_3115155-17870660\n",
+      "writing file scanGenome_data/Blocks/chr17_+_1_20945419-28331120\n",
+      "writing file scanGenome_data/Blocks/chr17_+_2_28473130-36140698\n",
+      "writing file scanGenome_data/Blocks/chr17_+_3_36159158-71659089\n",
+      "writing file scanGenome_data/Blocks/chr17_+_4_71717346-94879642\n",
+      "writing file scanGenome_data/Blocks/chr16_+_0_3744168-20646525\n",
+      "writing file scanGenome_data/Blocks/chr16_+_1_20651691-37836605\n",
+      "writing file scanGenome_data/Blocks/chr16_+_2_37868428-98039251\n",
+      "writing file scanGenome_data/Blocks/chr4_-_0_3549195-43563565\n",
+      "writing file scanGenome_data/Blocks/chr4_-_1_43565169-81349280\n",
+      "writing file scanGenome_data/Blocks/chr4_-_2_81356242-118213871\n",
+      "writing file scanGenome_data/Blocks/chr4_-_3_118217004-132348100\n",
+      "writing file scanGenome_data/Blocks/chr4_-_4_132351527-143142227\n",
+      "writing file scanGenome_data/Blocks/chr4_-_5_143145353-156246971\n",
+      "writing file scanGenome_data/Blocks/chr10_-_0_4228195-41529463\n",
+      "writing file scanGenome_data/Blocks/chr10_-_1_41718834-77249325\n",
+      "writing file scanGenome_data/Blocks/chr10_-_2_77251485-85386401\n",
+      "writing file scanGenome_data/Blocks/chr10_-_3_85874407-120476953\n",
+      "writing file scanGenome_data/Blocks/chr10_-_4_120610571-130465577\n",
+      "writing file scanGenome_data/Blocks/chr9_+_0_3335518-35039698\n",
+      "writing file scanGenome_data/Blocks/chr9_+_1_35117516-56903116\n",
+      "writing file scanGenome_data/Blocks/chr9_+_2_56937483-67997804\n",
+      "writing file scanGenome_data/Blocks/chr9_+_3_68663864-96030956\n",
+      "writing file scanGenome_data/Blocks/chr9_+_4_96032025-109119961\n",
+      "writing file scanGenome_data/Blocks/chr9_+_5_109832792-124424526\n",
+      "writing file scanGenome_data/Blocks/chr8_-_0_3143318-33659161\n",
+      "writing file scanGenome_data/Blocks/chr8_-_1_33700715-70627754\n",
+      "writing file scanGenome_data/Blocks/chr8_-_2_70629464-95332111\n",
+      "writing file scanGenome_data/Blocks/chr8_-_3_95420201-116733019\n",
+      "writing file scanGenome_data/Blocks/chr8_-_4_116888577-129234341\n",
+      "writing file scanGenome_data/Blocks/chr13_+_0_3298870-49709865\n",
+      "writing file scanGenome_data/Blocks/chr13_+_1_49711742-77205125\n",
+      "writing file scanGenome_data/Blocks/chr13_+_2_77206412-119791703\n",
+      "writing file scanGenome_data/Blocks/chr7_+_0_3173088-24538677\n",
+      "writing file scanGenome_data/Blocks/chr7_+_1_24547230-43453049\n",
+      "writing file scanGenome_data/Blocks/chr7_+_2_43454511-68233755\n",
+      "writing file scanGenome_data/Blocks/chr7_+_3_68304661-99461914\n",
+      "writing file scanGenome_data/Blocks/chr7_+_4_99479016-118774138\n",
+      "writing file scanGenome_data/Blocks/chr7_+_5_118775285-128692466\n",
+      "writing file scanGenome_data/Blocks/chr7_+_6_128693639-145309530\n",
+      "writing file scanGenome_data/Blocks/chr11_-_0_3122745-22801472\n",
+      "writing file scanGenome_data/Blocks/chr11_-_1_22830084-52376517\n",
+      "writing file scanGenome_data/Blocks/chr11_-_2_52388580-63158571\n",
+      "writing file scanGenome_data/Blocks/chr11_-_3_63312376-76213923\n",
+      "writing file scanGenome_data/Blocks/chr11_-_4_76217130-86603304\n",
+      "writing file scanGenome_data/Blocks/chr11_-_5_86604356-98098496\n",
+      "writing file scanGenome_data/Blocks/chr11_-_6_98099891-103882948\n",
+      "writing file scanGenome_data/Blocks/chr11_-_7_103910351-116469325\n",
+      "writing file scanGenome_data/Blocks/chr11_-_8_116470715-121673079\n"
+     ]
+    }
+   ],
+   "source": [
+    "total = 0\n",
+    "files = glob.glob(root_dir+\"/*.txt\")\n",
+    "info = open('scanGenome_data/Blocks/info.txt','w')\n",
+    "info.write('ID\\tstart\\tend\\tlength\\tsites_num\\n')\n",
+    "for file in files:\n",
+    "    num_lines = sum(1 for line in open(file))\n",
+    "    num_blocks = round(num_lines/5e5)\n",
+    "    len_blocks = num_lines/num_blocks\n",
+    "    \n",
+    "    f= open(file,'r')\n",
+    "    pre_pos = 0\n",
+    "    dict_line = OrderedDict()\n",
+    "    #dict_line = dict()\n",
+    "    count = 0\n",
+    "    separate_num=0\n",
+    "    save_block = 0\n",
+    "    start = 0\n",
+    "    \n",
+    "    for i, line in enumerate(f):\n",
+    "        line = line.rstrip('\\n')\n",
+    "        if(i==0):\n",
+    "            continue ###Skip header\n",
+    "        chromosome,pos,strand = line.split('\\t')[0].split(':')\n",
+    "        pos = int(pos)\n",
+    "        count += 1\n",
+    "        if(i==1):\n",
+    "            start=pos\n",
+    "        if(count>len_blocks and pos-pre_pos>1000 and save_block<num_blocks-1):\n",
+    "            array = Gene_Loc[chromosome+strand]\n",
+    "            index1,index2 = binary_locate(array,pre_pos,0,len(array)-1)\n",
+    "            if(index1%2==1 and index2%2==0):\n",
+    "                ww = open('scanGenome_data/Blocks/%s_%s_%d'%(chromosome,strand,save_block),'w')\n",
+    "                print('writing file scanGenome_data/Blocks/%s_%s_%d_%d-%d'%(chromosome,strand,save_block,start,pre_pos))\n",
+    "                info.write('%s_%s_%d\\t%d\\t%d\\t%d\\t%d\\n'%(chromosome,strand,save_block,start,pre_pos,pre_pos-start,count))\n",
+    "                #print('%s_%s_%d\\t%d\\t%d\\t%d\\t%d\\n'%(chromosome,strand,save_block,start,pre_pos,pre_pos-start,count))\n",
+    "                for key,val in dict_line.items():\n",
+    "                    ww.write('%s\\n'%val)\n",
+    "                ww.close()\n",
+    "                dict_line.clear()\n",
+    "                count = 0\n",
+    "                save_block += 1\n",
+    "                start  = pos\n",
+    "            \n",
+    "        \n",
+    "        dict_line[pos] = line\n",
+    "        pre_pos = pos\n",
+    "        \n",
+    "    out = open('scanGenome_data/Blocks/%s_%s_%d'%(chromosome,strand,save_block),'w')\n",
+    "    print('writing file scanGenome_data/Blocks/%s_%s_%d_%d-%d'%(chromosome,strand,save_block,start,pre_pos))\n",
+    "    info.write('%s_%s_%d\\t%d\\t%d\\t%d\\t%d\\n'%(chromosome,strand,save_block,start,pre_pos,pre_pos-start,count))\n",
+    "    for key,val in dict_line.items():\n",
+    "        out.write('%s\\n'%(val))\n",
+    "    out.close()\n",
+    "\n",
+    "info.close()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 89,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "string='scanGenome_data/Blocks/chr10_+_0'\n",
+    "block_dir='scanGenome_data/Blocks'\n",
+    "root_dir = 'data/negative/round2'\n",
+    "string3 = string.replace(block_dir,root_dir)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 90,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "'data/negative/round2/chr10_+_0'"
+      ]
+     },
+     "execution_count": 90,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "string3"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 96,
+   "metadata": {},
+   "outputs": [
+    {
+     "ename": "SyntaxError",
+     "evalue": "invalid syntax (<ipython-input-96-872da350a6e0>, line 1)",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;36m  File \u001b[0;32m\"<ipython-input-96-872da350a6e0>\"\u001b[0;36m, line \u001b[0;32m1\u001b[0m\n\u001b[0;31m    a = [c = f.replace(block_dir,root_dir) for f in files]\u001b[0m\n\u001b[0m           ^\u001b[0m\n\u001b[0;31mSyntaxError\u001b[0m\u001b[0;31m:\u001b[0m invalid syntax\n"
+     ]
+    }
+   ],
+   "source": [
+    "a = [c = f.replace(block_dir,root_dir) for f in files]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 95,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "['scanGenome_data/bl6.pAs.scanGenome.step1.str1.REP1.chr1.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str2.REP1.chr4.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str1.REP1.chr12.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str1.REP1.chr17.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str2.REP1.chr14.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str2.REP1.chr6.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str1.REP1.chr7.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str1.REP1.chr3.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str1.REP1.chr6.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str2.REP1.chr1.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str1.REP1.chrX.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str2.REP1.chr11.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str1.REP1.chr19.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str1.REP1.chr13.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str1.REP1.chr5.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str2.REP1.chr2.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str2.REP1.chr10.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str2.REP1.chr5.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str1.REP1.chr18.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str1.REP1.chr14.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str2.REP1.chr19.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str2.REP1.chr18.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str2.REP1.chrX.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str1.REP1.chr9.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str2.REP1.chr8.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str1.REP1.chr15.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str2.REP1.chr12.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str1.REP1.chr16.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str2.REP1.chr15.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str2.REP1.chr3.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str1.REP1.chr2.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str2.REP1.chr17.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str2.REP1.chr16.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str1.REP1.chr4.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str1.REP1.chr10.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str2.REP1.chr9.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str1.REP1.chr8.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str2.REP1.chr13.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str2.REP1.chr7.UpstreamTrimmed10.txt',\n",
+       " 'scanGenome_data/bl6.pAs.scanGenome.step1.str1.REP1.chr11.UpstreamTrimmed10.txt']"
+      ]
+     },
+     "execution_count": 95,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "a"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}

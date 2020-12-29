@@ -1,0 +1,36 @@
+#!/bin/bash
+#SBATCH --job-name=mountainClimber
+#SBATCH --partition=batch
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=32
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --output=LOG/log.%J
+#SBATCH --time=50:00:00
+#SBATCH --mem=140G
+
+####SBATCH --gres=gpu:1
+######SBATCH -a 0-39
+##SBATCH --dependency afterok:6686802_[1-100] 
+
+
+
+SAMPLE="human.chr1"
+CHROM="hg19.chr1.genome"
+GTF="hg19.chr1.gtf"
+FA="hg19.chr1.fa"
+BAM="BAM/chr$chr.bam"
+
+#python ./src/get_junction_counts.py -i $BAM -s fr-unstrand -o ./junctions/$SAMPLE.bed
+
+#bedtools genomecov -trackline -bg -split -ibam $BAM -g $CHROM > ./bedgraph/$SAMPLE.bedgraph
+
+#python ../src/mountainClimberTU.py -b ./bedgraph/$SAMPLE.bedgraph -j ./junctions/$SAMPLE.bed -s 0 -g $CHROM  -o mountainClimberTU/${SAMPLE}_tu.bed
+
+
+python ../src/merge_tus.py -i ./mountainClimberTU/${SAMPLE}_tu.bed --ss n -g $GTF  -o tus_merged/tus_merged
+
+python ../src/mountainClimberCP.py -i ./bedgraph/$SAMPLE.bedgraph -g tus_merged/tus_merged.annot.hg19.chr1_singleGenes.bed  -j ./junctions/$SAMPLE.bed -o mountainClimberCP/$SAMPLE.bed -x $FA
+
+python ../src/mountainClimberRU.py -i mountainClimberCP/$SAMPLE.bed -o mountainClimberRU/$SAMPLE.bed

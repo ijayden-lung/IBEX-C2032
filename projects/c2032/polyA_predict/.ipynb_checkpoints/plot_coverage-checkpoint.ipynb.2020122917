@@ -1,0 +1,95 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#!/usr/bin/env Rscript\n",
+    "library(ggplot2)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "plotPASCoverage <- function(pas){\n",
+    "    if(is.numeric(pas)){\n",
+    "        df =  data.frame(position = 1:201,coverage = as.vector(as.matrix(data[pas,5:205])))\n",
+    "    }\n",
+    "    else{\n",
+    "        cov = subset(data,data$V1 == pas)[,5:205]\n",
+    "        df = data.frame(position = 1:201,coverage = as.vector(as.matrix(cov)))\n",
+    "    }\n",
+    "    ggplot(data=df,aes(x=position,y=coverage))+\n",
+    "    geom_line()+\n",
+    "    labs(title=paste(\"Coverage of PAS \",pas,sep=''))+\n",
+    "    theme_bw()+\n",
+    "    theme(axis.title=element_text(size=12),\n",
+    "          axis.text=element_text(size=12,vjust=0.5,hjust=0.5,angle=0),\n",
+    "          legend.title=element_blank(),\n",
+    "          plot.title = element_text(size=15,face = \"bold\",hjust = 0.5),\n",
+    "          legend.text=element_text(size=11,color=\"black\",face=\"bold\"))\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "Warning message in file(file, \"rt\"):\n",
+      "“cannot open file '`data/bl6.pAs.zhangbin.fibroblast.txt': No such file or directory”"
+     ]
+    },
+    {
+     "ename": "ERROR",
+     "evalue": "Error in file(file, \"rt\"): cannot open the connection\n",
+     "output_type": "error",
+     "traceback": [
+      "Error in file(file, \"rt\"): cannot open the connection\nTraceback:\n",
+      "1. read.table(\"`data/bl6.pAs.zhangbin.fibroblast.txt\")",
+      "2. file(file, \"rt\")"
+     ]
+    }
+   ],
+   "source": [
+    "data = read.table('`data/bl6.pAs.zhangbin.fibroblast.txt')\n",
+    "data[21:30,]  ##plot top 10 line"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "plotPASCoverage('ENSMUSG00000079641.3:1')"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "R",
+   "language": "R",
+   "name": "ir"
+  },
+  "language_info": {
+   "codemirror_mode": "r",
+   "file_extension": ".r",
+   "mimetype": "text/x-r-source",
+   "name": "R",
+   "pygments_lexer": "r",
+   "version": "3.5.1"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

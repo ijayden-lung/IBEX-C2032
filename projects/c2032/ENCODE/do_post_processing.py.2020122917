@@ -1,0 +1,18 @@
+import pandas as pd
+import os
+df=pd.read_csv('All_selected.tsv',sep='\t')
+
+for CELL in ['HepG2','K562']:
+    for TARGET in ['ZRANB2','FUS','RBFOX2']:
+        dt=df[(df.cell==CELL)&(df.target==TARGET)]
+        if len(dt)!=0:
+            
+            os.environ['CELL']=CELL
+            os.environ['TARGET']=TARGET
+            os.environ['REP']='REP1'
+            
+            os.system("bash do_post_processing.sh")
+            
+            os.environ['REP']='REP2'
+            
+            os.system("bash do_post_processing.sh")

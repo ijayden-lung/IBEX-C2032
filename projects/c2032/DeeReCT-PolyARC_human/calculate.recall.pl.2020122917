@@ -1,0 +1,27 @@
+#!/usr/bin/perl -w
+
+my %pas_shift;
+open FILE,"train_data/bl6.pAs.positive.REP1.allround0.txt";
+<FILE>;
+while(<FILE>){
+	my ($pas_id,$pas_type,$chr,$end,$srd,$symbol) = split;
+	$pas_shift{$pas_id} = $symbol;
+}
+
+my %truth;
+my %correct;
+open FILE,"predict/bl6.pAs.positive.REP1.zbround2.txt";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$predict) = split;
+	$truth{$pas_shift{$pas_id}}++;
+	if($predict == 0){
+		$correct{$pas_shift{$pas_id}}++;
+	}
+}
+
+foreach my $key (sort keys %truth){
+	my $precis = $correct{$key};
+	my $precision = sprintf("%.3f",$precis/$truth{$key});
+	print "$key\t$precision\n";
+}

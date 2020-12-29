@@ -1,0 +1,21 @@
+#!/usr/bin/perl -w
+
+my %pas;
+open FILE,"Stat/bl6.pAs.scanGenome.maxSum.8.-0.3.txt";
+while(<FILE>){
+	chomp;
+	my ($pas_id) = split;
+	if($pas_id =~ /ENS/){
+		$pas{$pas_id} = '';
+	}
+}
+
+open FILE,"Stat/maxSum.8.-0.3.noRepeat.txt";
+while(<FILE>){
+	chomp;
+	my ($pas_id) = split;
+	if(!exists $pas{$pas_id}){
+		print "$_\n";
+	}
+}
+

@@ -1,0 +1,25 @@
+#!/bin/bash
+#SBATCH --job-name=DeeReCT_PolyA
+#SBATCH --partition=batch
+#SBATCH --time=24:00:00
+#SBATCH --output=log.Oripara5
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --dependency=afterok:2499340
+#SBATCH --gres=gpu:1
+#SBATCH --constraint=[gpu]
+
+cd /home/longy/script/polyA_predict/
+
+
+for i in {501..600}
+do
+	name="Ori${i}"
+	#python3 train1.py model/Data_bl6.pAs.fibroblast.Ori.npz --out model/Train_$name --hparam model/BL_hparamOri5.npz #--newpara para/$name
+	#python3 train1.py model/Data_bl6.pAs.fibroblast.Ori.npz --out model/Train_$name  --newpara para/$name
+	#python3 test1.py model/Data_bl6.pAs.fibroblast.Ori.npz model/Train_$name.npz #--out model/Test_$name.txt
+	#rm model/Train_$name.npz
+done
+name='bl6.pAs.fibroblast.Ori'
+python3 test1.py model/Data_bl6.pAs.fibroblast.Ori.npz model/Test_neg_Rc103.txt #--out model/Test_$name.txt
+

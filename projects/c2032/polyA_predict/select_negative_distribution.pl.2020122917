@@ -1,0 +1,100 @@
+#!/usr/bin/perl -w
+use List::Util qw/shuffle sum/;
+
+open FILE,"/ibex/scratch/longy/workspace/polyA_predict/stat/Input.density.exon.negative.all.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$distance) = (split)[0,4];
+	$dist{$pas_id} = $distance;
+}
+
+open FILE,"/ibex/scratch/longy/workspace/polyA_predict/stat/Input.density.exon.negative2.all.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$distance) = (split)[0,4];
+	$pas_id = $pas_id.".2";
+	$dist{$pas_id} = $distance;
+}
+
+open FILE,"/ibex/scratch/longy/workspace/polyA_predict/data/bl6.pAs.random.negative2.all.adjust.txt";
+my $header = <FILE>;
+open OUT,">/ibex/scratch/longy/workspace/polyA_predict/data/bl6.pAs.random.negative.txt";
+print OUT $header;
+my @array = shuffle <FILE>;
+
+my %count = ('exon_noMotif'=>0,'exon_hasMotif'=>0,'tandemUTR_noMotif'=>0,'tandemUTR_hasMotif'=>0);
+my $number = 21677/4;
+my $outlierCount1 = 0;
+my $outlierCount2 = 0;
+
+foreach my $ele (@array){
+	chomp $ele;
+	my @data = split /\t/,$ele;
+	$pas_id = $data[0].".2";
+	$pas_type = $data[1];
+	$ele = join "\t",$pas_id,@data[1..$#data];
+	if($pas_type =~ /exon/ && exists $dist{$pas_id} && $dist{$pas_id} < 100){
+		$outlierCount1++;
+		next if $outlierCount1 > 250;
+	}
+	#if($pas_type =~ /exon/ && exists $dist{$pas_id} && $dist{$pas_id} >= 100 && $dist{$pas_id} < 10000){
+	#	$outlierCount2++;
+	#	next if $outlierCount2 > 8486;
+	#}
+	if($pas_type eq 'exon_motif=0' && $count{'exon_noMotif'}<=1423){ 
+		print OUT "$ele\n";
+		$count{'exon_noMotif'}++;
+	}
+	elsif($pas_type =~ /exon_motif=[1-9]/ && $count{'exon_hasMotif'}<=7982){
+		print OUT "$ele\n";
+		$count{'exon_hasMotif'}++;
+	}
+	elsif($pas_type eq 'tandemUTR_motif=0' && $count{'tandemUTR_noMotif'}<=1423){
+		print OUT "$ele\n";
+		$count{'tandemUTR_noMotif'}++;
+	}
+	elsif($pas_type =~ /tandemUTR_motif=[1-9]/ && $count{'tandemUTR_hasMotif'}<=10842){
+		print OUT "$ele\n";
+		$count{'tandemUTR_hasMotif'}++;
+	}
+}
+
+open FILE2,"/ibex/scratch/longy/workspace/polyA_predict/data/bl6.pAs.random.negative.all.adjust.txt";
+$header = <FILE2>;
+my @array2 = shuffle <FILE2>;
+
+foreach my $ele (@array2){
+	chomp $ele;
+	my ($pas_id,$pas_type) = split /\t/,$ele;
+	if($pas_type =~ /exon/ && exists $dist{$pas_id} && $dist{$pas_id} < 100){
+		$outlierCount1++;
+		next if $outlierCount1 > 250;
+	}
+	#if($pas_type =~ /exon/ && exists $dist{$pas_id} && $dist{$pas_id} >= 100 && $dist{$pas_id} < 10000){
+	#	$outlierCount2++;
+	#	next if $outlierCount2 > 8486;
+	#}
+
+	if($pas_type eq 'exon_motif=0' && $count{'exon_noMotif'}<=1423){ 
+		print OUT "$ele\n";
+		$count{'exon_noMotif'}++;
+	}
+	elsif($pas_type =~ /exon_motif=[1-9]/ && $count{'exon_hasMotif'}<=7985){
+		print OUT "$ele\n";
+		$count{'exon_hasMotif'}++;
+	}
+	elsif($pas_type eq 'tandemUTR_motif=0' && $count{'tandemUTR_noMotif'}<=1423){
+		print OUT "$ele\n";
+		$count{'tandemUTR_noMotif'}++;
+	}
+	elsif($pas_type =~ /tandemUTR_motif=[1-9]/ && $count{'tandemUTR_hasMotif'}<=10853){
+		print OUT "$ele\n";
+		$count{'tandemUTR_hasMotif'}++;
+	}
+}
+while(my($key,$val) = each %count){
+	print "$key\t$val\n";
+}
+

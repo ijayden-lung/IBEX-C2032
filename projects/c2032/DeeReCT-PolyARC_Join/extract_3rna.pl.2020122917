@@ -1,0 +1,24 @@
+#!/usr/bin/perl -w
+
+
+my %hash;
+open FILE,"/home/longy/project/DeeReCT-PolyARC_3RNA/STAR/BL6_REP1/Signal.Unique.str2.out.chr1.wig";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pos,$predict) = split;
+	$hash{$pos} = ''if $predict > 10;
+}
+
+open FILE,"maxSum/bl6.pAs.scanGenome.step1.str2.MERGE.chr1.Trimmed25.usage0.2.npz.37.txt.bidirection.30.15.txt";
+open OUT,">hei.txt";
+while(<FILE>){
+	chomp;
+	my ($pos) = split;
+	($pos) = split /\./,$pos;
+	print "$pos\n";
+	if(exists $hash{$pos}){
+		print OUT "$_\n";
+	}
+}
+		

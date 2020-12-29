@@ -1,0 +1,13 @@
+#!/usr/bin/perl -w
+
+my %hash;
+open FILE,"tianbin.multiPas.txt";
+while(<FILE>){
+	my (undef,$gene) = split;
+	$hash{$gene} = '';
+}
+open FILE,"predict.multiPas.txt";
+while(<FILE>){
+	my (undef,$gene) = split;
+	print "$gene\n" if exists $hash{$gene};
+}

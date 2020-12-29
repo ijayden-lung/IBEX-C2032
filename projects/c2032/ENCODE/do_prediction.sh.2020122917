@@ -1,0 +1,20 @@
+# human model
+
+cat>tmp.sh<<EOF
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J prediction_hm_${CELL}_${TARGET}_${REP}
+#SBATCH --output /ibex/scratch/projects/c2032/ENCODE/log/prediction_hm_${CELL}_${TARGET}_${REP}.log
+#SBATCH --time=72:00:00
+#SBATCH --mem=100G
+
+cd /home/zhouj0d/c2032/ENCODE
+mkdir /home/zhouj0d/c2032/ENCODE/data/${CELL}_${TARGET}/${REP}/Prediction_HM
+
+python predict.py --model /home/zhouj0d/c2032/ENCODE/model/HUMAN_BRAIN_UP100_DOWN75_USAGE0.2_50_31.npz \
+--cell ${CELL} --target ${TARGET} --rep ${REP}
+
+EOF
+
+sbatch tmp.sh

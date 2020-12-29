@@ -1,0 +1,15 @@
+#!/usr/bin/perl -w
+
+open FILE,"bl6.pAs.genome.trimmed10.txt";
+my $header = <FILE>;
+open OUT,">bl6.pAs.genome.random.length176.txt";
+print OUT $header;
+while(<FILE>){
+	chomp;
+	my @data = split;
+	#if(rand()<0.46){
+		$data[7] = substr($data[7],0,176);
+		print OUT join("\t",@data[0..183]),"\n";
+		#}
+}
+

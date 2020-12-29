@@ -1,0 +1,11 @@
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J change_point
+#SBATCH --output /home/zhouj0d/c2032/MOUNTAIN/log/change_point.log
+#SBATCH --time=72:00:00
+#SBATCH --mem=30G
+
+cd /home/zhouj0d/c2032/MOUNTAIN/mountainClimber/src
+python mountainClimberCP.py -i /home/zhouj0d/c2032/MOUNTAIN/bedgraph_new.bedgraph -g /home/zhouj0d/c2032/MOUNTAIN/tus_merged.annot.Homo_sapiens.GRCh38.95_singleGenes.new.bed -j /home/zhouj0d/c2032/MOUNTAIN/junction.bed -o /home/zhouj0d/c2032/MOUNTAIN/mountainClimberCP/HUM_Brain_MERGE.bed -x /home/zhouj0d/c2032/MOUNTAIN/hg38/Homo_sapiens.GRCh38.dna.primary_assembly.fa
+

@@ -1,0 +1,43 @@
+#!/usr/bin/perl -w
+
+open FILE,"polyA_seq/bl6.pAs.tianbin.train.bed.info.cutoff";
+<FILE>;
+#open OUT,">usage_data/bl6.pAs.tianbin.usage.train.txt";
+#print OUT "pas_id\tpas_type\tchr\tpos\tstrand\tsymbol\tusage\treadCount\tmotif\tave_diff\n";
+my %dist;
+my %readCount;
+my %ave_diff;
+my %pas_id;
+my %remove_id;
+open OUT,">Distance.txt";
+print OUT "distance\n";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif,$ave_diff) = split;
+	if(exists $dist{$symbol}){
+		my $dist_diff = $pos - $dist{$symbol};
+		print OUT "$pas_id\t$dist_diff\n";
+		if($dist_diff <= 50){
+			if($readCount > $readCount{$symbol}){
+				$remove_id{$pas_id{$symbol}} = '';
+			}
+			elsif($readCount == $readCount{$symbol}){
+				if($ave_diff > $ave_diff{$symbol}){
+					$remove_id{$pas_id{$symbol}} = '';
+				}
+				else{
+					$remove_id{$pas_id} = '';
+				}
+			}
+			else{
+				$remove_id{$pas_id} = '';
+			}
+		
+		}
+			
+	}
+	$dist{$symbol} = $pos;
+	$readCount{$symbol} = $readCount;
+	$ave_diff{$symbol} = $ave_diff;
+	$pas_id{$symbol} = $pas_id;
+}

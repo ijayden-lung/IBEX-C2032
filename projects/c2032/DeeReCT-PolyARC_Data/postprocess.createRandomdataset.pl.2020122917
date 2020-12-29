@@ -1,0 +1,144 @@
+#!/usr/bin/perl -w
+
+
+use Statistics::Descriptive;
+system("perl postprocess.createALldataset.pl");
+
+my %maybereal;
+my %pas_pos;
+open FILE,"RandominGene.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($gene_id,$pos,$pas_id,$relative) = split;
+	$maybereal{$pas_id} = $gene_id;
+	$pas_pos{$gene_id}->{$pas_id} = $pos;
+}
+
+my %nearest;
+my %nearReal;
+open ENS,"awk '(\$3 == \"three_prime_utr\")' /home/longy/cnda/ensembl/mm10.ensemblv95.nopsuedo.gtf |" ;
+while(<ENS>){
+	chomp;
+	my ($chr,$source,$type,$start,$end,undef,$srd,undef,undef,$gene_id) = split;
+	$gene_id =~ s/\"|\;//g;
+	if(exists $pas_pos{$gene_id}){
+		my $pas_ref = $pas_pos{$gene_id};
+		while(my($pas_id,$pos) = each %$pas_ref){
+			if(exists $nearest{$pas_id}){
+				if( abs($pos-$end)<abs($nearest{$pas_id})){
+					$nearest{$pas_id} = $pos-$end;
+					$nearReal{$pas_id} = $end;
+				}
+			}
+			else{
+				$nearest{$pas_id} = $pos-$end;
+				$nearReal{$pas_id} = $end;
+			}
+		}
+	}
+}
+open FILE,"/home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.tianbin.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$end,$srd) = split;
+	my ($gene_id) = split /\./,$pas_id;
+	if(exists $pas_pos{$gene_id}){
+		my $pas_ref = $pas_pos{$gene_id};
+		while(my($pas_id,$pos) = each %$pas_ref){
+			if(exists $nearest{$pas_id}){
+				if( abs($pos-$end)<abs($nearest{$pas_id})){
+					$nearest{$pas_id} = $pos-$end;
+					$nearReal{$pas_id} = $end;
+				}
+			}
+			else{
+				$nearest{$pas_id} = $pos-$end;
+			}
+		}
+	}
+}
+
+open FILE,"/home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.zhangbin.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$end,$srd) = split;
+	my ($gene_id) = split /\./,$pas_id;
+	if(exists $pas_pos{$gene_id}){
+		my $pas_ref = $pas_pos{$gene_id};
+		while(my($pas_id,$pos) = each %$pas_ref){
+			if(exists $nearest{$pas_id}){
+				if( abs($pos-$end)<abs($nearest{$pas_id})){
+					$nearest{$pas_id} = $pos-$end;
+					$nearReal{$pas_id} = $end;
+				}
+			}
+			else{
+				$nearest{$pas_id} = $pos-$end;
+			}
+		}
+	}
+}
+
+
+my $total = keys %maybereal;
+my $recall20 = 0;
+my $recall50 = 0;
+my $recall100 = 0;
+
+open OUT,">>Stat/postprocess.allDatasetPredict.distribute.txt"; ####Next time you should learn AllDatast First;
+my @stat;
+while(my ($key,$val) = each %nearReal){
+	my $diff = $nearest{$key};
+	print OUT "$key\t$val\t$diff\tRandom\n";
+	if(abs($diff)<100){
+		push @stat,$diff;
+		$recall100++;
+		if(abs($diff)<50){
+			$recall50++;
+			if(abs($diff)<20){
+				$recall20++;
+			}
+		}
+	}
+}
+my $percent20 = 1-$recall20/$total;
+my $percent50 = 1-$recall50/$total;
+my $percent100 = 1-$recall100/$total;
+print "$recall20\t$recall50\t$recall100\t$total\n";
+print "$percent20\t$percent50\t$percent100\n";
+
+my $stat = Statistics::Descriptive::Full->new();
+$stat->add_data(@stat);
+my $mean = $stat->mean();#平均值
+my $variance = $stat->variance();#方差
+my $num = $stat->count();#data的数目
+my $standard_deviation=$stat->standard_deviation();#标准差
+my $sum=$stat->sum();#求和
+my $min=$stat->min();#最小值
+my $mindex=$stat->mindex();#最小值的index
+my $max=$stat->max();#最大值
+my $maxdex=$stat->maxdex();#最大值的index
+my $range=$stat->sample_range();#最小值到最大值
+my $median=$stat->median();
+
+
+print "Header\tRecall\tFPR\tMean\tMedian\tSTD\tRange\n";
+my $penality=-0.25;
+my $maxLength=8;
+print "$penality,$maxLength\t$recall100\t$percent100\t$mean\t$median\t$standard_deviation\t$min,$max\n";
+=pod
+open FILE,"data/bl6.pAs.scanGenome.step1.str2.REP1.chr1.Trimmed10.txt";
+open OUT,">data/bl6.pAs.maybereal.txt";
+my $header = <FILE>;
+print OUT $header;
+while(<FILE>){
+	chomp;
+	my ($pas_id) = split ;
+	if(exists $nearReal{$pas_id}){
+		print OUT "$_\n";
+	}
+}
+=cut

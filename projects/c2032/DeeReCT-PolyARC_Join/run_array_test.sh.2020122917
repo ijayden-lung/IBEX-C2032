@@ -1,0 +1,67 @@
+#!/bin/bash
+#SBATCH --job-name=POSTREV
+#SBATCH --partition=batch
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --output=log.%J
+#SBATCH --time=1:00:00
+#SBATCH --mem=512G
+#SBATCH -a 0-5
+####SBATCH --gres=gpu:1
+
+#source activate ML
+cd /home/longy/project/DeeReCT-PolyARC_Join
+echo "This is job #${SLURM_ARRAY_JOB_ID}, task id ${SLURM_ARRAY_TASK_ID}"
+allsteps=(1 1 1 1 1 1)
+allstrands=("str2" "str1" "str2" "str1" "str2" "str1")
+allsigns=("+" "-" "+" "-" "+" "-")
+#allreps=("MERGE" "MERGE")
+allreps=("REP1" "REP1")
+allchrs=("chr1" "chr5" "chr9" "chr11" "chr7" "chr2")
+for ((i=0;i<=119;i++))
+do
+	b=$(( $i % 2 ))
+	c=$(( $i / 2))
+	steps[$i]=${allsteps[$b]}
+	strands[$i]=${allstrands[$b]}
+	signs[$i]=${allsigns[$b]}
+	reps[$i]=${allreps[$b]}
+	chrs[$i]=${allchrs[$c]}
+done
+
+window=176
+step=${steps[$SLURM_ARRAY_TASK_ID]}
+strand=${strands[$SLURM_ARRAY_TASK_ID]}
+sign=${signs[$SLURM_ARRAY_TASK_ID]}
+rep=${reps[$SLURM_ARRAY_TASK_ID]}
+chr=${chrs[$SLURM_ARRAY_TASK_ID]}
+
+PAS="/home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.zhangbin.txt"
+USAGE="train_data_bk/bl6.pAs.REP1.positive.txt"
+ENS="/home/longy/cnda/ensembl/mm10.ensemblv95.nopsuedo.gtf"
+DB="/home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.tianbin.txt"
+
+####Validation
+Trim="data_bk/bl6.pAs.scanGenome.step${step}.${strand}.${rep}.${chr}.Trimmed10.txt.test.txt"
+Data="Data/bl6.pAs.scanGenome.step${step}.${strand}.${rep}.${chr}.Trimmed10.txt.test.txt"
+Testid="bl6.pAs.scanGenome.step${step}.${strand}.${rep}.${chr}.Trimmed10.txt.round2.test"
+#python3 prep_test_data.py $Trim --out $Data  ####You don't need to prepreare again and again
+#python3 test.scanGenome.py ${Data}.npz Model/bl6.pAs.REP1.0.round31_epoch19.npz --testid $Testid
+
+input="predict/${Testid}.txt"
+
+####正向
+echo $input
+maxPoint=8
+penality=4
+perl scanGenome.maximum_sum4.chr.pl $maxPoint $penality $input
+####反向
+perl scanGenome.maximum_sum4.reverse.chr.pl $maxPoint $penality $input
+#####正反向
+perl postprocess.bidirection.pl $maxPoint $penality $chr $sign $USAGE $PAS $ENS $DB $input
+
+####合并
+#perl merge_postpropose.pl

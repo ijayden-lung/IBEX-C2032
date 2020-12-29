@@ -1,0 +1,48 @@
+#!/bin/bash
+#SBATCH --job-name=DeeRect
+#SBATCH --partition=batch
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=16
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --output=log.%J
+#SBATCH --time=01:00:00
+#SBATCH --mem=40G
+#SBATCH -a 1-50
+
+##SBATCH --dependency afterok:6686802_[1-100] 
+
+#source activate ML
+
+echo "This is job #${SLURM_ARRAY_JOB_ID}, task id ${SLURM_ARRAY_TASK_ID}"
+base="tandom.length176"
+name=${base}${SLURM_ARRAY_TASK_ID}
+
+
+
+#evaluate="f1score"
+#evaluate="precision"
+evaluate="accuracy"
+
+#distribute="sameDistribute"
+distribute="allmotif"
+#distribute="totalRandom"
+
+
+modelid=bl6.pAs.fibroblast.REP1
+#python3 DataPrep.py data/${modelid}.positive.usage0.2.txt data/${modelid}.negative.${distribute}.Trimmed10.txt  --out Data/${modelid}.${distribute}.npz
+#python3 DataPrep.py data/${modelid}.positive.usage0.2.allmotif.txt data/${modelid}.negative.${distribute}.Trimmed10.txt  --out Data/${modelid}.${distribute}.npz
+#python3 train.${evaluate}.py Data/${modelid}.${distribute}.npz --out Model/${modelid}.${distribute}.${evaluate}.${SLURM_ARRAY_TASK_ID}.npz --hparam para/BL_hparamIn5.npz --trainid ${modelid}.${distribute}.${evaluate}.${SLURM_ARRAY_TASK_ID}
+
+testid=bl6.pAs.fibroblast.REP1
+python3 DataPrep_positive.py  data/${testid}.positive.usage0.2.txt --out Data/positive.$testid 
+#python3 test.scanGenome.py Data/positive.${testid}.npz
+#python3 test.scanGenome.py Data/positive.${testid}.npz Model/Optimize_UP100_DOWN75_USAGE0.2_TRIMMED10_50_3.npz --testid positive.$testid
+
+
+#SLURM_ARRAY_TASK_ID=1
+testid="bl6.pAs.genome.allmotif.REP1"
+#python3 DataPrep_negative.py  data/${testid}.txt --out Data/$testid 
+python3 test.py Data/${testid}.npz Model/${modelid}.${distribute}.${evaluate}.${SLURM_ARRAY_TASK_ID}.npz --testid ${testid}.${distribute}.${evaluate}.${SLURM_ARRAY_TASK_ID}
+#python3 test.py Data/${testid}.npz Model/Optimize_UP100_DOWN75_USAGE0.2_TRIMMED10_50_3.npz --testid Optimize

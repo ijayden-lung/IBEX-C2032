@@ -1,0 +1,38 @@
+#2019.11 New Hfq Data
+
+for i in {1..12}
+do
+
+cat>tmp.sh<<EOF
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J accepted_hits_with_TSS_SunWei-${i}
+#SBATCH --output /home/zhouj0d/zhouj0d/sunwei_hfp/log/accepted_hits_with_TSS_SunWei-${i}.out
+#SBATCH --mail-user=juexiao.zhou@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --time=72:00:00
+#SBATCH --mem=30G
+
+module load bedtools
+
+bedtools intersect -v -s -a /home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-${i}/accepted_hits_firstbase.bed \
+-b /home/zhouj0d/zhouj0d/sunwei_hfp/ref/TSS.bed > \
+/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-${i}/accepted_hits_no_overlap_with_TSS.bed
+
+bedtools intersect -wa -wb -s -a /home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-${i}/accepted_hits_firstbase.bed \
+-b /home/zhouj0d/zhouj0d/sunwei_hfp/ref/TSS.bed > \
+/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-${i}/accepted_hits_overlap_with_TSS.bed
+
+bedtools intersect -u -s -a /home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-${i}/accepted_hits_firstbase.bed \
+-b /home/zhouj0d/zhouj0d/sunwei_hfp/ref/TSS.bed > \
+/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-${i}/accepted_hits_overlap_with_TSS_uniq.bed
+
+bedtools intersect -c -s -a /home/zhouj0d/zhouj0d/sunwei_hfp/ref/TSS.bed \
+-b /home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-${i}/accepted_hits_firstbase.bed > \
+/home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-${i}/accepted_hits_overlap_with_TSS_count.bed
+
+
+EOF
+sbatch tmp.sh
+done

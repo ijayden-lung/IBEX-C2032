@@ -1,0 +1,32 @@
+#!/usr/bin/perl -w
+my ($data,$secondary,$out) = @ARGV;
+
+
+my %hash;
+open FILE,"$secondary";
+my $pas_id = '';
+while(<FILE>){
+	chomp;
+	if($_ =~ />/){
+		use integer;
+		my $line_num = $. / 4 + 1;
+		$pas_id = substr($_,1).$line_num;
+	}
+	else{
+		$hash{$pas_id} .= "\t$_";
+	}
+}
+
+my $num1 = keys %hash;
+my $num2 = 0;
+open FILE2,"$data";
+open OUT,">$out";
+while(<FILE2>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$seq) = split;
+	if(exists $hash{$pas_id.$.}){
+		$num2++;
+		print OUT "$pas_id\t$pas_type\t$chr\t$pos\t$strand\t$symbol\t$usage\t$seq","$hash{$pas_id.$.}\n";
+	}
+}
+print "$num1\t$num2\n";

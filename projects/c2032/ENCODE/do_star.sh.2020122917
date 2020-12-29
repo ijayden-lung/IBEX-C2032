@@ -1,0 +1,19 @@
+cat>tmp.sh<<EOF
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J star_${CELL}_${TARGET}_${REP}
+#SBATCH --output /ibex/scratch/projects/c2032/ENCODE/log/star_${CELL}_${TARGET}_${REP}.log
+#SBATCH --time=72:00:00
+#SBATCH --mem=100G
+
+cd /ibex/scratch/projects/c2032/ENCODE/data/${CELL}_${TARGET}/${REP}
+STAR  --twopassMode Basic --runThreadN 12 --genomeDir /ibex/scratch/projects/c2032/ENCODE/hg38len100  \
+--readFilesIn ../$fq1 ../$fq2 --outSAMtype BAM SortedByCoordinate --outSAMattrIHstart 0 \
+--outFilterMultimapScoreRange 0  --alignEndsType EndToEnd  --readFilesCommand zcat \
+--outFilterIntronMotifs RemoveNoncanonicalUnannotated --outSAMstrandField intronMotif \
+--outReadsUnmapped Fastq --outWigType wiggle  --outWigNorm None --limitBAMsortRAM 40000000000
+
+EOF
+
+sbatch tmp.sh

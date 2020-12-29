@@ -1,0 +1,32 @@
+#!/usr/bin/perl -w
+#
+my %gt;
+open FILE,"../train_data/bl6.pAs.positive.REP1.newround0.txt";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol) = split;
+	if($symbol eq "Origin" ){
+		$gt{"$chr:$pos:$strand"} = '';
+	}
+}
+
+open FILE,"pAs_ensembl.info";
+open OUT,">bl6.pAs.ens.txt";
+#print OUT "pas_id\tread_count\n";
+<FILE>;
+my $total = 0;
+my $pass = 0;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$chr,$start,$end,$pos,$strand,$rep1,$rep2) = split;
+	#next if !exists  $gt{"$chr:$pos:$strand"};
+	my $ave_read = ($rep1+$rep2)/2;
+	if($ave_read>10){
+		$pass++;
+	}
+	$total++;
+	print OUT "$pas_id\t$ave_read\tENS\n";
+}
+
+print "$pass\t$total\n";
+

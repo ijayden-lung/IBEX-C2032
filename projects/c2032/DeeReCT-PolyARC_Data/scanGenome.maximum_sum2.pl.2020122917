@@ -1,0 +1,107 @@
+#!/usr/bin/perl -w
+#
+#
+#Upate 2019/11/07
+#The negative justthe position wrong, but the data is correct
+
+use POSIX;
+my ($maxLength,$penality) = @ARGV;
+
+my %pas;
+open FILE,"data/bl6.pAs.fibroblast.REP1.positive.usage0.2.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,undef,undef,$position) = split;
+	$pas{$pas_id} = $position;
+}
+
+my %correct;
+open FILE,"Correct_pas.txt";
+while(<FILE>){
+	chomp;
+	my ($pas_id) = split;
+	$correct{$pas_id} = '';
+}
+
+open OUT,">Stat/maxSum.$maxLength.$penality.txt";
+foreach my $file (glob 'predict/bl6.pAs.scanGenome.step1.str2.REP1.chr*.Trimmed10.Optimize.txt'){
+	&maxSum($file);
+}
+
+#&maxSum('test.txt');
+
+my %distribution;
+sub maxSum{
+	my ($file) = @_;
+	open FILE,$file;
+	my %predict;
+	while(<FILE>){
+		chomp;
+		my ($key,$predition) = split;
+		if($key =~ /ENS/){
+			my @id = split /,/,$key;
+			if(@id ==1){
+				$id = $id[0];
+				my ($pas_id,$pos) = split /\-/,$id;
+				if(exists $correct{$pas_id}){
+					my $position = int(substr($pos,3));
+					my $coor = $pas{$pas_id} + 100-$position;
+					$predict{$pas_id}->{$coor} = $predition;
+				}
+			}
+		}
+	}
+
+	while(my ($pas_id,$val) = each %predict){
+		my $sum = 0;
+		$val->{100000000000000} = 1;
+		my @coor = sort{$a<=>$b} keys %$val;
+		my $start = $coor[0];
+		my $end = $coor[0];
+		foreach my $coor (@coor){
+			my $predition = $val->{$coor};
+			if($coor-$end>1){
+				if($sum >0){
+					my $plus_length = floor(-$sum/$penality);
+					my $jump_length = $coor-$end;
+					if($jump_length < $plus_length){
+						$sum += $penality*($jump_length);
+					}
+					elsif($end-$start+$plus_length>$maxLength){
+						my $length = $end-$start+$plus_length;
+						my $diff = ($end+$start+$plus_length)/2-$pas{$pas_id};
+						print OUT "$pas_id\t$pas{$pas_id}\t$start\t$end\t$diff\t$length\n";
+						$start = $coor;
+						$sum = 0;
+						$end = $coor;
+					}
+				}
+				else{
+					$start = $coor;
+					$sum = 0;
+					$end = $coor;
+				}	
+			}
+			elsif($predition ==1){
+				$end = $coor;
+				$sum += $penality;
+				if($sum < 0){
+					my $length = $end-$start;
+					if($length>$maxLength){
+						my $diff = ($end+$start)/2-$pas{$pas_id};
+						print OUT "$pas_id\t$pas{$pas_id}\t$start\t$end\t$diff\t$length\n";
+					}
+					$start = $coor;
+					$sum = 0;
+				}
+			}
+			else{
+				$sum++;
+			}
+			$end = $coor;
+		}
+	}
+}
+
+system("perl check_remaining_pas.pl $maxLength $penality");

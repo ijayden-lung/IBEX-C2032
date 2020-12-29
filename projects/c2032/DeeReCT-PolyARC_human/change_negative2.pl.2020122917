@@ -1,0 +1,57 @@
+#!/usr/bin/perl -w
+use List::Util qw(first max maxstr min minstr reduce shuffle sum shuffle) ;
+
+my ($chr,$srd,$input,$negative,$out,$out2,$scanGenome,$round) = @ARGV;
+open FILE,"$input";
+<FILE>;
+my %pas_id;
+while(<FILE>){
+	chomp;
+	my ($pos,$id,$diff) = split;
+	next if (abs($diff) < 100 && $id =~ /chr/);
+	my $end = sprintf("%.0f",$pos);
+	if($srd eq "+"){
+		my $head = $end-100;
+		my $tail = $end+75;
+		$pas_id{"$chr:$head-$tail"} = '';
+	}
+	else{
+		my $head = $end-75;
+		my $tail = $end+100;
+		$pas_id{"$chr:$head-$tail"} = '';
+	}
+}
+
+my @shuffle = keys %pas_id;
+my %pas;
+open FILE,"$scanGenome";
+my $header  =<FILE>;
+open OUT2,">$out2";
+print OUT2 "$header";
+while(<FILE>){
+	chomp;
+	my @data = split;
+	if(exists $pas_id{$data[0]}){
+		$data[5] = $round;
+		$pas{$data[0]} = join("\t",@data);
+		print OUT2 join("\t",@data),"\n";
+	}
+}
+
+
+open FILE,"awk '(\$3 == \"$chr\" && \$5 == \"$srd\")' $negative | ";
+my $i=0;
+open OUT,">$out";
+#print OUT "$header";
+my @line = <FILE>;
+@line = &shuffle(@line);
+foreach (@line){
+	chomp;
+	if(rand()<0.5 && $i<@shuffle){
+		print OUT "$pas{$shuffle[$i]}\n";
+		$i++;
+	}
+	else{
+		print OUT "$_\n";
+	}
+}

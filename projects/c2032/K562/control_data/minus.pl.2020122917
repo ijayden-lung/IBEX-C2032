@@ -1,0 +1,41 @@
+#!/usr/bin/perl -w
+
+my %hash;
+open FILE,"hg38.pAs.compare2.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$gene,$pre,$exp) = split;
+	$hash{$gene}->{$pas_id} = "$pre\t$exp";
+	#my $diff = $exp-$pre;
+	#$hash{$gene}->{$pas_id} = $diff;
+}
+
+my %hash2;
+open FILE,"../zranb2_data/hg38.pAs.compare2.txt";
+my $header = <FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$gene,$pre,$exp) = split;
+	if(exists  $hash{$gene}->{$pas_id} ){
+		my ($pre1,$exp1) = split /\t/,$hash{$gene}->{$pas_id};
+		$pre -= $pre1;
+		$exp -= $exp1;
+		$hash2{$gene}->{$pas_id}  = "$pre\t$exp";
+		#my $diff = $exp-$pre;
+		#$hash2{$gene}->{$pas_id}  = "$hash{$gene}->{$pas_id}\t$diff";
+	}
+}
+
+open OUT,">hg38.pAs.minus.txt";
+print OUT "$header";
+foreach my $gene (keys %hash2){
+	my $val_num = values %hash2;
+	if($val_num>1){
+		my $val = $hash2{$gene};
+		foreach my $pas_id (keys %$val){
+			print OUT "$pas_id\t$gene\t$hash2{$gene}->{$pas_id}\n";
+		}
+	}
+}
+

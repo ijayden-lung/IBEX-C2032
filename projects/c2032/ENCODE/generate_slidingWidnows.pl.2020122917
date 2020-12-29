@@ -1,0 +1,8 @@
+#!/usr/bin/perl -w
+
+use CalCov;
+
+my ($WIG,$ScanGeomome,$window,$step) = @ARGV;
+print "main: $step\n";
+
+&calCov($WIG,$ScanGeomome,$window,$step);

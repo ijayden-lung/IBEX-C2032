@@ -1,0 +1,28 @@
+#!/usr/bin/perl -w
+
+open FILE,"bl6.pAs.negative.allfptp.onlymotif.txt";
+open OUT1,">bl6.pAs.negative.halffp.onlymotif.txt";
+open OUT2,">bl6.pAs.negative.quarterfp.onlymotif.txt";
+open OUT3,">bl6.pAs.negative.eighthfp.onlymotif.txt";
+open OUT4,">bl6.pAs.negative.sixteenthfp.onlymotif.txt";
+my $header = <FILE>;
+print OUT1 $header;
+print OUT2 $header;
+print OUT3 $header;
+print OUT4 $header;
+
+while(<FILE>){
+	next if $_ =~ /^ENS/;
+	if(rand()<0.5){
+		print OUT1;
+	}
+	if(rand()<0.25){
+		print OUT2;
+	}
+	if(rand()<0.125){
+		print OUT3;
+	}
+	if(rand()<0.0625){
+		print OUT4;
+	}
+}

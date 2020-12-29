@@ -1,0 +1,45 @@
+#!/usr/bin/perl -w
+#
+
+my %hash1;
+open FILE,"control_data/hg38.pAs.compare2.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$symbol,$predict_usage) = split;
+	$hash1{$symbol}->{$pas_id} = $predict_usage;
+}
+
+
+my %hash2;
+open FILE,"zranb2_data/hg38.pAs.compare2.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$symbol,$predict_usage) = split;
+	if(exists $hash1{$symbol}){
+		$hash2{$symbol}->{$pas_id} = $predict_usage;
+	}
+}
+
+
+open OUT,">k562_hg38_controlVSzranb2.txt";
+print OUT "symbol\tpas_id\tcontrol_usage\tzranb2_usage\n";
+
+my %hash;
+while(my ($symbol,$val2) = each %hash2){
+	my $val1 = $hash1{$symbol};
+	while(my ($pas_id,$usage) = each %$val1){
+		if(!exists $val2->{$pas_id}){
+			$val2->{$pas_id} = 0;
+		}
+	}
+	while(my ($pas_id,$usage) = each %$val2){
+		if(!exists $val1->{$pas_id}){
+			$val1->{$pas_id} = 0;
+		}
+	}
+	while(my ($pas_id,$usage) = each %$val1){
+		#print OUT "$symbol\t$pas_id\t$usage\t$val2->{$pas_id}\n" if $usage>0 && $val2->{$pas_id}>0;
+	}
+}

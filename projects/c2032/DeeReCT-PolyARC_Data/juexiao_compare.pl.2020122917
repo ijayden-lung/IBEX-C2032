@@ -1,0 +1,17 @@
+#!/usr/bin/perl -w
+
+open FILE,"optimize.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	($epoch,$tp,$fp,$tn,$fn) = (split)[0,3,4,5,6]; #right version
+	my $tpr = ($tp+$fn)>0 ? $tp/($tp+$fn) : 100;
+	my $ppv = $tp/($tp+$fp);
+	my $fdr = 1-$ppv;
+	my $fpr = $fp/($fp+$tn);
+	if(($ppv+$tpr) eq 0){
+		print"$fp,$fn,$tn,$tp\n";
+		next;
+	}
+	my $f1score = 2*$tpr*$ppv/($ppv+$tpr);
+	

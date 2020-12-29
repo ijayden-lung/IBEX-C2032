@@ -1,0 +1,196 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import numpy as np\n",
+    "import os\n",
+    "import sys\n",
+    "import argparse\n",
+    "from supporting import *\n",
+    "import pandas as pd"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "tf_learning_rate 0.0012486949912176339\n",
+      "tf_momentum 0.9617189540116183\n",
+      "tf_motif_init_weight 0.10002897844740304\n",
+      "tf_fc_init_weight 0.2010047932705765\n",
+      "tf_motif_weight_decay 0.0006246914571800547\n",
+      "tf_fc_weight_decay 7.086348211594088e-05\n",
+      "tf_keep_prob 0.5\n"
+     ]
+    }
+   ],
+   "source": [
+    "para = np.load('para/SeqRCInB449.npz')\n",
+    "for key,val in para.items():\n",
+    "    print(key,val)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "tf_learning_rate 0.000775114669991951\n",
+      "tf_momentum 0.9850232506666752\n",
+      "tf_motif_init_weight 0.0996931898484049\n",
+      "tf_fc_init_weight 0.26440698288031994\n",
+      "tf_motif_weight_decay 0.0007498801181261965\n",
+      "tf_fc_weight_decay 0.0009051384514015576\n",
+      "tf_keep_prob 0.5\n"
+     ]
+    }
+   ],
+   "source": [
+    "para = np.load('para/SeqRCInB479.npz')\n",
+    "for key,val in para.items():\n",
+    "    print(key,val)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "tf_learning_rate 0.0046668675601373175\n",
+      "tf_momentum 0.9686165215766279\n",
+      "tf_motif_init_weight 0.3330722138077506\n",
+      "tf_fc_init_weight 0.36653224065516593\n",
+      "tf_motif_weight_decay 6.653503541912981e-05\n",
+      "tf_fc_weight_decay 1.3217676070094414e-05\n",
+      "tf_keep_prob 0.5\n"
+     ]
+    }
+   ],
+   "source": [
+    "para = np.load('para/SeqRCInB68.npz')\n",
+    "for key,val in para.items():\n",
+    "    print(key,val)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "tf_learning_rate 0.0013640650283435725\n",
+      "tf_momentum 0.9752411046459939\n",
+      "tf_motif_init_weight 0.05560911835123016\n",
+      "tf_fc_init_weight 0.04459777296737408\n",
+      "tf_motif_weight_decay 1.0198070061974353e-05\n",
+      "tf_fc_weight_decay 1.7445067319011822e-05\n",
+      "tf_keep_prob 0.5\n"
+     ]
+    }
+   ],
+   "source": [
+    "para = np.load('para/SeqRCInA425.npz')\n",
+    "for key,val in para.items():\n",
+    "    print(key,val)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "tf_learning_rate 0.001354095352166583\n",
+      "tf_momentum 0.9566034628209947\n",
+      "tf_motif_init_weight 0.052315785723372324\n",
+      "tf_fc_init_weight 0.12048343438407483\n",
+      "tf_motif_weight_decay 4.2603260508508366e-05\n",
+      "tf_fc_weight_decay 1.4247349909744916e-05\n",
+      "tf_keep_prob 0.5\n"
+     ]
+    }
+   ],
+   "source": [
+    "para = np.load('para/SeqRCInA367.npz')\n",
+    "for key,val in para.items():\n",
+    "    print(key,val)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "tf_learning_rate 0.001105439715512707\n",
+      "tf_momentum 0.9595371901577865\n",
+      "tf_motif_init_weight 0.010951929473160447\n",
+      "tf_fc_init_weight 0.03159428385451955\n",
+      "tf_motif_weight_decay 0.0003348646389435137\n",
+      "tf_fc_weight_decay 0.00029253785579076556\n",
+      "tf_keep_prob 0.5\n"
+     ]
+    }
+   ],
+   "source": [
+    "para = np.load('para/SeqRCInA437.npz')\n",
+    "for key,val in para.items():\n",
+    "    print(key,val)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

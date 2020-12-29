@@ -1,0 +1,27 @@
+#!/usr/bin/perl -w
+my ($PREDICT,$ORI,$OUT) = @ARGV;
+
+my %fp;
+open FILE,"$PREDICT";
+while(<FILE>){
+	chomp;
+	my ($id,$result) = split /,/;
+	if($result eq "FP" || $result eq "TP"){
+		$fp{$id} = '';
+	}
+}
+
+open FILE,"$ORI";
+my $header = <FILE>;
+open OUT,">$OUT";
+print OUT $header;
+while(<FILE>){
+	chomp;
+	my ($id) = split;
+	if($id =~ /ENS/){
+		($id) = split /\-/,$id;
+	}
+	if(exists $fp{$id}){
+		print OUT "$_\n";
+	}
+}

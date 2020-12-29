@@ -1,0 +1,21 @@
+#!/bin/bash
+#SBATCH --job-name=Train_Join
+#SBATCH --partition=batch
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --output=LOG/log.%J
+#SBATCH --time=3:00:00
+#SBATCH --mem=50G
+#SBATCH --gres=gpu:1
+##SBATCH -a 0-39
+##SBATCH --dependency afterok:6686802_[1-100] 
+
+#./src/train.py -polya human_dataset/polyA_cs.fasta -cs human_dataset/non-cs.fasta -non human_dataset/non-polyA_cs.fasta -model Model/human -l 200
+
+#./src/test.py -t TEST_FILE -m Model/human_model.hdf5 -l 200 -o human_model.txt
+
+#python3 prep_data.py human_dataset/polyA_cs.fasta human_dataset/non-cs.fasta --out human_deeRectPoly.npz
+python3 train.accuracy.py human_deeRectPoly.npz --out Model/human_deeRectPolyA --hparam /home/longy/project/DeeReCT-PolyARC_Data/para/BL_hparamIn5.npz --trainid  deerect1

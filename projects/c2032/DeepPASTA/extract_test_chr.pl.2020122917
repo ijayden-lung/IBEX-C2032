@@ -1,0 +1,24 @@
+#!/usr/bin/perl -w
+
+my ($file) = @ARGV;
+
+
+my %hash = ('chr2-'=>106001729, 'chr2+'=>104058164,'chr7-'=>80744422,'chr7+'=>83755767,'chr11-'=>80057595,'chr11+'=>75638909);
+
+open ORI,"$file";
+my $header = <ORI>;
+
+open TRAIN,">$file.train.txt";
+open TEST,">$file.test.txt";
+print TRAIN "$header";
+print TEST "$header";
+while(<ORI>){
+	chomp;
+	my (undef,undef,$chr,$position,$srd) = split;
+	if($position < $hash{"$chr$srd"}){
+		print TRAIN "$_\n";
+	}
+	else{
+		print TEST "$_\n";
+	}
+}

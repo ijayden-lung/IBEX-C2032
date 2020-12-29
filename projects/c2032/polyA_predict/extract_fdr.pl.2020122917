@@ -1,0 +1,73 @@
+#!/usr/bin/perl -w
+
+
+open OUT,">Distribution_hparamNegBestCompare.txt";
+print OUT "fdr\ttpr\tf1score\tfpr\tparameter\n";
+&get_data("log.neg.Inpara5","SeqRcIn");
+&get_data("log.neg.Outpara1","SeqRcOut");
+&get_data("log.neg.Oripara2","Seq");
+&get_data("log.neg.Rcpara5","Rc");
+
+
+
+sub get_data{
+	my ($file,$para) = @_;
+	my %tp;
+	my %fp;
+	my %fn;
+	my %tn;
+	my @record;
+	open $file,$file;
+	while(<$file>){
+		chomp;
+		push @record,$_;
+		if($_ =~ /TP:/){
+			my ($tp,$fp) = split /,/;
+			$tp = (split /\s+/,$tp)[-1];
+			$fp = (split /\s+/,$fp)[-1];
+			my $file = @record[$.-3];
+			$file =~ /(\d+)/;
+			$tp{$1} = $tp;
+			$fp{$1} = $fp;
+			#print "$file\t$tp\t$fp\n";
+		}
+		elsif($_ =~ /FN:/){
+			my ($fn,$tn) = split /,/;
+			$fn = (split /\s+/,$fn)[-1];
+			$tn = (split /\s+/,$tn)[-1];
+			my $file = @record[$.-4];
+			$file =~ /(\d+)/;
+			$fn{$1} = $fn;
+			$tn{$1} = $tn;
+			#print "$file\t$fn\t$tn\n";
+		}
+	}
+
+	my %f1score;
+	my %falsedr;
+	my %truepr;
+	my %falsepr;
+	while(my ($key,$tp) = each %tp){
+		my $fp = $fp{$key};
+		my $fn = $fn{$key};
+		my $tn = $tn{$key};
+		my $tpr = ($tp+$fn)>0 ? $tp/($tp+$fn) : 100;
+		my $ppv = $tp/($tp+$fp);
+		my $fdr = 1-$ppv;
+		my $fpr = $fp/($fp+$tn);
+		if(($ppv+$tpr) eq 0){
+			print"$key,$fp,$fn,$tn,$tp\n";
+			next;
+		}
+		my $f1score = 2*$tpr*$ppv/($ppv+$tpr);
+		$falsedr{$key} = $fdr;
+		$truepr{$key} = $tpr;
+		$f1score{$key} = $f1score;
+		$falsepr{$key} = $fpr;
+	}
+
+	#open OUT,">>Distribution_hparamA.txt";
+	foreach my $key (sort{$f1score{$b}<=>$f1score{$a}} keys %f1score){
+		printf OUT ("$falsedr{$key}\t$truepr{$key}\t$f1score{$key}\t$falsepr{$key}\t$para\n");
+	}
+}

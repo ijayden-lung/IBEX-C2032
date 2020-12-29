@@ -1,0 +1,13 @@
+#!/usr/bin/perl -w
+#
+open FILE,"bl6.pAs.zhangbin.fibroblast.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($id,$chr,$pos,$seq) = (split)[0,2,3,7];
+	my $pas = substr($seq,80,20);
+	my $reverse = reverse $pas;
+	$reverse =~ tr/ATCG/TAGC/;
+	print "$chr,$pos,$pas,$reverse\n" if $id eq "ENSMUSG00000053286.8:1"
+}
+

@@ -1,0 +1,20 @@
+#!/usr/bin/perl -w
+#
+#
+my ($inp,$out) = @ARGV;
+open FILE,"$inp";
+open OUT1,">$out";
+my $header = <FILE>;
+#print OUT1 $header;
+
+while(<FILE>){
+	chomp;
+	next if $_ =~ /^ENS/;
+	my (undef,$motif) = split;
+	my (undef,$motif_num) = split /\=/,$motif;
+	if($motif_num>0){
+		if(rand()<0.002){
+			print OUT1 "$_\n";
+		}
+	}
+}

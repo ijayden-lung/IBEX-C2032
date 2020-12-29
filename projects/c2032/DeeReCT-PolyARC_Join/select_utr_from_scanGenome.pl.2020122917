@@ -1,0 +1,142 @@
+#!/usr/bin/perl -w
+
+#Note This script is wrong. (On Apr. 6)
+#
+#
+#
+#my $file = "data/bl6.pAs.scanGenome.step1.str1.MERGE.chr2.Trimmed10.txt";
+#my $CHR = "chr2";
+#my $STR = "-";
+my ($file,$CHR,$STR) = @ARGV;
+print "$file\n";
+
+my %true_pas;
+open FILE,"/home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.tianbin.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$srd) = split;
+	my ($gene_id) = split /\./,$pas_id;
+	$true_pas{$gene_id}->{$pos} = '';
+}
+
+open FILE,"/home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.zhangbin.fibroblast.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$srd) = split;
+	my ($gene_id) = split /\./,$pas_id;
+	$true_pas{$gene_id}->{$pos} = '';
+}
+
+
+
+my %pas_plus;
+my %pas_minus;
+open FILE,"awk '(\$1 == \"$CHR\" && \$3 == \"three_prime_utr\" && \$7 ==\"$STR\")' /home/longy/cnda/ensembl/mm10.ensemblv95.nopsuedo.gtf |";
+while(<FILE>){
+	chomp;
+	my ($chr,$str,$end,$srd,$gene_id,$gene_name) = (split)[0,3,4,6,9,17];
+	$gene_id =~ s/\"|\;//g;
+	$gene_name =~ s/\"|\;//g;
+	####### To avoid to close to the exon
+	if($srd eq "+"){
+		$str += 90;
+		$end -= 50;
+	}
+	else{
+		$end -= 90;
+		$str += 50;
+	}
+	next if $end<=$str;
+	my %identity;
+	if(exists $true_pas{$gene_id}){
+		my $pos_ref = $true_pas{$gene_id};
+		for(my$i=0;$i<30;$i++){
+			my $random = int(rand($end-$str))+$str;
+			my $near_pas = 0;
+			foreach my $pos (keys %$pos_ref){
+				if($random >$pos-50 && $random < $pos+50){
+					$near_pas++;
+					last;
+				}
+			}
+			foreach my $pos (keys %identity){
+				if($random >$pos-30 && $random < $pos+30){
+					$near_pas++;
+					last;
+				}
+			}
+			$identity{$random} = '';
+			if($near_pas == 0){
+				if($srd eq "+"){
+					my $head = $random-100;
+					my $tail = $random+75;   ######This becasue the bug in scanGenome file;
+					$pas_plus{"$chr:$head-$tail"} = 'tandemUTR;';
+				}
+				else{
+					my $head = $random-75;
+					my $tail = $random+100;
+					$pas_minus{"$chr:$head-$tail"} = 'tandemUTR;';
+				}
+			}
+		}
+	}
+	else{
+		for(my $i=0;$i<5;$i++){
+			my $random = int(rand($end-$str))+$str;
+			my $near_pas = 0;
+			foreach my $pos (keys %identity){
+				if($random >$pos-30 && $random < $pos+30){
+					$near_pas++;
+					last;
+				}
+			}
+			$identity{$random} = '';
+			if($near_pas==0){
+				if($srd eq "+"){
+					my $head = $random-100;
+					my $tail = $random+75;   ######This becasue the bug in scanGenome file;
+					$pas_plus{"$chr:$head-$tail"} = 'tandemUTR;';
+				}
+				else{
+					my $head = $random-75;
+					my $tail = $random+100;
+					$pas_minus{"$chr:$head-$tail"} = 'tandemUTR;';
+				}
+			}
+		}
+	}
+}
+
+
+my $pas_minus_number = keys %pas_minus;
+my $pas_plus_number = keys %pas_plus;
+print "plus: $pas_plus_number\tminus: $pas_minus_number\n";
+
+open FILE,"$file";
+my $header = <FILE>;
+$file =~ s/data/train_data/;
+$file .= ".tandemUTR.txt";
+open OUT,">$file";
+print OUT "$header";
+while(<FILE>){
+	chomp;
+	my @data = split /\t/;
+	my $pas_id = $data[0];
+	if ($file =~ /str1/){
+		if(exists $pas_minus{$pas_id}){
+			my $val = $pas_minus{$pas_id};
+			$_ =~ s/None/$val/;
+			print OUT "$_\n";
+		}
+	}
+	elsif ($file =~ /str2/){
+		if(exists $pas_plus{$pas_id}){
+			my $val = $pas_plus{$pas_id};
+			$_ =~ s/None/$val/;
+			print OUT "$_\n";
+		}
+	}
+}
+

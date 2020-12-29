@@ -1,0 +1,95 @@
+#!/usr/bin/perl -w
+my %true_pas;
+open FILE,"/home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.tianbin.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$srd) = split;
+	my ($gene_id) = split /\./,$pas_id;
+	$true_pas{$gene_id}->{$pos} = '';
+}
+
+open FILE,"/home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.zhangbin.fibroblast.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$srd) = split;
+	my ($gene_id) = split /\./,$pas_id;
+	$true_pas{$gene_id}->{$pos} = '';
+}
+
+#####This is use for only second time generation, pseudo true pas
+open FILE,"/ibex/scratch/longy/workspace/polyA_predict/data/bl6.pAs.random.negative.all.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$srd) = split;
+	my ($gene_id) = split /\:/,$pas_id;
+	$true_pas{$gene_id}->{$pos} = '';
+}
+
+
+
+
+my %false_pas;
+open FILE,"awk '(\$3 == \"three_prime_utr\" && \$2 == \"ensembl_havana\")' /home/longy/cnda/ensembl/mm10v95_ensembl.gtf |";
+open OUT,">/ibex/scratch/longy/workspace/polyA_predict/bl6.pAs.random.tandemUTR2.txt";
+print OUT "pas_id\tpas_type\tchr\tposition\tstrand\tsymbol\n";
+my %exon_list;
+while(<FILE>){
+	chomp;
+	my ($chr,$str,$end,$srd,$gene_id,$gene_name) = (split)[0,3,4,6,9,17];
+	$gene_id =~ s/\"|\;//g;
+	$gene_name =~ s/\"|\;//g;
+	####### To avoid to close to the exon
+	if($srd eq "+"){
+		$str += 100;
+	}
+	else{
+		$end -= 100;
+	}
+	next if exists $exon_list{"$chr:$str:$end:$srd"};
+	$exon_list{"$chr:$str:$end:$srd"} = '';
+	my %identity;
+	if(exists $true_pas{$gene_id}){
+		my $pos_ref = $true_pas{$gene_id};
+		for(my$i=0;$i<20;$i++){
+			my $random = int(rand($end-$str))+$str;
+			my $near_pas = 0;
+			foreach my $pos (keys %$pos_ref){
+				if($random >$pos-50 && $random < $pos+50){
+					$near_pas++;
+					last;
+				}
+			}
+			foreach my $pos (keys %identity){
+				if($random >$pos-30 && $random < $pos+30){
+					$near_pas++;
+					last;
+				}
+			}
+			$identity{$random} = '';
+			if($near_pas == 0){
+				$false_pas{$gene_id}++;
+				print OUT "$gene_id:$false_pas{$gene_id}\ttandemUTR\tchr$chr\t$random\t$srd\t$gene_name\n";
+			}
+		}
+	}
+	else{
+		for(my $i=0;$i<5;$i++){
+			my $random = int(rand($end-$str))+$str;
+			my $near_pas = 0;
+			foreach my $pos (keys %identity){
+				if($random >$pos-30 && $random < $pos+30){
+					$near_pas++;
+					last;
+				}
+			}
+			$identity{$random} = '';
+			if($near_pas==0){
+				$false_pas{$gene_id}++;
+				print OUT "$gene_id:$false_pas{$gene_id}\ttandemUTR\tchr$chr\t$random\t$srd\t$gene_name\n";
+			}
+		}
+	}
+}

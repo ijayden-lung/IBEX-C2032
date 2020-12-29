@@ -1,0 +1,68 @@
+#!/usr/bin/perl -w
+
+my ($inp1,$inp2,$out) = @ARGV;
+
+my %pas_left;
+open FILE,"$inp1";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$maxPoint,$diff,$pos,$start,$end) = split;
+	my ($gene_id) = split /\./,$pas_id;
+	my $chr;
+	if($pas_id =~ /chr/){
+		($chr) = split /\:/,$pas_id;
+	}
+	else{
+		$chr = $chr{$pas_id};
+	}
+	$pas_left{$chr}->{$pos} = "$start\t$end";
+}
+my %pas_right;
+open FILE,"$inp2";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$maxPoint,$diff,$pos,$start,$end) = split;
+	my ($gene_id) = split /\./,$pas_id;
+	my $chr;
+	if($pas_id =~ /chr/){
+		($chr) = split /\:/,$pas_id;
+	}
+	else{
+		$chr = $chr{$pas_id};
+	}
+	$pas_right{$chr}->{$pos} = "$end\t$start";
+}
+
+
+my %merge_pas;
+my $total = 0;
+open OUT,">$out";
+print OUT "chr\tpredict_pos\n";
+while(my ($chr,$val) = each %pas_left){
+	my @sort_pas_pos1 = sort{$a<=>$b} keys %$val;
+	my $val2 = $pas_right{$chr};
+	my @sort_pas_pos2 = sort{$a<=>$b} keys %$val2;
+	for(my$i=0,$j=0;$i<@sort_pas_pos1 && $j<@sort_pas_pos2;){
+		my $pos1 = $sort_pas_pos1[$i];
+		my $pos2 = $sort_pas_pos2[$j];
+		if($pos2>$pos1){
+			$i++;
+		}
+		else{
+			my ($start1,$end1) = split /\t/,$val->{$pos1};
+			my ($start2,$end2) = split /\t/,$val2->{$pos2};
+			if($pos1>$end2 || $pos2<$start1){
+				$j++;
+			}
+			else{
+				my $pos = ($pos1+$pos2)/2;
+				$merge_pas{$chr}->{$pos} = "$chr:$pos";
+				print OUT "$chr\t$pos\n";
+				$total++;
+				$i++,$j++;
+			}
+
+		}
+	}
+}
+

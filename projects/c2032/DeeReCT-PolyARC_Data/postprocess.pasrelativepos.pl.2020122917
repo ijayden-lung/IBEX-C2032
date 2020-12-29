@@ -1,0 +1,124 @@
+#!/usr/bin/perl -w
+#
+#
+#Updata Nov 12
+#
+open OUT,">Stat/postprocess.real.distribute.txt";
+print OUT "gene_id\trelative_dist\tlabel\n";
+my %fp;
+open FILE,"Stat/bl6.pAs.scanGenome.maxSum.8.-0.25.Optimize.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pasid,$maxPoint,$diff,$pos) = split;
+	my ($chr) = split /\:/,$pasid;
+	$fp{$chr}->{$pos} = $pasid;
+}
+
+my %random;
+open FILE,"predict/bl6.pAs.genome.allmotif.REP1.allmotif.accuracy.1.txt";
+while(<FILE>){
+	chomp;
+	my ($pasid) = split;
+	my ($chr,$start) = split /\:|\-/,$pasid;
+	$random{$chr}->{$start+100} = '';
+}
+
+
+my %gene_length;
+my %gene_tss;
+#open ENS,"awk '(\$3 == \"transcript\" && \$2 != \"havana\")' /home/longy/cnda/ensembl/mm10.ensemblv95.nopsuedo.gtf |" ;
+open ENS,"awk '(\$3 == \"gene\")' /home/longy/cnda/ensembl/mm10.ensemblv95.nopsuedo.gtf |" ;
+while(<ENS>){
+	chomp;
+	my ($chr,$source,$type,$start,$end,undef,$srd,undef,undef,$gene_id) = split;
+	if($srd eq "+"){
+		$gene_id =~ s/\;|\"//g;
+		my $fp_ref = $fp{$chr};
+		my $random_ref = $random{$chr};
+		my $length = $end-$start;
+		while(my ($pos,$val) = each %$fp_ref){
+			if($start<$pos && $end+0.1*$length>$pos){
+				my $diff = ($pos-$start)/$length;
+				print OUT "$gene_id\t$diff\tfp\n";
+			}
+		}
+		while(my ($pos,$val) = each %$random_ref){
+			if($start<$pos && $end+0.1*$length>$pos){
+				my $diff = ($pos-$start)/$length;
+				print OUT "$gene_id\t$diff\trandom\n";
+			}
+		}
+		if(exists $gene_tss{$gene_id}){
+			if($gene_length{$gene_id} < $length){
+				$gene_length{$gene_id} = $length;
+				$gene_tss{$gene_id} = $start;
+			}
+		}
+		else{
+			$gene_length{$gene_id} = $length;
+			$gene_tss{$gene_id} = $start;
+		}
+	}
+}
+
+
+open FILE,"data/bl6.pAs.zhangbin.fibroblast.txt";
+<FILE>;
+my %longest;
+while(<FILE>){
+	chomp;
+	my ($pasid,$pas_type,$chr,$pos,$srd) = split;
+	if($srd eq "+"){
+		my ($gene_id) = split /\:|\./,$pasid;
+		if(exists $longest{$gene_id}){
+			$longest{$gene_id} = $pos if $longest{$gene_id} <$pos;
+		}
+		else{
+			$longest{$gene_id} = $pos;
+		}
+	}
+}
+
+
+open FILE,"data/bl6.pAs.zhangbin.fibroblast.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pasid,$pas_type,$chr,$pos,$srd) = split;
+	if($srd eq "+"){
+		my ($gene_id) = split /\:|\./,$pasid;
+		if( exists $gene_tss{$gene_id}){
+			my $diff = ($pos-$gene_tss{$gene_id})/$gene_length{$gene_id};
+			print OUT "$gene_id\t$diff\trealPas\n";
+		}
+	}
+}
+open FILE,"data/bl6.pAs.fibroblast.REP1.positive.usage0.2.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pasid,$pas_type,$chr,$pos,$srd) = split;
+	if($srd eq "+"){
+		my ($gene_id) = split /\:|\./,$pasid;
+		if( exists $gene_tss{$gene_id}){
+			my $diff = ($pos-$gene_tss{$gene_id})/$gene_length{$gene_id};
+			print OUT "$gene_id\t$diff\trealPasUsage\n";
+		}
+	}
+}
+
+
+open FILE,"Stat/bl6.pAs.scanGenome.maxSum.8.-0.25.Optimize.txt";
+while(<FILE>){
+	chomp;
+	my ($pasid,$maxPoint,$diff,$pos) = split;
+	next if $pasid =~ /chr/;
+	my ($gene_id) = split /\:|\./,$pasid;
+	if( exists $gene_tss{$gene_id}){
+		my $diff = ($pos-$gene_tss{$gene_id})/$gene_length{$gene_id};
+		print OUT "$gene_id\t$diff\tpredict\n";
+	}
+}
+
+

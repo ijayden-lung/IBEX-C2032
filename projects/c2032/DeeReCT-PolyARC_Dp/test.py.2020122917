@@ -1,0 +1,143 @@
+#!/usr/bin/env python3
+# Juexiao
+# Data: 1769-09-30
+
+
+import numpy as np
+import tensorflow as tf
+import sys, os
+import argparse
+from sklearn import metrics
+from model import Net
+
+############ Parameters ############
+BATCH_SIZE = 64
+PATCH_SIZE = 10
+DEPTH = 32
+NUM_HIDDEN = 64
+SEQ_LEN = 176 + 2*PATCH_SIZE-2
+NUM_LABELS = 2
+NUM_EPOCHS = 100
+############ **************** ############
+
+def pad_dataset(dataset, labels):
+	''' Pad sequences to (length + 2*DEPTH - 2) wtih 0.25 '''
+	new_dataset = np.ones([dataset.shape[0], dataset.shape[1]+2*PATCH_SIZE-2, dataset.shape[2], dataset.shape[3]], dtype = np.float32) * 0.25
+	new_dataset[:, PATCH_SIZE-1:-(PATCH_SIZE-1), :, :] = dataset
+	labels = (np.arange(NUM_LABELS) == labels[:,None]).astype(np.float32)
+	return new_dataset, labels
+
+
+def get_accuracy(predictions, labels):
+	  return (100.0 * np.sum(np.argmax(predictions, 1) == np.argmax(labels, 1))
+		  / predictions.shape[0])
+
+def perf_measure(y_actual, y_hat):
+	TP = 0
+	FP = 0
+	TN = 0
+	FN = 0
+
+	for i in range(len(y_hat)):
+		if y_actual[i]==y_hat[i]==0:
+			   TP += 1
+		if y_hat[i]==1 and y_actual[i]!=y_hat[i]:
+			   FN += 1
+		if y_actual[i]==y_hat[i]==1:
+			   TN += 1
+		if y_hat[i]==0 and y_actual[i]!=y_hat[i]:
+			   FP += 1
+
+	return(TP, FP, TN, FN)
+
+if __name__ == '__main__':
+
+	parser = argparse.ArgumentParser()
+	parser.add_argument('data', help='Path to data file, can be .txt file containing sequeces or .npz file containing one-hotencoded sequences')
+	parser.add_argument('wts', help='Trained model (.npz file)')
+	parser.add_argument('--out', default=None, help='Save predictions to (.txt file)')
+	parser.add_argument('--testid', default=None, help='Test ID')
+	opts = parser.parse_args()
+
+
+	data=opts.data
+	out=opts.out
+	TEST_ID = opts.testid
+
+	WW=open('out/%s.txt'%TEST_ID,'w')
+	WW.write('runtime\ttest_acc\tTP\tFP\tTN\tFN\terror_rate\taccuracy_score\tmicro_precision_score\tmacro_precision_score\tmicro_recall_score\tmacro_recall_score\tf1_score\tcohen_kappa_score\n')
+
+
+	# Load and pad data
+	data = np.load(data)
+	test_data1, test_labels = pad_dataset(data['test_dataset'], data['test_labels'])
+	test_id = data['test_pasid']
+	print("Read %d sequences and %d labels from %s."%(len(test_data1), len(test_labels), opts.data))
+
+
+	wts=opts.wts
+	hyper_dict = {'tf_learning_rate': 0.001257480894209189, 'tf_momentum': 0.9800240743506459, 'tf_motif_init_weight': 0.12476684341236771, 'tf_fc_init_weight': 0.02674129616233189, 'tf_motif_weight_decay': 0.00044213243479539205, 'tf_fc_weight_decay': 0.00032473211764796254, 'tf_keep_prob': 0.5}
+
+	#sess = tf.Session()
+	#model = Net()
+	model = Net(hyper_dict)
+
+	config = tf.ConfigProto(allow_soft_placement=True)
+	sess = tf.Session(config=config)
+	sess.run(tf.global_variables_initializer())
+
+	model.load_weights(wts, sess)
+	print('test the pre-trained model %s'%wts)
+
+	pred = model.get_prediction(sess, test_data1, False)
+
+	test_results = []
+	save_weights = []
+	TPs,FPs,TNs,FNs=[],[],[],[]
+	error_rates,accuracy_scores,micro_precision_scores,macro_precision_scores=[],[],[],[]
+	micro_recall_scores,macro_recall_scores,f1_scores,cohen_kappa_scores=[],[],[],[]
+
+	preds_new=np.argmax(pred, 1)
+	labels_new=np.argmax(test_labels, 1)
+
+	TP,FP,TN,FN=perf_measure(labels_new,preds_new)
+	error_rate=1-(TP+TN)/(TP+TN+FP+FN)
+	accuracy_score=metrics.accuracy_score(labels_new,preds_new)
+	micro_precision_score=metrics.precision_score(labels_new,preds_new, average='micro')
+	macro_precision_score=metrics.precision_score(labels_new,preds_new, average='macro')
+	#micro_recall_score=metrics.recall_score(labels_new,preds_new, average='micro')
+	#macro_recall_score=metrics.recall_score(labels_new,preds_new, average='macro')
+	micro_recall_score=0
+	macro_recall_score=0
+	#f1_score=metrics.f1_score(labels_new,preds_new, average='weighted')
+	f1_score=0
+	cohen_kappa_score=metrics.cohen_kappa_score(labels_new,preds_new)
+
+	test_results.append(get_accuracy(pred, test_labels))
+	TPs.append(TP)
+	FPs.append(FP)
+	TNs.append(TN)
+	FNs.append(FN)
+	error_rates.append(error_rate)
+	accuracy_scores.append(accuracy_score)
+	micro_precision_scores.append(micro_precision_score)
+	macro_precision_scores.append(macro_precision_score)
+	micro_recall_scores.append(micro_recall_score)
+	macro_recall_scores.append(macro_recall_score)
+	f1_scores.append(f1_score)
+	cohen_kappa_scores.append(cohen_kappa_score)
+
+	# Summary
+	WW.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n'%(str(TEST_ID),\
+			str(test_results[-1]),str(TPs[-1]),str(FPs[-1])\
+		   ,str(TNs[-1]),str(FNs[-1]),str(error_rates[-1]),str(accuracy_scores[-1]),str(micro_precision_scores[-1]),str(macro_precision_scores[-1]),\
+			str(micro_recall_scores[-1]),str(macro_recall_scores[-1]),str(f1_scores[-1]),str(cohen_kappa_scores[-1])))
+
+	print('TEST_ID: %s'%TEST_ID)
+
+	WW.close()
+
+	predictions = np.argmax(pred, 1)
+	with open('transcriptome/%s.txt'%TEST_ID, 'w') as f:
+		for idx,pred in enumerate(predictions):
+			f.write('%s\t%s\n'%(str(test_id[idx]),str(pred)))

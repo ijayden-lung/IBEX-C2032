@@ -1,0 +1,37 @@
+#!/bin/bash
+
+#cat train_data/bl6.pAs.scanGenome.step1.str*.REP1.chr*.Trimmed10.txt.negative >train_data/bl6.pAs.negative.REP1.comround0.txt
+#rm train_data/bl6.pAs.scanGenome.step1.str*.REP1.chr*.Trimmed10.txt.negative
+
+
+#cat train_data/bl6.pAs.negative.REP1.newround1.txt.chr* >train_data/bl6.pAs.negative.REP1.newround1.txt
+#rm train_data/bl6.pAs.negative.REP1.newround1.txt.chr*
+
+#cat train_data/bl6.pAs.predictFalsePositive.REP1.newround1.txt.chr* > train_data/bl6.pAs.predictFalsePositive.REP1.newround1.txt
+#rm train_data/bl6.pAs.predictFalsePositive.REP1.newround1.txt.chr*
+
+
+#cat train_data/bl6.pAs.negative.REP1.selround1.txt.chr* >train_data/bl6.pAs.negative.REP1.selround1.txt
+#rm train_data/bl6.pAs.negative.REP1.selround1.txt.chr*
+
+#cat train_data/bl6.pAs.predictFalsePositive.REP1.selround1.txt.chr* > train_data/bl6.pAs.predictFalsePositive.REP1.selround1.txt
+#rm train_data/bl6.pAs.predictFalsePositive.REP1.selround1.txt.chr*
+
+#cat train_data/bl6.pAs.predictFalsePositive.REP1.zbround1.txt.chr* > train_data/bl6.pAs.predictFalsePositive.REP1.zbround1.txt
+#rm train_data/bl6.pAs.predictFalsePositive.REP1.zbround1.txt.chr*
+
+cat train_data/bl6.pAs.predictAll.REP1.newround4.txt.chr* >train_data/bl6.pAs.predictAll.REP1.newround4.txt
+rm train_data/bl6.pAs.predictAll.REP1.newround4.txt.chr*
+
+
+:<<BL
+cat train_data/bl6.pAs.predictFalsePositive.REP1.zbround2.txt.chr* > train_data/bl6.pAs.predictFalsePositive.REP1.zbround2.txt
+rm train_data/bl6.pAs.predictFalsePositive.REP1.zbround2.txt.chr*
+cat train_data/bl6.pAs.predictFalsePositive.REP1.zbround3.txt.chr* > train_data/bl6.pAs.predictFalsePositive.REP1.zbround3.txt
+rm train_data/bl6.pAs.predictFalsePositive.REP1.zbround3.txt.chr*
+cat train_data/bl6.pAs.predictFalsePositive.REP1.zbround4.txt.chr* > train_data/bl6.pAs.predictFalsePositive.REP1.zbround4.txt
+rm train_data/bl6.pAs.predictFalsePositive.REP1.zbround4.txt.chr*
+=cut
+BL
+
+

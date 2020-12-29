@@ -1,0 +1,67 @@
+# str1
+for chr in chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20 chr21 chr22 chrX
+do
+
+window=176
+step=1
+sign=-  # -/str1 +/str2
+spe=hg38
+WIG=/ibex/scratch/projects/c2032/ENCODE/data/${CELL}_${TARGET}/${REP}/Signal.Unique.str1.out.${chr}.wig
+scanGenome=/ibex/scratch/projects/c2032/ENCODE/data/${CELL}_${TARGET}/${REP}/scanGenome/scanGenome.step${step}.${sign}.${chr}.txt
+Trim=/ibex/scratch/projects/c2032/ENCODE/data/${CELL}_${TARGET}/${REP}/Trim/scanGenome.step${step}.${sign}.${chr}.Trimmed10.txt
+Pas=/ibex/scratch/projects/c2032/ENCODE/pas.txt
+
+mkdir /ibex/scratch/projects/c2032/ENCODE/data/${CELL}_${TARGET}/${REP}/scanGenome/
+mkdir /ibex/scratch/projects/c2032/ENCODE/data/${CELL}_${TARGET}/${REP}/Trim/
+
+cat>tmp.sh<<EOF
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J prepare_scanGenome_${CELL}_${TARGET}_${REP}_str1_${chr}
+#SBATCH --output /ibex/scratch/projects/c2032/ENCODE/log/prepare_scanGenome_${CELL}_${TARGET}_${REP}_str1_${chr}.log
+#SBATCH --time=72:00:00
+#SBATCH --mem=30G
+
+cd /ibex/scratch/projects/c2032/ENCODE
+perl generate_slidingWidnows.pl $WIG $scanGenome $window $step
+perl prepare_scanGenome.pl $Pas $scanGenome $Trim $window $sign $chr $spe
+
+EOF
+
+sbatch tmp.sh
+done
+
+# str2
+for chr in chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20 chr21 chr22 chrX
+do
+
+window=176
+step=1
+sign=+  # -/str1 +/str2
+spe=hg38
+WIG=/ibex/scratch/projects/c2032/ENCODE/data/${CELL}_${TARGET}/${REP}/Signal.Unique.str2.out.${chr}.wig
+scanGenome=/ibex/scratch/projects/c2032/ENCODE/data/${CELL}_${TARGET}/${REP}/scanGenome/scanGenome.step${step}.${sign}.${chr}.txt
+Trim=/ibex/scratch/projects/c2032/ENCODE/data/${CELL}_${TARGET}/${REP}/Trim/scanGenome.step${step}.${sign}.${chr}.Trimmed10.txt
+Pas=/ibex/scratch/projects/c2032/ENCODE/pas.txt
+
+mkdir /ibex/scratch/projects/c2032/ENCODE/data/${CELL}_${TARGET}/${REP}/scanGenome/
+mkdir /ibex/scratch/projects/c2032/ENCODE/data/${CELL}_${TARGET}/${REP}/Trim/
+
+cat>tmp.sh<<EOF
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J prepare_scanGenome_${CELL}_${TARGET}_${REP}_str2_${chr}
+#SBATCH --output /ibex/scratch/projects/c2032/ENCODE/log/prepare_scanGenome_${CELL}_${TARGET}_${REP}_str2_${chr}.log
+#SBATCH --time=72:00:00
+#SBATCH --mem=30G
+
+cd /ibex/scratch/projects/c2032/ENCODE
+perl generate_slidingWidnows.pl $WIG $scanGenome $window $step
+perl prepare_scanGenome.pl $Pas $scanGenome $Trim $window $sign $chr $spe
+
+EOF
+
+sbatch tmp.sh
+done

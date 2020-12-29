@@ -1,0 +1,71 @@
+import os
+import sys
+import random
+import math
+import numpy as np
+import skimage.io
+import matplotlib
+import matplotlib.pyplot as plt
+import cv2
+
+# Root directory of the project
+ROOT_DIR = os.path.abspath("./")
+
+# Import Mask RCNN
+sys.path.append(ROOT_DIR)  # To find local version of the library
+from mrcnn import utils
+import mrcnn.model as modellib
+from mrcnn import visualize
+
+# Import COCO config
+#sys.path.append(os.path.join(ROOT_DIR, "samples/catvsdog/"))  # To find local version
+import teeth
+
+# get_ipython().run_line_magic('matplotlib', 'inline')
+
+# Directory to save logs and trained model
+MODEL_DIR = os.path.join(ROOT_DIR, "logs")
+
+# Local path to trained weights file
+COCO_MODEL_PATH = os.path.join(ROOT_DIR, "logs/teeth20191031T1432/mask_rcnn_teeth_0030.h5")
+# Download COCO trained weights from Releases if needed
+if not os.path.exists(COCO_MODEL_PATH):
+    utils.download_trained_weights(COCO_MODEL_PATH)
+
+
+class InferenceConfig(teeth.BalloonConfig):
+    # Set batch size to 1 since we'll be running inference on
+    # one image at a time. Batch size = GPU_COUNT * IMAGES_PER_GPU
+    GPU_COUNT = 1
+    IMAGES_PER_GPU = 1
+
+
+config = InferenceConfig()
+config.display()
+
+# Create model object in inference mode.
+model = modellib.MaskRCNN(mode="inference", model_dir=MODEL_DIR, config=config)
+
+# Load weights trained on MS-COCO
+model.load_weights(COCO_MODEL_PATH, by_name=True)
+
+class_names = ["11","12","13","14","15","16",'17','18',
+               '21','22','23','24','25','26','27','28',
+               '31','32','33','34','35','36','37','38',
+               '41','42','43','44','45','46','47','48']
+
+#image = skimage.io.imread('teeth_coco/val/d2accef65c5d4d84acb18525c2c2f16d.jpg')
+val_path = '../mrcnn_data/val/'
+result_path='../mrcnn_data/val_result/'
+val_list = os.listdir(val_path)[0:-1]
+for item in val_list:
+    image = cv2.imread(val_path + item)
+    image = np.array(image)
+    # Run detection
+    results = model.detect([image], verbose=1)
+
+    # Visualize results
+    r = results[0]
+    display = visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'],
+                                class_names, r['scores'])
+    cv2.imwrite(result_path+item,display)

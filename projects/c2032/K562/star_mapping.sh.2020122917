@@ -1,0 +1,68 @@
+#!/bin/bash
+#SBATCH --job-name=STAR
+#SBATCH --partition=batch
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=16
+#SBATCH --time=4:00:00
+#SBATCH --output=log.%J
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --mem=100G
+#SBATCH -a 0
+##SBATCH --dependency=afterok:8186700
+
+
+#####Control shRNA https://www.encodeproject.org/experiments/ENCSR815CVQ/
+####ZRANB2 shRNA https://www.encodeproject.org/experiments/ENCSR850PWM/
+
+
+#####Modify parameter
+threads=16
+dir='/home/longy/project/K562/STAR' ####Parental Directory
+genomeIndex="/ibex/scratch/longy/cnda/STAR_INDEX/hg38len100"
+#samples=("K562_Control_REP1" "K562_Control_REP2" "K562_ZRANB2_REP1" "K562_ZRANB2_REP2")
+sample="K562_ZRANB2_REP1"
+#sample=${samples[$SLURM_ARRAY_TASK_ID]}
+cd $dir/$sample
+
+#fq1="ENCFF312ANF.fastq.gz"
+#fq2="ENCFF124WIZ.fastq.gz"
+#fq1="ENCFF339ZUH.fastq.gz"
+#fq2="ENCFF292HLM.fastq.gz"
+#fq1="/home/longy/project/ENCODE/data/K562_ZRANB2/ENCFF308UBT.fastq.gz" ###REP1
+#fq2="/home/longy/project/ENCODE/data/K562_ZRANB2/ENCFF953CAQ.fastq.gz" ###REP1
+#fq1="/home/longy/project/ENCODE/data/K562_ZRANB2/ENCFF880DON.fastq.gz" 
+#fq2="/home/longy/project/ENCODE/data/K562_ZRANB2/ENCFF899MED.fastq.gz"
+
+time_start=$(date +"%s")
+echo "job start at" `date "+%Y-%m-%d %H:%M:%S"`
+echo "This is job #${SLURM_ARRAY_JOB_ID}, with parameter $sample"
+echo "My hostname is: $(hostname -s)"
+echo "My task ID is $SLURM_ARRAY_TASK_ID"
+echo
+
+
+#fastqc $fq1
+#echo 'cut adapter'
+#cutadapt -j $threads --minimum-length=50 -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCA -A AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT -o $trfq1 -p $trfq2 $fq1 $fq2
+#cutadapt -j $threads --minimum-length=15 -a TGGAATTCTCGGGTGCCAAGG -o $trfq1 $fq1
+
+
+echo 'starting mapping with STAR'
+echo "mapping with $sample"
+
+STAR  --twopassMode Basic --runThreadN $threads --genomeDir $genomeIndex  --readFilesIn $fq1 $fq2 --outSAMtype BAM SortedByCoordinate --outSAMattrIHstart 0  --outFilterMultimapScoreRange 0  --alignEndsType EndToEnd  --readFilesCommand zcat --outFilterIntronMotifs RemoveNoncanonicalUnannotated --outSAMstrandField intronMotif --outReadsUnmapped Fastq --outWigType wiggle  --outWigNorm None --limitBAMsortRAM 40000000000 
+
+####INDEX for sorted bam file
+echo 'generating index with samtools'
+#samtools index -@ $threads Aligned.sortedByCoord.out.bam
+
+echo "job  end  at" `date "+%Y-%m-%d %H:%M:%S"`
+time_end=$(date +"%s")
+duration=$(($time_end-$time_start))
+echo "Run time: $(($duration/3600)):$((($duration/60)%60)):$(($duration % 60))"
+
+
+#perl ../../seperate_chr_wig.pl Signal.Unique.str1.out.wig 
+#perl ../../seperate_chr_wig.pl Signal.Unique.str2.out.wig 

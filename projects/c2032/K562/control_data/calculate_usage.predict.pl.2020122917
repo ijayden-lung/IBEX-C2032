@@ -1,0 +1,208 @@
+#!/usr/bin/perl -w
+#
+#
+#Pseudogene 的距离要限制在25之内 或许不该限制
+#chr13   62053352        +       Gm3325 看这个基因
+
+
+my ($Data,$Inp,$Out,$ENS,$RefSeq) = @ARGV;
+my $Extend =10000;  ###Maximum extension;
+my $Window = 25;   ###Window size for predict
+
+
+my %compare;
+my %utr;
+my %gene_start;
+my %gene_end;
+my %biotype;
+$biotype{"intergenic"} = "intergenic";
+
+
+open ENS,"zcat $ENS | ";
+while(<ENS>){
+	next if $_ =~ /^\#/;
+	my ($chr,$source,$type,$start,$end,$srd) = (split)[0,1,2,3,4,6];
+	$chr = "chr$chr";
+	if($type eq "gene"){
+		my ($gene_name,$gene_type) = (split)[13,17];
+		$gene_name =~ s/\"|\;//g;
+		$gene_type =~ s/\"|\;//g;
+		$gene_start{"$chr:$srd"}->{$gene_name} = $start;
+		$gene_end{"$chr:$srd"}->{$gene_name} = $end;
+		$biotype{$gene_name} = $gene_type;
+	}
+	elsif($type eq "exon"){
+		my ($gene_name) = (split)[19];
+		$gene_name =~ s/\"|\;//g;
+		if($srd eq "+"){
+			if(!exists $compare{$gene_name}){
+				$compare{$gene_name} = $end;
+				$utr{$gene_name} = "$start-$end";
+			}
+			elsif($compare{$gene_name} < $end){
+				$compare{$gene_name} = $end;
+				$utr{$gene_name} = "$start-$end";
+			}
+		}
+		else{
+			if(!exists $compare{$gene_name}){
+				$compare{$gene_name} = $start;
+				$utr{$gene_name} = "$start-$end";
+			}
+			elsif($compare{$gene_name} > $start){
+				$compare{$gene_name} = $start;
+				$utr{$gene_name} = "$start-$end";
+			}
+		}
+	}
+}
+
+
+
+my %intergenic_length;
+my %gene_location_plus;
+while(my ($location,$val) = each %gene_end){
+	if($location =~ /\+/){
+		foreach my $key (sort{$val->{$a} <=> $val->{$b}} keys %$val){
+			push @{$gene_location_plus{$location}},$key;
+		}
+	}
+}
+
+while(my ($location,$gene) = each %gene_location_plus){
+	for(my $i=0;$i<@$gene-1;$i++){
+		my $intergene_length = $gene_start{$location}->{$gene->[$i+1]}
+		-$gene_end{$location}->{$gene->[$i]};
+		#print "$location\t$gene->[$i]\t$intergene_length\n";
+		$intergene_length = $Window  if $intergene_length < $Window;
+		$intergene_length{$gene->[$i]} = $intergene_length;
+	}
+	$intergene_length{$gene->[@$gene-1]} = $Extend;
+}
+
+
+my %gene_location_minus;
+while(my ($location,$val) = each %gene_start){
+	if($location =~ /\-/){
+		foreach my $key (sort{$val->{$b} <=> $val->{$a}} keys %$val){
+			push @{$gene_location_minus{$location}},$key;
+		}
+	}
+}
+
+while(my ($location,$gene) = each %gene_location_minus){
+	for(my $i=0;$i<@$gene-1;$i++){
+		my $intergene_length = $gene_start{$location}->{$gene->[$i]}
+		-$gene_end{$location}->{$gene->[$i+1]};
+		#print "$location\t$gene->[$i]\t$intergene_length\n" if $gene->[$i] eq "Gpc4";
+		$intergene_length = $Window  if $intergene_length < $Window;
+		$intergene_length{$gene->[$i]} = $intergene_length;
+		#print "$location\t$gene->[$i]\t$intergene_length\n" if $gene->[$i] eq "Gpc4";
+		#print "$location\t$gene->[$i]\t$intergene_length{$gene->[$i]}\n" if $gene->[$i] eq "Gpc4";
+	}
+	$intergene_length{$gene->[@$gene-1]} = $Extend;
+}
+
+
+my %pas_gene;
+my %pas_type;
+my %remark;
+my %filter;
+open FILE,"$Data";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$motif,$chr,$pos,$strand,$symbol) = split;
+	my $pas_type = "NA";
+	$symbol = "intergenic";
+	my $extend_length = "No";
+	my $val = $gene_start{"$chr:$strand"};
+	foreach my $gene_name (keys %$val){
+		my $start = $val->{$gene_name};
+		my $end = $gene_end{"$chr:$strand"}->{$gene_name};
+		my $ext_start = $start;
+		my $ext_end   = $end;
+		my $extend  = $Extend;
+		$extend = $intergene_length{$gene_name} if $intergene_length{$gene_name} < $Extend;
+		if($strand eq "+"){
+			$ext_end += $extend;
+		}
+		else{
+			$ext_start -= $extend;
+		}
+		if($ext_start < $pos && $ext_end > $pos){
+			$symbol = $gene_name;
+			my ($utr_start,$utr_end) = split /\-/,$utr{$gene_name};
+			#print "$symbol\n" if !defined $utr_end;
+			$pas_type = "Non_tandemUTR";
+			if($strand eq "+"){
+				$pas_type = "tandemUTR" if $utr_start < $pos;
+				$extend_length = $pos - $end if $pos-$end>0;
+			}
+			else{
+				$pas_type = "tandemUTR" if $utr_end > $pos;
+				$extend_length = $start-$pos if $start-$pos>0;
+			}
+			last;
+		}
+	}
+	$pas_type{"$chr:$pos:$strand"} = "$pas_type\t$chr\t$pos\t$strand\t$symbol";
+	$pas_gene{"$chr:$pos:$strand"} = "$symbol";
+	$remark{"$chr:$pos:$strand"} = $extend_length;
+
+
+	my @data = split;
+	my $before = &TrimmedMean(@data[8..108]);
+	my $after = &TrimmedMean(@data[109..$#data]);
+	my $diff = $before-$after;
+	my $ave = ($before+$after)/2;
+	my $ave_diff = $diff/$ave;
+	$filter{"$chr:$pos:$strand"} = "$motif\t$ave_diff";
+}
+
+open FILE,"$Inp";
+<FILE>;
+my %total;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$chr,$pre,$end,$pos,$strand,$rep1,$rep2) = split;
+	my $ave = ($rep1+$rep2)/2;
+	#if (! exists  $pas_gene{"$chr:$pos:$strand"}){
+	#	print "$chr:$pos:$strand\n";
+	#}
+	my $gene_name = $pas_gene{"$chr:$pos:$strand"};
+	$total{$gene_name} += $ave;
+}
+
+
+
+open FILE,"$Inp";
+<FILE>;
+open OUT,">$Out";
+print OUT "pas_id\tpas_type\tchr\tposition\tstrand\tsymbol\tusage\treadCount\tmotif\tave_diff\tbiotype\textend\n";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$chr,$pos,$strand,$rep1,$rep2) = (split)[0,1,4,5,6,7];
+	my $ave = ($rep1+$rep2)/2;
+	my $gene_name = $pas_gene{"$chr:$pos:$strand"};
+	my $usage = $total{$gene_name}>0 ? $ave/$total{$gene_name} : 0;;
+	my $motif = $filter{"$chr:$pos:$strand"};
+	my $pas_info = $pas_type{"$chr:$pos:$strand"};
+	my $extend_length = $remark{"$chr:$pos:$strand"};
+	$biotype{$gene_name} = "Unknown" if !exists $biotype{$gene_name};
+	print OUT "$pas_id\t$pas_info\t$usage\t$ave\t$motif\t$biotype{$gene_name}\t$extend_length\n";
+}
+
+sub TrimmedMean{
+	my @data = @_;
+	my $sum = 0;
+	my $count = 0;
+	foreach my $ele (@data){
+		if($ele>0){
+			$sum += $ele;
+			$count++;
+		}
+	}
+	my $ave = $count>0 ? $sum/$count : 0;
+	return $ave;
+}

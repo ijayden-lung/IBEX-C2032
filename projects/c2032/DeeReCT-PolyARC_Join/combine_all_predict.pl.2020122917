@@ -1,0 +1,6 @@
+#!/usr/bin/perl -w
+#
+#
+foreach my $file (glob "Stat/bl6.pAs.scanGenome.step1.str2.MERGE.chr*.Trimmed25.usage0.2.npz.37.txt.bidirection.30.15.txt"){
+	open FILE,"$file";
+	my $recall_line = "$=";

@@ -1,0 +1,10 @@
+#!/usr/bin/perl -w
+
+open FILE,"bl6.pAs.negative.round0.txt";
+open OUT,">bl6.pAs.negative.round0.txt2";
+while(<FILE>){
+	chomp;
+	if(rand()<0.5){
+		print OUT "$_\n";
+	}
+}

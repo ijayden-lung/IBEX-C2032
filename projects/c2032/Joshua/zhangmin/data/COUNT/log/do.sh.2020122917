@@ -1,0 +1,24 @@
+cd /home/zhouj0d/zhouj0d/zhangmin/data/INSERT_DATA
+
+for id in *.fa
+do
+
+MER=8
+
+cat>${id}_${MER}MER.sh<<EOF
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J ${id}_${MER}MER
+#SBATCH --output /home/zhouj0d/zhouj0d/zhangmin/data/COUNT/log/${id}_${MER}MER.log
+#SBATCH --time=72:00:00
+#SBATCH --mem=30G
+
+cd /home/zhouj0d/zhouj0d/zhangmin/data/INSERT_DATA
+./jellyfish-linux count -m ${MER} -t 10 -s 100M -o ${id}.jf ${id}
+./jellyfish-linux dump -c -t ${id}.jf  > /home/zhouj0d/zhouj0d/zhangmin/data/COUNT/RAW_${id}.tsv
+
+EOF
+
+sbatch ${id}_${MER}MER.sh
+done

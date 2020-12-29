@@ -1,0 +1,45 @@
+#!/usr/bin/perl -w
+
+#open FILE,"grep Origin train_data/bl6.pAs.positive.REP1.newround0.txt | sort -k 3,3 -k 5,5 -k 4,4n  |";
+open FILE,"/home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.tianbin.txt";
+<FILE>;
+my $pre_pos = 0;
+my $pre_ave = 0;
+my $pre_id = "NA";
+my %pointer;
+my %record;
+my @total;
+open OUT,">tianbin_data/bl6.pAs.raw2.tianbin.txt";
+print OUT "pas_id\tpas_type\tchr\tpos\tstrand\tsymbol\tmotif\tusage\treadCount\n";
+$record{"NA"} = 0;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand) = split;
+	next if $pas_id =~ "^na";
+	next if $pas_id =~ "^NO";
+	next if $chr =~ /chrY/;
+	$record{$pas_id} = "$_";
+	if(abs($pos-$pre_pos)<25){
+		print "$_\n";
+		$pointer{$pas_id} = $pre_id;
+		#$pointer{$pre_id} = "BEGIN";
+	}
+	else{
+		if(exists $pointer{$pre_id}){
+			my %total;
+			while(exists $pointer{$pre_id}){
+				$total{$pre_id} = '';
+				$pre_id = $pointer{$pre_id};
+				$total{$pre_id} = '';
+			}
+			my @keys = keys %total;
+			print OUT "$record{$keys[0]}\n";
+		}
+		else{
+			print OUT "$record{$pre_id}\n";
+		}
+	}
+	$pre_pos = $pos;
+	$pre_id = $pas_id;
+}
+

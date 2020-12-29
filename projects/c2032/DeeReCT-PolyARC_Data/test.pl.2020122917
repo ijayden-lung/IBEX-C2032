@@ -1,0 +1,12 @@
+#!/usr/bin/perl -w
+#
+
+my $pas = "ENSMUSG00000026643.13:4-pos159";
+my ($a,$b) = split /\-pos/,$pas;
+print "$a\t$b\n";
+
+
+for (my$i=0,$j=0;$i<1 && $j<2;){
+	print "$i\n";
+	$j += 0.5;
+}

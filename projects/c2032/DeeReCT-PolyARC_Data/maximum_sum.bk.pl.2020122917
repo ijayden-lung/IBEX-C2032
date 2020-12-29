@@ -1,0 +1,95 @@
+#!/usr/bin/perl -w
+#
+#
+#Upate 2019/11/05
+
+my $MaxLength = 10;
+
+my %pas;
+open FILE,"data/bl6.pAs.fibroblast.REP1.positive.usage0.2.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,undef,undef,$position) = split;
+	$pas{$pas_id} = $position;
+}
+
+my %correct;
+open FILE,"Correct_pas.txt";
+while(<FILE>){
+	chomp;
+	my ($pas_id) = split;
+	$correct{$pas_id} = '';
+}
+
+open OUT,">Stat/maxSum.txt";
+foreach my $file (glob 'predict/bl6.pAs.scanGenome.step1.str2.REP1.chr9.Trimmed10.Optimize.txt'){
+	&maxSum($file);
+}
+
+
+my %distribution;
+sub maxSum{
+	my ($file) = @_;
+	if($file =~ /str1/){
+		open FILE,"tac $file |";
+	}
+	else{
+		open FILE,$file;
+	}
+	my $sum = 0;
+	my $start = 10000000000000;
+	my $end = 0;
+	my $last_pas_id = '';
+	while(<FILE>){
+		chomp;
+		my ($key,$predition) = split;
+		if($key =~ /ENS/){
+			my @id = split /,/,$key;
+			if(@id ==1){
+				$id = $id[0];
+				my ($pas_id,$pos) = split /\-/,$id;
+				if(exists $correct{$pas_id}){
+					my $position = int(substr($pos,3));
+					my $coor = $pas{$pas_id} + 100-$position;
+					if($file =~ /str1/){
+						$coor++;
+					}
+					if($coor-$end>1){
+						my $length = $end-$start;
+						if($sum >0 && $length>$MaxLength){
+							my $diff = ($end+$start)/2-$pas{$last_pas_id};
+							print OUT "$last_pas_id\t$pas{$last_pas_id}\t$start\t$end\t$diff\t$length\n";
+						}
+						$start = $coor;
+						$end = $coor;
+						$sum = 0;
+					}
+					if($predition ==1){
+						$sum -=1;
+						if($sum <=-1){
+							$start = $coor;
+						}
+					}
+					else{
+						$sum++;
+						if($sum == 1){
+							$start = $coor;
+						}
+					}
+					$end = $coor;
+					if($sum <=0){
+						my $length = $end-$start;
+						if($length>$MaxLength){
+							my $diff = ($end+$start)/2-$pas{$pas_id};
+							print OUT "$pas_id\t$pas{$pas_id}\t$start\t$end\t$diff\t$length\n";
+						}
+						$sum = 0;
+					}
+					$last_pas_id = $pas_id;
+				}
+			}
+		}
+	}
+}
+

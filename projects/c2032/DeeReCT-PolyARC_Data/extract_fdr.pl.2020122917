@@ -1,0 +1,89 @@
+#!/usr/bin/perl -w
+
+#########NOTICE
+#FOR sep,seq_exon,seq_tandem. FP=FN and FN=FP 
+#Now FP=FN,FN=FP
+#Correct later in usage
+
+open OUT,">Stat/Distribution_combine.txt";
+print OUT "id\tfdr\ttpr\tf1score\tfpr\tparameter\n";
+
+my %stat_pos;
+my %stat_neg;
+
+#&openFile("all.usage0.20.trimmed10");
+#&openFile("all.usage0.05.trimmed10");
+#&openFile("all.usage0.30.trimmed10");
+#&openFile("tandem.all.trimmed10");
+#&openFile("tandem.usage0.05.trimmed10");
+#&openFile("tandem.usage0.20.trimmed10");
+#&openFile("tandem.usage0.30.trimmed10");
+#&openFile("tandem.usage0.30.all");
+#&openFile("tandem.usage0.20.all");
+#&openFile("tandem.usage0.05.all");
+sub openFile{
+	my $info = $_[0];
+	foreach my $file (glob "out/$info"."[0-9]*.txt"){
+		if($file =~ /neg/){
+			&get_data_neg($file,$info);
+		}
+		else{
+			&get_data_pos($file,$info);
+		}
+	}
+}
+
+
+while(my ($key,$val) = each %stat_pos){
+	while(my($id,$val2) = each %$val){
+		#my (undef,$para) = split /\_/,$key;
+		my $para = $key;
+		print OUT "$id\t$val2\t$stat_neg{$key}->{$id}\t$para\n";
+	}
+}
+
+sub get_data_pos{
+	my ($file,$para) = @_;
+	open $file,$file;
+	my ($epoch,$tp,$fp,$tn,$fn);
+	<$file>;
+	while(<$file>){
+		chomp;
+		($epoch,$tp,$fp,$tn,$fn) = (split)[0,3,4,5,6]; #right version
+		#($epoch,$tp,$fn,$tn,$fp) = (split)[0,3,4,5,6]; #wrong version
+	}
+
+	my $tpr = ($tp+$fn)>0 ? $tp/($tp+$fn) : 100;
+	my $ppv = $tp/($tp+$fp);
+	my $fdr = 1-$ppv;
+	my $fpr = $fp/($fp+$tn);
+	if(($ppv+$tpr) eq 0){
+		print"$fp,$fn,$tn,$tp\n";
+		next;
+	}
+	my $f1score = 2*$tpr*$ppv/($ppv+$tpr);
+	
+	my $id = (split /\_/,$file)[0];
+	$id =~ s/.txt//g;
+	#print "$id\n";
+	$stat_pos{$para}->{$id} = "$fdr\t$tpr\t$f1score";
+	#printf OUT ("$fdr\t$tpr\t$f1score\t$fpr\t$para\n");
+}
+
+
+sub get_data_neg{
+	my ($file,$para) = @_;
+	open FILE,$file;
+	<FILE>;
+	my $line = <FILE>;
+	if(!defined $line){
+		next;
+	}
+	my ($epoch,undef,$tp,$fp,$tn,$fn) = split /\t/,$line; ###right version
+	my $fpr = $fp/($fp+$tn) ;
+	my $id = (split /\_/,$file)[0];
+	#print "$id\n";
+	$stat_neg{$para}->{$id} = $fpr;
+}
+
+

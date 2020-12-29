@@ -1,0 +1,12 @@
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J PLASMID_CDC42_ROUND5.fa_8MER
+#SBATCH --output /home/zhouj0d/zhouj0d/zhangmin/data/COUNT/log/PLASMID_CDC42_ROUND5.fa_8MER.log
+#SBATCH --time=72:00:00
+#SBATCH --mem=30G
+
+cd /home/zhouj0d/zhouj0d/zhangmin/data/INSERT_DATA
+./jellyfish-linux count -m 8 -t 10 -s 100M -o PLASMID_CDC42_ROUND5.fa.jf PLASMID_CDC42_ROUND5.fa
+./jellyfish-linux dump -c -t PLASMID_CDC42_ROUND5.fa.jf  > /home/zhouj0d/zhouj0d/zhangmin/data/COUNT/RAW_PLASMID_CDC42_ROUND5.fa.tsv
+

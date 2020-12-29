@@ -1,0 +1,7 @@
+#!/usr/bin/perl -w
+#
+#
+#
+
+open FILE,"../tianbin_data/bl6.pAs.subset.predict.txt";
+

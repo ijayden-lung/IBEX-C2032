@@ -1,0 +1,30 @@
+#2019.11 New Hfq Data
+
+for i in {1..12}
+do
+
+cat>tmp.sh<<EOF
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J tophat_SunWei-${i}
+#SBATCH --output /home/zhouj0d/zhouj0d/sunwei_hfp/log/tophat_SunWei-${i}.out
+#SBATCH --mail-user=juexiao.zhou@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --time=72:00:00
+#SBATCH --mem=30G
+
+
+cd /home/zhouj0d/zhouj0d/sunwei_hfp/tophat
+module load tophat2
+
+# --read-mismatches 5 --read-edit-dist 5
+
+tophat -p 12 --read-mismatches 5 --read-edit-dist 5 -o /home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-${i} \
+-G /home/zhouj0d/zhouj0d/sunwei_hfp/ref/GCF_000005845.2_ASM584v2_genomic.gtf \
+/home/zhouj0d/zhouj0d/sunwei_hfp/ref/bowtie2_index/ecoli \
+/home/zhouj0d/zhouj0d/sunwei_hfp/cutadapt/SunWei-${i}_1.clean.fq.gz
+
+EOF
+sbatch tmp.sh
+done

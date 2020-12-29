@@ -1,0 +1,10 @@
+import os
+
+for CELL in ['HepG2']:
+    for TARGET in ['WT']:
+            
+            os.environ['CELL']=CELL
+            os.environ['TARGET']=TARGET
+            os.environ['REP']='REP1'
+            
+            os.system("bash do_prepare_scanGenome.sh")

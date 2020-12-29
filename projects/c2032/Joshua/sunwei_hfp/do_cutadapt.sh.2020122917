@@ -1,0 +1,91 @@
+#2019.11 New Hfq Data
+
+for i in {1..12}
+do
+
+if [ ${i} -eq 1 ]
+then
+    index=AGATCGGAAGAGCACACGTCTGAACTCCAGTCACATCACGATCTCGTATGCCGTCTTCTGCTTG
+fi
+
+if [ ${i} -eq 2 ]
+then
+    index=AGATCGGAAGAGCACACGTCTGAACTCCAGTCACCGATGTATCTCGTATGCCGTCTTCTGCTTG
+fi
+
+if [ ${i} -eq 3 ]
+then
+    index=AGATCGGAAGAGCACACGTCTGAACTCCAGTCACTTAGGCATCTCGTATGCCGTCTTCTGCTTG
+fi
+
+if [ ${i} -eq 4 ]
+then
+    index=AGATCGGAAGAGCACACGTCTGAACTCCAGTCACTGACCAATCTCGTATGCCGTCTTCTGCTTG
+fi
+
+if [ ${i} -eq 5 ]
+then
+    index=AGATCGGAAGAGCACACGTCTGAACTCCAGTCACACAGTGATCTCGTATGCCGTCTTCTGCTTG
+fi
+
+if [ ${i} -eq 6 ]
+then
+    index=AGATCGGAAGAGCACACGTCTGAACTCCAGTCACGCCAATATCTCGTATGCCGTCTTCTGCTTG
+fi
+
+if [ ${i} -eq 7 ]
+then
+    index=AGATCGGAAGAGCACACGTCTGAACTCCAGTCACCAGATCATCTCGTATGCCGTCTTCTGCTTG
+fi
+
+if [ ${i} -eq 8 ]
+then
+    index=AGATCGGAAGAGCACACGTCTGAACTCCAGTCACACTTGAATCTCGTATGCCGTCTTCTGCTTG
+fi
+
+if [ ${i} -eq 9 ]
+then
+    index=AGATCGGAAGAGCACACGTCTGAACTCCAGTCACGATCAGATCTCGTATGCCGTCTTCTGCTTG
+fi
+
+if [ ${i} -eq 10 ]
+then
+    index=AGATCGGAAGAGCACACGTCTGAACTCCAGTCACTAGCTTATCTCGTATGCCGTCTTCTGCTTG
+fi
+
+if [ ${i} -eq 11 ]
+then
+    index=AGATCGGAAGAGCACACGTCTGAACTCCAGTCACGGCTACATCTCGTATGCCGTCTTCTGCTTG
+fi
+
+if [ ${i} -eq 12 ]
+then
+    index=AGATCGGAAGAGCACACGTCTGAACTCCAGTCACCTTGTAATCTCGTATGCCGTCTTCTGCTTG
+fi
+
+base=/home/zhouj0d/zhouj0d/sunwei_hfp/cleandata/SunWei-${i}_FKDL192533308-1a-${i}
+
+cat>tmp.sh<<EOF
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J cutadapt_SunWei-${i}_FKDL192533308-1a-${i}
+#SBATCH --output /home/zhouj0d/zhouj0d/sunwei_hfp/log/cutadapt_SunWei-${i}_FKDL192533308-1a-${i}.out
+#SBATCH --mail-user=juexiao.zhou@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --time=72:00:00
+
+module load cutadapt
+cd ${base}
+cutadapt -a ${index} \
+-A GATCGTCGGACTGTAGAACTCTGAACGTGTAGATCTCGGTGGTCGCCGTATCATT \
+-m 10 -j 24 --discard-untrimmed \
+-o /home/zhouj0d/zhouj0d/sunwei_hfp/cutadapt/SunWei-${i}_1.clean.fq.gz \
+-p /home/zhouj0d/zhouj0d/sunwei_hfp/cutadapt/SunWei-${i}_2.clean.fq.gz \
+SunWei-${i}_FKDL192533308-1a-${i}_1.clean.fq.gz \
+SunWei-${i}_FKDL192533308-1a-${i}_2.clean.fq.gz
+
+EOF
+
+sbatch tmp.sh
+done

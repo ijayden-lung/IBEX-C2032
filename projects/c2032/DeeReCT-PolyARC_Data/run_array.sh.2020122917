@@ -1,0 +1,25 @@
+#!/bin/bash
+#SBATCH --job-name=DeeRect
+#SBATCH --partition=batch
+#SBATCH --nodes=1
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --output=log.%J
+#SBATCH --time=01:00:00
+#SBATCH --mem=40G
+#SBATCH -a 1-100
+
+#source activate ML
+
+echo "This is job #${SLURM_ARRAY_JOB_ID}, task id ${SLURM_ARRAY_TASK_ID}"
+base=random.length176
+#base="sep_usage0.25"
+name=${base}${SLURM_ARRAY_TASK_ID}
+testid="${name}"
+
+echo "running $testid"
+
+#python3 train.py Data/${base}.npz --out Model/$name.npz --hparam para/BL_hparamIn5.npz --trainid $name
+#python3 test.py Data/trimmed10_neg.npz Model/${name}.npz --testid $testid
+#python3 test.py Data/all_negative.npz Model/${name}.npz --testid $testid
+python3 test.py Data/bl6.pAs.liver.REP1.usage0.2.npz Model/bl6.pAs.fibroblast.REP1.sameDistribute.accuracy.1.npz  --testid liver

@@ -1,0 +1,13 @@
+#!/usr/bin/perl -w
+
+open FILE,"../scanGenome_data/bl6.pAs.scanGenome.step1.str2.REP1.chr9.UpstreamTrimmed10.txt";
+open OUT, ">bl6.pAs.scanGenome.step1.str2.REP1.chr9.UpstreamTrimmed10.txt";
+while(<FILE>){
+	chomp;
+	my (undef,undef,undef,$pos) = split;
+	if($pos >= 121734235){
+		print OUT "$_\n";
+	}
+}
+
+

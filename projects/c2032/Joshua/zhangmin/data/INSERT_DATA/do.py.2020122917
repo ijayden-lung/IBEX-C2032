@@ -1,0 +1,17 @@
+LIBRARY=12
+FILES=["PLASMID_CDC42_6HE_ROUND4.fa","PLASMID_CDC42_ROUND0.fa","PLASMID_CDC42_ROUND1.fa","PLASMID_CDC42_ROUND2.fa","PLASMID_CDC42_ROUND3.fa","PLASMID_CDC42_ROUND4.fa","PLASMID_CDC42_ROUND5.fa","PLASMID_CDC42_ROUND6.fa","PLASMID_IGF12_ROUND0.fa","PLASMID_IGF12_ROUND1.fa","PLASMID_IL4RA_HEA_ROUND0.fa","PLASMID_IL4RA_HEB_ROUND1.fa","PLASMID_IL4RA_ROUND0.fa","PLASMID_IL4RA_ROUND1.fa","PLASMID_IL4RA_ROUND2.fa","PLASMID_IL4RA_ROUND4.fa","PLASMID_IL4RA_ROUND5.fa","PLASMID_RBM12_ROUND0.fa","PLASMID_RBM12_ROUND1.fa","PLASMID_RBM12_ROUND2.fa","PLASMID_RBM12_ROUND3.fa","PLASMID_RBM12_ROUND4.fa","PLASMID_RBM12_ROUND5.fa","PLASMID_SV40_ROUND0.fa","PLASMID_SV40_ROUND1.fa","PLASMID_SV40_ROUND2.fa","PLASMID_VPS_HE_ROUND1.fa","PLASMID_VPS_ROUND0.fa","PLASMID_VPS_ROUND1.fa","PLASMID_VPS_ROUND3.fa"]
+for FILE in FILES:
+    PATH="/home/zhouj0d/zhouj0d/zhangmin/data/MERGE/%s"%FILE
+    with open(PATH,"r") as f:
+        with open("/home/zhouj0d/zhouj0d/zhangmin/data/INSERT_DATA/%s"%FILE,"w") as w:
+            for line in f:
+                line=line.rstrip("\n")
+                if line[0]=="@":
+                    line1=line
+                else:
+                    if len(line)==int(LIBRARY)+12:
+                        line2=line[6:6+int(LIBRARY)]
+                        w.write(line1+"\n"+line2+"\n")
+                    else:
+                        pass
+    print(FILE)

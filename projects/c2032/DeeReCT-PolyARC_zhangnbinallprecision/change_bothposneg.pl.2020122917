@@ -1,0 +1,108 @@
+#!/usr/bin/perl -w
+use List::Util qw(first max maxstr min minstr reduce shuffle sum shuffle) ;
+
+open FILE,"polyA_seq/bl6.pAs.scanGenome.newround3.txt.bidirection.6.2.txt";
+my %ens_pas;
+my %db_pas;
+my %zb_pas;
+my %gt_pas;
+my %pd_pas;
+my %pg_pas;
+my %all_pas;
+my $count = 0;
+while(<FILE>){
+	next if $_ =~ /predict/;
+	chomp;
+	my ($pos,$id,$diff,$chr,$strand,$gt_id,$gt_diff,$zb_id,$zb_diff,$ens_id,$ens_diff,$db_id,$db_diff) = split;
+	$pos = sprintf("%.0f",$pos);
+	if(abs($diff)<=25){
+		$all_pas{"$chr:$pos:$strand"} = '';
+	}
+	if(abs($ens_diff)<=25){
+		$ens_pas{$ens_id} = '';
+		$pd_pas{"$chr:$pos:$strand"} = '';
+	}
+	if(abs($db_diff)<=25){
+		$db_pas{$db_id} = '';
+		$pd_pas{"$chr:$pos:$strand"} = '';
+	}
+	if(abs($zb_diff)<=25){
+		$zb_pas{$zb_id} = '';
+		$pd_pas{"$chr:$pos:$strand"} = '';
+	}
+	if(abs($gt_diff)<=25){
+		$gt_pas{"$gt_id"} = '';
+		$pd_pas{"$chr:$pos:$strand"} = '';
+		$pg_pas{"$chr:$pos:$strand"} = '';
+		$count++;
+	}
+}
+
+print "$count\n";
+open FILE,"polyA_seq/pAs_predictAll.info.cutoff";
+$header = <FILE>;
+open OUT,">polyA_seq/fp.pAs_all.info.cutoff";
+print OUT "$header";
+open OUT2,">polyA_seq/fp.pAs_gt.info.cutoff";
+print OUT2 "$header";
+open OUT3,">polyA_seq/tp.pAs_gt.info.cutoff";
+print OUT3 "$header";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand) = split;
+	if (!exists $pd_pas{"$chr:$pos:$strand"}){
+		print OUT "$_\n";
+	}
+	elsif(exists $pg_pas{"$chr:$pos:$strand"}){
+		print OUT3 "$_\n";
+	}
+	else{
+		print OUT2 "$_\n";
+	}
+}
+
+
+open FILE,"polyA_seq/pAs_ensembl.info.cutoff";
+$header = <FILE>;
+open OUT,">polyA_seq/fn.pAs_ensembl.info.cutoff";
+print OUT "$header";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand) = split;
+	if (!exists $ens_pas{"$chr:$pos:$strand"}){
+		print OUT "$_\n";
+	}
+}
+open FILE,"polyA_seq/pAs_tianbin.info.cutoff";
+$header = <FILE>;
+open OUT,">polyA_seq/fn.pAs_tianbin.info.cutoff";
+print OUT "$header";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand) = split;
+	if (!exists $db_pas{"$chr:$pos:$strand"}){
+		print OUT "$_\n";
+	}
+}
+open FILE,"polyA_seq/pAs_zhangbin.info.cutoff";
+$header = <FILE>;
+open OUT,">polyA_seq/fn.pAs_zhangbin.info.cutoff";
+print OUT "$header";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand) = split;
+	if (!exists $zb_pas{"$chr:$pos:$strand"}){
+		print OUT "$_\n";
+	}
+}
+open FILE,"polyA_seq/pAs_groundtruth.info.cutoff";
+$header = <FILE>;
+open OUT,">polyA_seq/fn.pAs_groundtruth.info.cutoff";
+print OUT "$header";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand) = split;
+	if (!exists $gt_pas{"$chr:$pos:$strand"}){
+		print OUT "$_\n";
+	}
+}

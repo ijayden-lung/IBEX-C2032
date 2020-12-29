@@ -1,0 +1,64 @@
+#!/usr/bin/perl -w
+
+my ($USAGE,$file,$CHR,$SRD,$threshold) = @ARGV;
+
+my %true_pas;
+open FILE,"$USAGE";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$srd,undef,$usage) = split;
+	next if $chr ne $CHR;
+	next if $srd ne $SRD;
+	next if $usage < $threshold;
+	$true_pas{$pos} = '';
+}
+
+my @sort_true_pas = sort{$a<=>$b} keys %true_pas;
+
+open FILE,"$file";
+my $header = <FILE>;
+
+($file) = (split /\//,$file)[-1];
+$file = "data/$file";
+open OUT,">$file.negative";
+my $index = 0;
+while(<FILE>){
+	chomp;
+	my @data = split /\t/;
+	my ($chr,$pos,$srd) =  @data[2..4];
+	my $pas_id = "$data[2]:$data[3]:$data[4]";
+	my $p = 0.0012;
+	if(rand() < $p){
+		my $accept = 1;
+=pod
+		my $sum = 0;
+		my $count=0;
+		for(my$i=8;$i<108;$i++){
+			if($data[$i]>0){
+				$sum+= $data[$i];
+				$count++;
+			}
+		}
+		next if $count == 0;
+		my $trimMean = $sum/$count;
+		next if $trimMean < 10;
+=cut
+		for(my$i=$index;$i<@sort_true_pas;$i++){
+			if($sort_true_pas[$i] - $pos < -50){
+				$index = $i;
+				next;
+			}
+			elsif($sort_true_pas[$i] - $pos < 50){
+				$accept = 0;
+			}
+			else{
+				last;
+			}
+		}
+		if($accept == 1){
+			$data[0] = $pas_id;
+			print OUT join("\t",@data),"\n";
+		}
+	}
+}

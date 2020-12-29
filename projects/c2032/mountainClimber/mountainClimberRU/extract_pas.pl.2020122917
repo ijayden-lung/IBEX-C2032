@@ -1,0 +1,98 @@
+#!/usr/bin/perl -w
+
+#my @type = qw/DistalPolyA ExonicAPA IntronicAPA TandemAPA DistalLeft DistalRight TandemLeft TandemRight/
+my @type = qw/DistalPolyA ExonicAPA IntronicAPA TandemAPA/;
+open FILE,"Merge.bed";
+open OUT,">bl6.pAs.mountainClimber.txt";
+print OUT "pas_id\tpas_type\tchr\tpos\tstrand\tsymbol\tusage\n";
+my %pas_pos;
+while(<FILE>){
+	chomp;
+	next if $_ =~ /^track/;
+	my ($chr,$pos,undef,$info,$usage,$srd) =  split;
+	$chr = "chr$chr";
+	my ($pas_type,$symbol) = split /:/,$info;
+	if(grep { $_ eq $pas_type } @type){
+		print OUT "$chr:$pos:$srd\t$pas_type\t$chr\t$pos\t$srd\t$symbol\t$usage\n";
+		$pas_pos{"$chr:$srd"}->{$pos} =  "$chr:$pos:$srd\t$pas_type\t$chr\t$pos\t$srd\t$symbol\t$usage";
+	}
+}
+
+
+
+my %nearest;
+my %nearReal;
+my $ground_truth = 0 ;
+open FILE,"../../SANPolyA_Join/usage_data/bl6.pAs.tianbin.usage.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$end,$srd,$symbol,$usage) = split;
+	next if $usage < 0.2;
+	$ground_truth++;
+	if(exists $pas_pos{"$chr:$srd"}){
+		my $val = $pas_pos{"$chr:$srd"};
+		while(my($pos,$val2) = each %$val){
+			if(!exists $nearest{$pos} || abs($pos-$end)<abs($nearest{$pos})){
+				$nearest{$pos} = $pos-$end;
+				$nearReal{$pos} = "GT.$chr:$end:$srd";
+			}
+		}
+	}
+}
+
+my $near_num = keys %nearest;
+my $pas_num = keys %pas_pos;
+print "$near_num\t$pas_num\n";
+
+my $RealNum25 = 0;
+my $RealNum50 = 0;
+my $RealNum100 = 0;
+while(my($pas_id,$diff) = each %nearest){
+	if(abs($diff)<100){
+		$RealNum100++;
+		if(abs($diff)<50){
+			$RealNum50++;
+			if(abs($diff)<25){
+				$RealNum25++;
+			}
+		}
+	}
+}
+$recall25 = $RealNum25/$ground_truth;
+$recall50 = $RealNum50/$ground_truth;
+$recall100 = $RealNum100/$ground_truth;
+print  "ground truth: $RealNum25\t$RealNum50\t$RealNum100\t$ground_truth\n";
+print  "recall: $recall25\t$recall50\t$recall100\n";
+
+
+
+my $precis25 = 0;
+my $precis50 = 0;
+my $precis100 = 0;
+
+open OUT,">bl6.pAs.mountainClimber.predict.txt";
+print OUT "predict_pos\tnearestPasID\tdiffn";
+my @stat;
+foreach my $key (sort{$a<=>$b} keys %nearReal){
+	my $val = $nearReal{$key};
+	my $diff = $nearest{$key};
+	print OUT "$key\t$val\t$diff\n";
+	if(abs($diff)<100){
+		$precis100++;
+		if(abs($diff)<50){
+			$precis50++;
+			if(abs($diff)<25){
+				push @stat,$diff;
+				$precis25++;
+			}
+		}
+	}
+}
+
+my $total = keys %nearest;
+my $percent25 = $precis25/$total;
+my $percent50 = $precis50/$total;
+my $percent100 = $precis100/$total;
+print "precis: $precis25\t$precis50\t$precis100\t$total\n";
+print "precision: $percent25\t$percent50\t$percent100\n";

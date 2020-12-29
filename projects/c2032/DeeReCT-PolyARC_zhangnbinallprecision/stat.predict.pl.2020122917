@@ -1,0 +1,65 @@
+#!/usr/bin/perl -w
+
+#my $file = "polyA_seq/pAs_ensembl.info.cutoff";
+#open OUT,">Stat/Polt_newround3.txt";
+#print OUT "pas_id\tusage\treadCount\tave_diff\ttype\n";
+&stat("polyA_seq/pAs_ensembl.info.cutoff");
+&stat("polyA_seq/pAs_zhangbin.info.cutoff");
+&stat("polyA_seq/pAs_tianbin.info.cutoff");
+my %my_gene;
+sub stat{
+	my ($file) = @_;
+	my $sample = $file;
+	$sample =~ s/polyA_seq\///g;
+	$sample =~ s/.info.cutoff//g;
+	$sample =~ s/pAs_//g;
+	$sample =~ s/tianbin/polyADB/g;
+	open FILE,"$file" or die "cannot open file $file";
+	my $header  = <FILE>;
+	my $total = 0;
+	my $motifNum = 0;
+	my $tandem = 0;
+	my $multi = 0;
+	my %gene;
+	while(<FILE>){
+		chomp;
+		my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif,$ave_diff) = split;
+		$my_gene{$symbol} = ''; 
+		#print OUT "$pas_id\t$usage\t$readCount\t$ave_diff\t$sample\n";
+		$total++;
+		if(exists $gene{$symbol}){
+			$multi++;
+		}
+		else{
+			$gene{$symbol} = '';
+		}
+		if($pas_type !~ /Non/){
+			$tandem++;
+		}
+		if($motif !~ /motif=0/){
+			$motifNum++;
+		}
+	}
+	my $permotif = sprintf("%.3f",$motifNum/$total);
+	my $pertandem = sprintf("%.3f",$tandem/$total);
+	my $permulti = sprintf("%.3f",$multi/$total);
+	#print "$sample\n$total\t$permotif\t$pertandem\t$permulti\n";
+}
+
+
+open FILE,"polyA_seq/pAs_predictAll.info.cutoff";
+<FILE>;
+my %hash;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif,$ave_diff,$biotype) = split;
+	if(exists $my_gene{$symbol}){
+		$hash{'in_db'}++;
+	}
+	$hash{$biotype}++;
+}
+
+while(my ($key,$val) = each %hash){
+	print "$key\t$val\n";
+}
+

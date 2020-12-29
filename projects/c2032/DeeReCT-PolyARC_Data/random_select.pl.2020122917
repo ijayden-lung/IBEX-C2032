@@ -1,0 +1,14 @@
+#!/usr/bin/perl -w
+
+my ($inp,$out) = @ARGV;
+open FILE,"$inp";
+open OUT1,">$out";
+my $header = <FILE>;
+#print OUT1 $header;
+
+while(<FILE>){
+	next if $_ =~ /^ENS/;
+	if(rand()<0.002){
+		print OUT1;
+	}
+}

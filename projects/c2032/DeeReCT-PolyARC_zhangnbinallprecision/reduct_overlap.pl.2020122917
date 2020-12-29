@@ -1,0 +1,45 @@
+#!/usr/bin/perl -w
+
+open FILE,"polyA_seq/pAs_zhangbin.info.cutoff";
+#open FILE,"ensembl_data/bl6.pAs.raw6.ensembl.txt";
+<FILE>;
+my @total;
+my $pre_pos = 0;
+my $pre_type = "NA";
+my $pre_id = "NA";
+my $pre = "NA";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand) = (split)[0,1,2,3,4];
+	next if $chr =~ /chrY/;
+	next if $chr =~ /JH/;
+	next if $chr =~ /GL/;
+	push @total,$_;
+	if(abs($pos-$pre_pos)<25){
+		print "$pre\n$_\n";
+		if($pas_type =~ /terminal/){
+			pop @total;
+			pop @total;
+			push @total,$_;
+		}
+		elsif($pre_type =~ /terminal/){
+			pop @total;
+		}
+		else{
+			#pop @total;
+			#pop @total;
+			#push @total,$_;
+		}
+	}
+	$pre_pos = $pos;
+	$pre_type = $pas_type;
+	$pre_id = $pas_id;
+	$pre = $_;
+}
+
+=pod
+open OUT,">ensembl_data/bl6.pAs.raw7.ensembl.txt";
+print OUT "pas_id\tpas_type\tchr\tpos\tstrand\tsymbol\n";
+foreach my $ele (@total){
+	print OUT "$ele\n";
+}

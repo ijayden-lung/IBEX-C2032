@@ -1,0 +1,21 @@
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J post_processing_chrX
+#SBATCH --time=72:00:00
+#SBATCH --mem=30G
+
+cd /home/zhouj0d/c2032/MOUNTAIN/human_brain_merge_scangenome
+
+perl /home/zhouj0d/c2032/ENCODE/scanGenome.maximum_sum4.pl 30 -1 humanBrain.pAs.scanGenome.step1.str1.REP1.chrX.Trimmed10.37.txt -1/humanBrain.pAs.scanGenome.step1.str1.REP1.chrX.Trimmed10.summary.processed.txt.output1
+
+perl /home/zhouj0d/c2032/ENCODE/scanGenome.maximum_sum4.reverse.pl 30 -1 humanBrain.pAs.scanGenome.step1.str1.REP1.chrX.Trimmed10.37.txt -1/humanBrain.pAs.scanGenome.step1.str1.REP1.chrX.Trimmed10.summary.processed.txt.output2
+
+perl /home/zhouj0d/c2032/ENCODE/postprocess.createALldataset.bidirection.pl -1/humanBrain.pAs.scanGenome.step1.str1.REP1.chrX.Trimmed10.summary.processed.txt.output1 -1/humanBrain.pAs.scanGenome.step1.str1.REP1.chrX.Trimmed10.summary.processed.txt.output2 -1/humanBrain.pAs.scanGenome.step1.str1.REP1.chrX.Trimmed10.summary.processed.txt.output
+
+perl /home/zhouj0d/c2032/ENCODE/scanGenome.maximum_sum4.pl 30 -1 humanBrain.pAs.scanGenome.step1.str2.REP1.chrX.Trimmed10.37.txt -1/humanBrain.pAs.scanGenome.step1.str2.REP1.chrX.Trimmed10.summary.processed.txt.output1
+
+perl /home/zhouj0d/c2032/ENCODE/scanGenome.maximum_sum4.reverse.pl 30 -1 humanBrain.pAs.scanGenome.step1.str2.REP1.chrX.Trimmed10.37.txt -1/humanBrain.pAs.scanGenome.step1.str2.REP1.chrX.Trimmed10.summary.processed.txt.output2
+
+perl /home/zhouj0d/c2032/ENCODE/postprocess.createALldataset.bidirection.pl -1/humanBrain.pAs.scanGenome.step1.str2.REP1.chrX.Trimmed10.summary.processed.txt.output1 -1/humanBrain.pAs.scanGenome.step1.str2.REP1.chrX.Trimmed10.summary.processed.txt.output2 -1/humanBrain.pAs.scanGenome.step1.str2.REP1.chrX.Trimmed10.summary.processed.txt.output
+

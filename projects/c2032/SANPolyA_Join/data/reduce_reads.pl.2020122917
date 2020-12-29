@@ -1,0 +1,11 @@
+#!/usr/bin/perl -w
+
+open FILE,"bl6.pAs.negative.REP1.tworound4.txt";
+open OUT,">hg38.pAs.brain.negative.round0.txt";
+while(<FILE>){
+	chomp;
+	if(rand()<0.88){
+		print OUT "$_\n";
+	}
+}
+

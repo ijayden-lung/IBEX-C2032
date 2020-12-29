@@ -1,0 +1,74 @@
+#!/usr/bin/perl -w
+
+my ($usage,$file) = @ARGV;
+print "$file\n";
+
+my $PAS = "$usage";
+open FILE,"$PAS";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$end,$srd,$symbol,$usage) = split;
+	my ($gene_id) = split /\./,$pas_id;
+	next if $usage < 0.2;
+	my $pos = $end;
+	$pas_minus{"$chr:$pos:$srd"} .= 'Origin';
+	$pas_plus{"$chr:$pos:$srd"}  .= 'Origin';
+	if($srd eq "+"){
+		$pos = $end-3;
+		$pas_plus{"$chr:$pos:$srd"} .= 'Up3';
+		$pos = $end-6;
+		$pas_plus{"$chr:$pos:$srd"} .= 'Up6';
+		$pos = $end-9;
+		$pas_plus{"$chr:$pos:$srd"} .= 'Up9';
+		$pos = $end+3;
+		$pas_plus{"$chr:$pos:$srd"} .= 'Dn3';
+		$pos = $end+6;
+		$pas_plus{"$chr:$pos:$srd"} .= 'Dn6';
+		$pos = $end+9;
+		$pas_plus{"$chr:$pos:$srd"} .= 'Dn9';
+	}
+	else{
+		$pos = $end+3;
+		$pas_minus{"$chr:$pos:$srd"} .= 'Up3';
+		$pos = $end+6;
+		$pas_minus{"$chr:$pos:$srd"} .= 'Up6';
+		$pos = $end+9;
+		$pas_minus{"$chr:$pos:$srd"} .= 'Up9';
+		$pos = $end-3;
+		$pas_minus{"$chr:$pos:$srd"} .= 'Dn3';
+		$pos = $end-6;
+		$pas_minus{"$chr:$pos:$srd"} .= 'Dn6';
+		$pos = $end-9;
+		$pas_minus{"$chr:$pos:$srd"} .= 'Dn9';
+	}
+}
+
+
+open FILE,"$file";
+my $header = <FILE>;
+($file) = (split /\//,$file)[-1];
+$file = "data/$file";
+open OUT,">$file";
+#print OUT "$header";
+while(<FILE>){
+	chomp;
+	my @data = split /\t/;
+	my $pas_id = "$data[2]:$data[3]:$data[4]";
+	if ($file =~ /str1/){
+		if(exists $pas_minus{$pas_id}){
+			my $val = $pas_minus{$pas_id};
+			$data[0] = $pas_id;
+			$data[5] = $val;
+			print OUT join("\t",@data),"\n";
+		}
+	}
+	elsif ($file =~ /str2/){
+		if(exists $pas_plus{$pas_id}){
+			my $val = $pas_plus{$pas_id};
+			$data[0] = $pas_id;
+			$data[5] = $val;
+			print OUT join("\t",@data),"\n";
+		}
+	}
+}

@@ -1,0 +1,33 @@
+#!/usr/bin/perl -w
+
+my %tp;
+my %fp;
+foreach my $file (glob "data/bl6.pAs.scanGenome.step1.str2.REP1.chr*.Trimmed10.$sample.txt"){
+	my ($file) = @_;
+	open FILE,$file;
+	while(<FILE>){
+		chomp;
+		my ($pas_id,$motifNum,$chr,$pos,$srd) = split;
+		($motifNum) = split /\=/,$motifNum; 
+		if($srd=="+"){
+			if($pas_id =~ /chr/){
+				$fp{$pas_id} = $motifNum;
+			}
+			else{
+				($pas_id,$shift) = split /\-pos/,$pas_id;
+				my $predictPos = $pos+100-$shift;
+				$tp{$pas_id}->{$predictPos} = $motifNum;
+			}
+		}
+	}
+}
+
+
+open FILE,"Stat/postprocess.allDatasetPredict.distribute.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$realPos,$diff) = split;
+	$predicPos = $realPos+$diff;
+
+

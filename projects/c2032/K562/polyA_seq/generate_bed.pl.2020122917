@@ -1,0 +1,28 @@
+#!/usr/bin/perl -w
+
+my ($inp,$out) = @ARGV;
+
+open FILE,"sort -k 3,3 -k 4,4n $inp | ";
+open OUT,">$out";
+while(<FILE>){
+	next if $_ =~ /^pas_id/;
+	my ($pas_id,$pas_type,$chr,$pos,$strand) = split;
+	my @data = split;
+	my $pre = $pos-24;
+	my $end = $pos+24;
+	print OUT "$chr\t$pre\t$end\t$pas_id\t$pos\t$strand\n";
+}
+
+
+=pod
+open FILE,"sort -k 2,2 -k 3,3n $inp | ";
+open OUT,">$out";
+while(<FILE>){
+	next if $_ =~ /^pas_id/;
+	my ($gene_id,$chr,$pos,$strand) = split;
+	my $pre = $pos-24;
+	my $end = $pos+24;
+	my $pas_id = "$chr:$pos:$strand";
+	print OUT "$chr\t$pre\t$end\t$pas_id\t$pos\t$strand\n";
+}
+=cut

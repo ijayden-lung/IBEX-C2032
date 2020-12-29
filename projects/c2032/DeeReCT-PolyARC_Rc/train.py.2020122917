@@ -1,0 +1,189 @@
+#!/usr/bin/env python3
+
+import numpy as np
+import tensorflow as tf
+import sys, os
+import argparse
+from model import Net
+#from tensorflow import set_random_seed
+#set_random_seed(1)
+
+############ Parameters ############
+BATCH_SIZE = 64
+PATCH_SIZE = 10
+DEPTH = 16
+NUM_HIDDEN = 64
+NUM_LABELS = 2
+NUM_EPOCHS = 100
+############ **************** ############
+
+def pad_dataset(dataset, labels):
+	''' Pad sequences to (length + 2*DEPTH - 2) wtih 0.25 '''
+	new_dataset = np.ones([dataset.shape[0], dataset.shape[1]+2*PATCH_SIZE-2, dataset.shape[2], dataset.shape[3]], dtype = np.float32) * 0.25
+	new_dataset[:, PATCH_SIZE-1:-(PATCH_SIZE-1), :, :] = dataset
+	labels = (np.arange(NUM_LABELS) == labels[:,None]).astype(np.float32)
+	return new_dataset, labels
+
+def get_accuracy(predictions, labels):
+  return (100.0 * np.sum(np.argmax(predictions, 1) == np.argmax(labels, 1))
+	      / predictions.shape[0])
+
+def get_pref(predictions, labels):
+	preds=np.argmax(predictions, 1)
+	labels=np.argmax(labels, 1)
+	TP = 0
+	FP = 0
+	TN = 0
+	FN = 0
+	for i in range(len(preds)):
+		if labels[i]==preds[i]==0:
+				TP += 1
+		if preds[i]==1 and labels[i]!=preds[i]:
+				FN += 1
+		if labels[i]==preds[i]==1:
+				TN += 1
+		if preds[i]==0 and labels[i]!=preds[i]:
+				FP += 1
+	return(TP, FP, TN, FN)
+
+if __name__ == '__main__':
+	parser = argparse.ArgumentParser()
+	parser.add_argument('data', help='Path to data npz files')
+	parser.add_argument('--out', default=None, help='Save model weights to (.npz file)')
+	parser.add_argument('--hparam', default=None, help='Hyper-params (.npz file), default using random hyper-params')
+	parser.add_argument('--trainid', default=None, help='Train ID')
+
+	opts = parser.parse_args()
+
+	# Load and pad data
+	data = np.load(opts.data)
+	TRAIN_ID = opts.trainid
+	train_data, train_labels = pad_dataset(data['train_dataset'], data['train_labels'])
+	valid_data, valid_labels = pad_dataset(data['valid_dataset'], data['valid_labels'])
+
+	# Build model and trainning graph
+	hyper_dict = dict(np.load(opts.hparam)) if opts.hparam is not None else None
+	model = Net(hyper_dict)
+	model.build_training_graph()
+	#####save new hyper parameter
+	#new_hyper = model.hyper_dict 
+	#np.savez(opts.newpara, **new_hyper)
+
+	#######Output File
+	W.write('epoch\ttrain_score\tvalid_score\tTP\tFP\tTN\tFN\terror_rate\taccuracy_score\tmicro_precision_score\tmacro_precisi    on_score\tmicro_recall_score\tmacro_recall_score\tf1_score\tcohen_kappa_score\troc_auc_score\n')
+	
+	
+	
+	# Kick off training
+	sess = tf.Session()
+	sess.run(tf.global_variables_initializer())
+
+	if opts.pretrained is not None:
+	    model.load_weights(opts.pretrained, sess)
+	    print('Fine-tuning the pre-trained model %s'%opts.pretrained)
+	else:
+	    print('Initialized')
+
+	
+	pred = model.get_prediction(sess, valid_data, False)
+	tp,fp,tn,fn  = get_pref(pred, valid_labels)
+	accuracy = (tp+tn)/(tp+tn+fp+fn)
+	precision = tp/(tp+fp)
+	recall =  tp/(tp+fn)
+	f1score = 2*precision*recall/(precision+recall)
+	print('Validation accuracy/precision/f1score at the beginning: %.5f%%, %.5f%%, %.5f%%' %(accuracy,precision,f1score))
+
+	train_resuts, valid_results = [], []
+	save_weights = []
+	for epoch in range(NUM_EPOCHS):
+	    permutation = np.random.permutation(train_labels.shape[0])
+	    shuffled_dataset = train_data[permutation, :, :]
+	    shuffled_labels = train_labels[permutation, :]
+
+		tps = 0.
+		fps = 0.
+		tns = 0.
+		fns = 0.
+	    for step in range(shuffled_labels.shape[0] // BATCH_SIZE):
+	        offset = step * BATCH_SIZE
+	        batch_data = train_data[offset:(offset+BATCH_SIZE), :, :, :]
+	        batch_labels = train_labels[offset:(offset+BATCH_SIZE), :]
+	        fd = {
+	            model.dataset: batch_data, 
+	            model.labels: batch_labels,
+	            model.istrain: True
+	        }
+	        _, pred = sess.run([model.optimizeOp, model.prediction], feed_dict=fd)
+			tp,fp,tn,fn  = get_pref(pred, batch_labels)
+			tps += tp
+			fps += fp
+			tns += tn
+			fns += fn
+	        sess.run(model.stepOp)
+
+	    #####Training accuracy
+		accuracy = (tps+tns)/(tps+tns+fps+fns)
+		precision = tps/(tps+fps)
+		recall = tps/(tps+fns)
+		f1score = 2*precision*recall/(precision+recall)
+	    train_resuts.append(accuracy)
+		
+		#####Validation accuracy
+	    pred = model.get_prediction(sess, valid_data, False)
+		vtp,vfp,vtn,vfn = get_pref(pred, valid_labels)
+		val_accuracy = (vtp+vtn)/(vtp+vtn+vfp+vfn)
+		val_precision = vtp/(vtp+vfp)
+		val_recall = vtp/(vtp+vfn)
+		val_f1score = 2*val_precision*val_recall/(val_precision+val_recall)
+	    valid_results.append(val_accuracy)
+
+		#### Run Evaluation
+
+		TP,FP,TN,FN = vtp,vfp,vtn,vfn
+		error_rate=1-(TP+TN)/(TP+TN+FP+FN)
+		accuracy_score=metrics.accuracy_score(labels_new,preds_new)
+		micro_precision_score=metrics.precision_score(labels_new,preds_new, average='micro')
+		macro_precision_score=metrics.precision_score(labels_new,preds_new, average='macro')
+		micro_recall_score=metrics.recall_score(labels_new,preds_new, average='micro')
+		macro_recall_score=metrics.recall_score(labels_new,preds_new, average='macro')
+		f1_score=metrics.f1_score(labels_new,preds_new, average='weighted')
+		cohen_kappa_score=metrics.cohen_kappa_score(labels_new,preds_new)
+		roc_auc_score=metrics.roc_auc_score(labels_new,preds_new)
+
+		W.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n'%(str(epoch),str(train_resuts[-1]),\
+		str(valid_results[-1]),str(TP),str(FP),\
+		str(TN),str(FN),str(error_rate),str(accuracy_score),str(micro_precision_score),str(macro_precision_score),\
+		str(micro_recall_score),str(macro_recall_score),str(f1_score),str(cohen_kappa_score),\
+		str(roc_auc_score)))
+		
+		print('Epoch: %d'%epoch)
+		print('Training accuracy/precision/f1score: %.5f%%, %.5f%%, %.5f%%' % (accuracy, precision,f1score))
+		print('Validation accuracy/precision/f1score: %.5f%%, %.5f%%, %.5f%%' %(val_accuracy,val_precision,val_f1score))
+
+	    # Early stopping based on validation results
+	    if epoch > 10 and valid_results[-11] > max(valid_results[-10:]):
+	        train_resuts = train_resuts[:-10]
+	        valid_results = valid_results[:-10]
+	        print('\n\n########################\nFinal result:')
+	        print("Best valid epoch: %d"%(len(train_resuts)-1))
+	        print("Training accuracy: %.2f%%"%train_resuts[-1])
+	        print("Validation accuracy: %.2f%%"%valid_results[-1])
+
+	        if opts.out is not None:
+	            np.savez(opts.out, **save_weights[0])
+	        break
+
+	    # Model saving
+	    sw = sess.run(model.weights)
+	    save_weights.append(sw)
+	    if epoch > 10:
+	        save_weights.pop(0)
+
+	    if epoch == NUM_EPOCHS-1:
+	        print('\n\n########################\nFinal result:')
+	        print("Best valid epoch: %d"%(len(train_resuts)-1))
+	        print("Training accuracy: %.2f%%"%train_resuts[-1])
+	        print("Validation accuracy: %.2f%%"%valid_results[-1])
+	        if opts.out is not None:
+	            np.savez(opts.out, **save_weights[-1])
+

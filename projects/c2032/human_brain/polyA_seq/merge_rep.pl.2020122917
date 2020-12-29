@@ -1,0 +1,35 @@
+#!/usr/bin/perl -w
+
+my ($count1,$count2,$out) = @ARGV;
+
+
+my %hash;
+open FILE,"$count1";
+while(<FILE>){
+	chomp;
+	my ($chr,$pre,$end,$motif,$readCount,$strand) = split;
+	$hash{"$chr:$end:$strand"} = $readCount;
+}
+
+
+open FILE,"$count2";
+my %hash2;
+while(<FILE>){
+	chomp;
+	my ($chr,$pre,$end,$motif,$readCount,$strand) = split;
+	$hash2{"$chr:$end:$strand"} = $readCount;
+}
+
+open OUT,">$out";
+print OUT "pas_id\tchr\tstart\tend\tposition\tstrand\trep1\trep2\n";
+
+open FILE,"/home/longy/workspace/apa_predict/pas_dataset/human.PAS.hg38.bed";
+while(<FILE>){
+	chomp;
+	my ($chr,$pre,$end,$pas_id,undef,$strand) = split;
+	if(exists $hash{$pas_id} && $hash2{$pas_id}){
+		$new_pas_id = "$chr:$end:$strand";
+		print OUT "$new_pas_id\t$chr\t$pre\t$end\t$end\t$strand\t$hash{$pas_id}\t$hash2{$pas_id}\n";
+	}
+}
+

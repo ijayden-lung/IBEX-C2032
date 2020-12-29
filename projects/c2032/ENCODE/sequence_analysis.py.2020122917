@@ -1,0 +1,147 @@
+import pandas as pd
+import pybedtools
+import numpy as np
+import pickle
+import argparse
+
+def save_obj(obj, name):
+    with open(name + '.pkl', 'wb') as f:
+        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+            
+def load_obj(name):
+    with open(name + '.pkl', 'rb') as f:
+        return pickle.load(f)
+
+# ...ATCATTTAGCATTTAGTACATTGAT...
+# .....CA.....CA..M....CA........
+# OUT: Position
+# DISTANCE: left to M: -, right to M: +
+# Onlyone: closest CA to M
+# No strand
+
+def find_all_motif(motif,seq):
+    distance=[]
+    for i in range(len(seq)-len(motif)):
+        if seq[i:(i+len(motif))]==motif:
+            distance.append(i-100)
+    
+    left=[x for x in distance if x<0]
+    right=[x for x in distance if x>0]
+    if len(left)!=0:
+        max_left=[np.max(left)]
+    else:
+        max_left=[-np.inf]
+    if len(right)!=0:
+        min_right=[np.min(right)]
+    else:
+        min_right=[np.inf]
+    if np.abs(max_left)<=np.abs(min_right):
+        return(distance,max_left)
+    else:
+        return(distance,min_right)
+    
+def analysis(dt,cell1,target1,rep1,cell2,target2,rep2,mark='TP'):
+    RECORD={}
+    count=0
+    
+    for i in range(len(dt)):
+        try:
+            CHR=dt.iloc[i,0].lstrip('chr')
+            POS=dt.iloc[i,1]
+            STR=dt.iloc[i,5]
+            USAGE=dt.iloc[i,3].rstrip('%')
+            print(i,'/',len(dt))
+            seq = pybedtools.BedTool("%s %s %s"%(str(CHR),str(POS-100),str(POS+100)), from_string=True)
+            seq = seq.sequence(fi=fasta)
+            seq = open(seq.seqfn).read().split('\n')[1]
+
+            if STR=='+':
+                CS_distance,CS_distance_close=find_all_motif('CA',seq)
+                # AAGAAA AATAAA AATACA AATAGA AATATA ACTAAA AGTAAA ATTAAA CATAAA GATAAA TATAAA AAAAAG
+                PAS_distance_1,PAS_distance_close_1=find_all_motif('AATAAA',seq)
+                PAS_distance_2,PAS_distance_close_2=find_all_motif('AAGAAA',seq)
+                PAS_distance_3,PAS_distance_close_3=find_all_motif('AATACA',seq)
+                PAS_distance_4,PAS_distance_close_4=find_all_motif('AATAGA',seq)
+                PAS_distance_5,PAS_distance_close_5=find_all_motif('AATATA',seq)
+                PAS_distance_6,PAS_distance_close_6=find_all_motif('ACTAAA',seq)
+                PAS_distance_7,PAS_distance_close_7=find_all_motif('AGTAAA',seq)
+                PAS_distance_8,PAS_distance_close_8=find_all_motif('ATTAAA',seq)
+                PAS_distance_9,PAS_distance_close_9=find_all_motif('CATAAA',seq)
+                PAS_distance_10,PAS_distance_close_10=find_all_motif('GATAAA',seq)
+                PAS_distance_11,PAS_distance_close_11=find_all_motif('TATAAA',seq)
+                PAS_distance_12,PAS_distance_close_12=find_all_motif('AAAAAG',seq)
+            elif STR=='-':
+                CS_distance,CS_distance_close=find_all_motif('TG',seq)
+                PAS_distance_1,PAS_distance_close_1=find_all_motif('TTTATT',seq)
+                PAS_distance_2,PAS_distance_close_2=find_all_motif('TTTCTT',seq)
+                PAS_distance_3,PAS_distance_close_3=find_all_motif('TGTATT',seq)
+                PAS_distance_4,PAS_distance_close_4=find_all_motif('TCTATT',seq)
+                PAS_distance_5,PAS_distance_close_5=find_all_motif('TATATT',seq)
+                PAS_distance_6,PAS_distance_close_6=find_all_motif('TTTAGT',seq)
+                PAS_distance_7,PAS_distance_close_7=find_all_motif('TTTACT',seq)
+                PAS_distance_8,PAS_distance_close_8=find_all_motif('TTTAAT',seq)
+                PAS_distance_9,PAS_distance_close_9=find_all_motif('TTTATG',seq)
+                PAS_distance_10,PAS_distance_close_10=find_all_motif('TTTATC',seq)
+                PAS_distance_11,PAS_distance_close_11=find_all_motif('TTTATA',seq)
+                PAS_distance_12,PAS_distance_close_12=find_all_motif('CTTTTT',seq)
+
+                CS_distance,CS_distance_close=[-x for x in CS_distance],[-x for x in CS_distance_close]
+
+                PAS_distance_1,PAS_distance_close_1=[-x for x in PAS_distance_1],[-x for x in PAS_distance_close_1]
+                PAS_distance_2,PAS_distance_close_2=[-x for x in PAS_distance_2],[-x for x in PAS_distance_close_2]
+                PAS_distance_3,PAS_distance_close_3=[-x for x in PAS_distance_3],[-x for x in PAS_distance_close_3]
+                PAS_distance_4,PAS_distance_close_4=[-x for x in PAS_distance_4],[-x for x in PAS_distance_close_4]
+                PAS_distance_5,PAS_distance_close_5=[-x for x in PAS_distance_5],[-x for x in PAS_distance_close_5]
+                PAS_distance_6,PAS_distance_close_6=[-x for x in PAS_distance_6],[-x for x in PAS_distance_close_6]
+                PAS_distance_7,PAS_distance_close_7=[-x for x in PAS_distance_7],[-x for x in PAS_distance_close_7]
+                PAS_distance_8,PAS_distance_close_8=[-x for x in PAS_distance_8],[-x for x in PAS_distance_close_8]
+                PAS_distance_9,PAS_distance_close_9=[-x for x in PAS_distance_9],[-x for x in PAS_distance_close_9]
+                PAS_distance_10,PAS_distance_close_10=[-x for x in PAS_distance_10],[-x for x in PAS_distance_close_10]
+                PAS_distance_11,PAS_distance_close_11=[-x for x in PAS_distance_11],[-x for x in PAS_distance_close_11]
+                PAS_distance_12,PAS_distance_close_12=[-x for x in PAS_distance_12],[-x for x in PAS_distance_close_12]
+
+            PAS_distance,PAS_distance_close=[],[]
+            for j in range(1,13):
+                PAS_distance.append(eval('PAS_distance_%s'%str(j)))
+                PAS_distance_close.append(eval('PAS_distance_close_%s'%str(j)))
+
+            RECORD['%s'%str(count)]=[CHR,POS,STR,USAGE,len(CS_distance),[len(x) for x in PAS_distance],CS_distance,CS_distance_close,PAS_distance,PAS_distance_close]
+            count+=1
+        except:
+            print('Wrong')
+    save_obj(RECORD,'/home/zhouj0d/c2032/ENCODE/sequence_analysis/%s_%s_%s_to_%s_%s_%s.%s'%(cell1,target1,rep1,cell2,target2,rep2,mark))
+
+fasta = pybedtools.example_filename('/home/zhouj0d/c2032/Homo_sapiens.GRCh38.dna.primary_assembly.fa')
+    
+parser = argparse.ArgumentParser(description='Prediction')
+parser.add_argument('--cell1', help='cell line', default='HepG2')
+parser.add_argument('--target1', help='target rbp', default='ZRANB2')
+parser.add_argument('--rep1', help='replicate', default='REP1')
+parser.add_argument('--cell2', help='cell line', default='HepG2')
+parser.add_argument('--target2', help='target rbp', default='ZRANB2')
+parser.add_argument('--rep2', help='replicate', default='REP1')
+args = parser.parse_args()
+
+CELL1=args.cell1
+TARGET1=args.target1
+REP1=args.rep1
+CELL2=args.cell2
+TARGET2=args.target2
+REP2=args.rep2
+
+df=pd.read_csv('/home/zhouj0d/c2032/ENCODE/distance/%s_%s_%s_to_%s_%s_%s.bed'%(CELL1,TARGET1,REP1,CELL2,TARGET2,REP2),sep='\t')
+TP_GT=df[(df.distance_up>-20)|(df.distance_down<20)]
+TP_GT.index=[x for x in range(len(TP_GT))]
+FN=df[(df.distance_up<=-20)&(df.distance_down>=20)]
+FN.index=[x for x in range(len(FN))]
+
+df=pd.read_csv('/home/zhouj0d/c2032/ENCODE/distance/%s_%s_%s_to_%s_%s_%s.bed'%(CELL2,TARGET2,REP2,CELL1,TARGET1,REP1),sep='\t')
+TP_Pred=df[(df.distance_up>-20)|(df.distance_down<20)]
+TP_Pred.index=[x for x in range(len(TP_Pred))]
+FP=df[(df.distance_up<=-20)&(df.distance_down>=20)]
+FP.index=[x for x in range(len(FP))]
+
+analysis(TP_GT,CELL1,TARGET1,REP1,CELL2,TARGET2,REP2,mark='TP_GT')
+analysis(FN,CELL1,TARGET1,REP1,CELL2,TARGET2,REP2,mark='FN')
+analysis(TP_Pred,CELL2,TARGET2,REP2,CELL1,TARGET1,REP1,mark='TP_Pred')
+analysis(FP,CELL2,TARGET2,REP2,CELL1,TARGET1,REP1,mark='FP')

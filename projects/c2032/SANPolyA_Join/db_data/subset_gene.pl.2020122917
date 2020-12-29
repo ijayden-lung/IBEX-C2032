@@ -1,0 +1,71 @@
+#!/usr/bin/perl -w
+#
+
+my ($distance,$tianbin,$predict,$out_tianbin,$out_predict) = @ARGV;
+
+open FILE,"$distance";
+my %db_pas;
+while(<FILE>){
+	next if $_ =~ /predict/;
+	chomp;
+	my ($pos,$id,$diff,$chr,$strand,$gt_id,$gt_diff,$zb_id,$zb_diff,$db_id,$db_diff) = split;
+	$pos = sprintf("%.0f",$pos);
+	$db_pas{"$chr:$pos:$strand"} = "$db_diff\t$db_id";
+}
+
+my %predict;
+open FILE,"$predict";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol) = split;
+	$predict{$symbol} = '';
+}
+
+my %database;
+my %pas_type;
+open FILE,"$tianbin";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$motif) = split;
+	if(exists $predict{$symbol}){
+		$database{$symbol} = '';
+		if($pas_type =~ /UTR/){ 
+			$pas_type = "tandemUTR";
+		}
+		else{
+			$pas_type = "Non_tandemUTR";
+		}
+		$pas_type{$pas_id} = "$pas_type\t$chr\t$pos\t$strand\t$symbol\t$motif";
+	}
+}
+
+
+open FILE,"$predict";
+$header = <FILE>;
+chomp $header;
+open OUT,">$out_predict";
+print OUT "$header\tdistance\tmap_id\n";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol) = split;
+	if(exists $database{$symbol}){
+		my $distance = $db_pas{"$chr:$pos:$strand"};
+		print OUT "$_\t$distance\n";
+	}
+}
+
+
+open FILE,"$tianbin";
+my $header = <FILE>;
+open OUT,">$out_tianbin";
+#print OUT "pas_id\tpas_type\tchr\tposition\tstrand\tsymbol\tmotif\tusage\treadCount\n";
+print OUT "$header";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol) = split;
+	if(exists $database{$symbol}){
+		print OUT "$_\n";
+	}
+}

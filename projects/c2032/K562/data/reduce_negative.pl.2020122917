@@ -1,0 +1,10 @@
+#!/usr/bin/perl -w
+
+open FILE,"hg38.pAs.negative.Control_Overlap.round0.txt";
+open OUT,">hg38.pAs.negative.Control_Overlap.round0.txt2";
+while(<FILE>){
+	chomp;
+	if(rand()<0.85){
+		print OUT "$_\n";
+	}
+}

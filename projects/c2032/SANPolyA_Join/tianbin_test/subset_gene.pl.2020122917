@@ -1,0 +1,80 @@
+#!/usr/bin/perl -w
+#
+
+my ($scanGenome,$predict,$data,$out1,$out2) = @ARGV;
+
+
+#open FILE,"bl6.pAs.scanGenome.upround8.txt";
+open FILE,"$scanGenome";
+my %db_pas;
+while(<FILE>){
+	next if $_ =~ /predict/;
+	chomp;
+	my ($pos,$id,$diff,$chr,$strand,$gt_id,$gt_diff,$zb_id,$zb_diff,$db_id,$db_diff) = split;
+	$pos = sprintf("%.0f",$pos);
+	$db_pas{"$chr:$pos:$strand"} = "$db_diff\t$db_id";
+}
+
+my %predict;
+#open FILE,"bl6.pAs.predict.upround8.usage.txt";
+open FILE,"$predict";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol) = split;
+	$predict{$symbol} = '';
+}
+
+my %database;
+my %overlap;
+my %pas_type;
+#open FILE,"../../SANPolyA_Join/usage_data/bl6.pAs.tianbin.usage.train.txt";
+open FILE,"$data";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$motif) = split;
+	$database{$symbol} = '';
+	if(exists $predict{$symbol}){
+		$overlap{$symbol} = '';
+	}
+}
+
+my $predict_gene = keys %predict;
+my $database_gene = keys %database;
+my $overlap_gene = keys %overlap;
+print "predict gene number: $predict_gene\n";
+print "database gene number: $database_gene\n";
+print "overlap gene number: $overlap_gene\n";
+
+#open FILE,"bl6.pAs.predict.upround8.usage.txt";
+open FILE,"$predict";
+$header = <FILE>;
+chomp $header;
+#open OUT,">bl6.pAs.subset.predict.txt";
+open OUT,">$out1";
+print OUT "$header\tdistance\tmap_id\n";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol) = split;
+	if(exists $overlap{$symbol}){
+		my $distance = $db_pas{"$chr:$pos:$strand"};
+		print OUT "$_\t$distance\n";
+	}
+}
+
+
+#open FILE,"../../SANPolyA_Join/usage_data/bl6.pAs.tianbin.usage.train.txt";
+open FILE,"$data";
+$header = <FILE>;
+chomp $header;
+#open OUT,">bl6.pAs.subset.tianbin.txt";
+open OUT,">$out2";
+print OUT "$header\n";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol) = split;
+	if(exists $overlap{$symbol}){
+		print OUT "$_\n";
+	}
+}

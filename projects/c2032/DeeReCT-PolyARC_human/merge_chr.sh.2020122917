@@ -1,0 +1,22 @@
+#!/bin/bash
+
+#cat train_data/humanBrain.pAs.scanGenome.step1.str*.REP1.chr*.Trimmed10.txt.negative >train_data/humanBrain.pAs.negative.REP1.newround0.txt
+#rm train_data/humanBrain.pAs.scanGenome.step1.str*.REP1.chr*.Trimmed10.txt.negative
+
+#cat train_data/humanBrain.pAs.scanGenome.step1.str*.REP1.chr*.Trimmed10.txt >train_data/humanBrain.pAs.positive.REP1.newround0.txt
+#rm train_data/humanBrain.pAs.scanGenome.step1.str*.REP1.chr*.Trimmed10.txt
+
+
+cat train_data/bl6.pAs.predictFalsePositive.REP1.newround1.txt.chr* > train_data/humanBrain.pAs.predictFalsePositive.REP1.newround1.txt
+rm train_data/bl.pAs.predictFalsePositive.REP1.newround1.txt.chr*
+
+
+cat train_data/humanBrain.pAs.negative.REP1.newround1.txt.chr* >train_data/humanBrain.pAs.negative.REP1.newround1.txt
+rm train_data/humanBrain.pAs.negative.REP1.newround1.txt.chr*
+
+#cat train_data/humanBrain.pAs.predictFalsePositive.REP1.comround4.txt.chr* > train_data/humanBrain.pAs.predictFalsePositive.REP1.comround4.txt
+#rm train_data/humanBrain.pAs.predictFalsePositive.REP1.comround4.txt.chr*
+
+#cat train_data/humanBrain.pAs.predictFalsePositive.REP1.zbround1.txt.chr* > train_data/humanBrain.pAs.predictFalsePositive.REP1.zbround1.txt
+#rm train_data/humanBrain.pAs.predictFalsePositive.REP1.zbround1.txt.chr*
+

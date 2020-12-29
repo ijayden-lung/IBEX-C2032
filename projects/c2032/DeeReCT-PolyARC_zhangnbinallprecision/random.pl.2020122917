@@ -1,0 +1,11 @@
+#!/usr/bin/perl -w
+
+open FILE,"train_data/bl6.pAs.negative.REP1.newround0.txt" or die;
+my $header = <FILE>;
+open OUT,">train_data/bl6.pAs.negative.REP1.selround0.txt" or die;
+print OUT "$header";
+while(<FILE>){
+	if(rand()<0.22){
+		print OUT "$_";
+	}
+}

@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+
+import numpy as np
+import tensorflow as tf
+import sys, os
+import argparse
+from model4 import Net
+from supporting import *
+
+parser = argparse.ArgumentParser()
+parser.add_argument('data', help='Path to data file, can be .txt file containing sequeces or .npz file containing one-hot encoded sequences')
+parser.add_argument('wts', help='Trained model (.npz file)')
+parser.add_argument('--out', default=None, help='Save predictions to (.txt file)')
+opts = parser.parse_args()
+
+
+
+def read_file(filename):
+	data = []
+	alphabet = np.array(['A', 'G', 'T', 'C'])
+	seq_len=0
+	with open(filename, 'r') as f:
+		next(f)
+		for line in f:
+			line = line.strip('\n')
+			array = line.split('\t')
+			base = list(array[7])
+			seq_len = len(base)
+			seq = np.array(base, dtype = '|U1').reshape(-1, 1)
+			seq_data = (seq == alphabet).astype(np.float32)
+			data.append(seq_data)
+	data = np.stack(data).reshape([-1,seq_len, 1, 4])
+	return data
+
+
+if __name__ == '__main__':
+   # Load and pad data
+	if opts.data.endswith('.npz'):
+		data = np.load(opts.data)
+		dataset = data['test_dataset']
+		labels = data['test_labels'] if 'test_labels' in data else []
+		pasid = data['test_pasid'] if 'test_pasid' in data else []
+		#dataset = data['valid_dataset']  #####Find parameter
+		#labels = data['valid_labels'] if 'valid_labels' in data else [] #####Find parameter
+		#pasid = data['valid_pasid'] if 'valid_pasid' in data else []    #####Find parameter
+	elif opts.data.endswith('.txt'):
+		dataset = read_file(opts.data)
+		labels = []
+
+	
+	# Build model
+	sess = tf.Session()
+	model = Net()
+
+	# Load trained model
+	model.load_weights(opts.wts, sess)
+	print('\n########################')
+	print('Model loaded from %s.'%opts.wts)
+
+	dataset, labels = pad_dataset(dataset, labels)
+	print("Read %d sequences and %d labels from %s."%(len(dataset), len(labels), opts.data))
+
+	predictions = model.get_prediction(sess, dataset, istrain=False)
+	if labels != []:
+		TPR= get_accuracy(predictions, pasid)
+		#with open("Stat_SeqRCOut.txt",'a') as f:
+		#	f.write)
+		#	f.write('\n')
+
+	if opts.out is not None:
+		predictions = np.argmax(predictions, 1)
+		predictions = np.where(predictions, 'F', 'T')
+		with open(opts.out, 'w') as f:
+			for idx,pred in enumerate(predictions):
+				f.write(pasid[idx]+'\t'+pred+'\n')
+		print('\nPredictions wrote to %s.'%opts.out)
+
+

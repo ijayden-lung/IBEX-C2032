@@ -1,0 +1,61 @@
+#!/usr/bin/perl -w
+
+open OUT,">Polt_newround3.txt";
+print OUT "pas_id\tusage\treadCount\tdistance\ttype\n";
+&stat("bl6.pAs.subset.predict.txt");
+&stat("bl6.pAs.subset.tianbin.txt");
+&stat("bl6.pAs.subset.fp.txt");
+&stat("bl6.pAs.subset.fn.txt");
+&stat("bl6.pAs.subset.tp.txt");
+&stat("bl6.pAs.subset.gt.txt");
+
+sub stat{
+	my ($file) = @_;
+	my $sample = $file;
+	$sample =~ s/bl6.pAs.subset.//g;
+	$sample =~ s/.txt//g;
+	$sample =~ s/tianbin/ensembl/g;
+	open FILE,"$file" or die "cannot open file $file";
+	my $header  = <FILE>;
+	my $total = 0;
+	my $motifNum = 0;
+	my $tandem = 0;
+	my $multi = 0;
+	my %gene;
+	while(<FILE>){
+		chomp;
+		my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$motif,$usage,$readCount,$distance);
+		$distance = "NA";
+		if($sample eq "ensembl" || $sample eq "fn"){
+			($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$motif,$usage,$readCount) = split;
+		}
+		elsif($sample eq "gt"){
+			($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif,$ave_diff) = split;
+		}
+		else{
+			($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif,$ave_diff,$biotype,$distance) = split;
+		}
+		print OUT "$pas_id\t$usage\t$readCount\t$distance\t$sample\n";
+		$total++;
+		$gene{$symbol}++;
+		if($pas_type !~ /Non/){
+			$tandem++;
+		}
+		if($motif !~ /motif=0/){
+			$motifNum++;
+		}
+	}
+	my $gene_num = 0;
+	while(my ($key,$val) = each %gene){
+		$gene_num++;
+		if($val>1){
+			$multi++;
+		}
+	}
+
+	my $permotif = sprintf("%.3f",$motifNum/$total);
+	my $pertandem = sprintf("%.3f",$tandem/$total);
+	my $permulti = sprintf("%.3f",$multi/$gene_num);
+	print "$sample\t$gene_num\t$total\t$permotif\t$pertandem\t$permulti\n";
+}
+

@@ -1,0 +1,515 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from torch.autograd import Variable\n",
+    "import torch\n",
+    "import torch.nn as nn\n",
+    "import torch.nn.functional as F\n",
+    "import torchvision\n",
+    "from torchvision import transforms,datasets\n",
+    "import matplotlib.pyplot as plt"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "train = datasets.MNIST(\"\",train=True,download=True,transform=transforms.Compose([transforms.ToTensor()]))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "test = datasets.MNIST(\"\",train=False,download=True,transform=transforms.Compose([transforms.ToTensor()]))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "trainset = torch.utils.data.DataLoader(train,batch_size=20,shuffle=True)\n",
+    "testet = torch.utils.data.DataLoader(test,batch_size=20,shuffle=True)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[tensor([[[[0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          ...,\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.]]],\n",
+      "\n",
+      "\n",
+      "        [[[0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          ...,\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.]]],\n",
+      "\n",
+      "\n",
+      "        [[[0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          ...,\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.]]],\n",
+      "\n",
+      "\n",
+      "        ...,\n",
+      "\n",
+      "\n",
+      "        [[[0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          ...,\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.]]],\n",
+      "\n",
+      "\n",
+      "        [[[0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          ...,\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.]]],\n",
+      "\n",
+      "\n",
+      "        [[[0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          ...,\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.],\n",
+      "          [0., 0., 0.,  ..., 0., 0., 0.]]]]), tensor([1, 0, 6, 7, 7, 4, 0, 4, 3, 7, 6, 9, 2, 3, 5, 4, 5, 4, 6, 7])]\n"
+     ]
+    }
+   ],
+   "source": [
+    "for data in trainset:\n",
+    "    print(data)\n",
+    "    break"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "torch.Size([1, 28, 28])"
+      ]
+     },
+     "execution_count": 6,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "data[0][2].shape"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<function matplotlib.pyplot.show(*args, **kw)>"
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    },
+    {
+     "data": {
+      "image/png": "iVBORw0KGgoAAAANSUhEUgAAAPsAAAD4CAYAAAAq5pAIAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEgAACxIB0t1+/AAAADh0RVh0U29mdHdhcmUAbWF0cGxvdGxpYiB2ZXJzaW9uMy4xLjEsIGh0dHA6Ly9tYXRwbG90bGliLm9yZy8QZhcZAAAOwklEQVR4nO3df7BU5X3H8c+HK14i6AgSCFWKymDVtqmaK5ohrSZO/NVOUafR0NaxHTqYNmQ0tU0Y02nsTNIhqdZpnMaKipKWmjpVJ8baJITaYTKmyIVQRTGglih6BSNYMZZf9377x12SG7zn2WXP2R/yvF8zO7t7vnv2fNnhc8/uPnvO44gQgMPfmE43AKA9CDuQCcIOZIKwA5kg7EAmjmjnxo50b4zT+HZuEsjKbv1Ee2OPR6uVCrvtiyX9naQeSXdFxOLU48dpvM7xBWU2CSBhdawsrDX9Nt52j6S/l3SJpNMlzbN9erPPB6C1ynxmny3puYh4ISL2Svq6pLnVtAWgamXCfrykl0bc31pb9nNsL7Ddb7t/n/aU2ByAMsqEfbQvAd7x29uIWBIRfRHRN1a9JTYHoIwyYd8qafqI+ydIeqVcOwBapUzY10iaZfsk20dK+rikh6tpC0DVmh56i4j9thdK+raGh96WRsTTlXUGoFKlxtkj4lFJj1bUC4AW4ueyQCYIO5AJwg5kgrADmSDsQCYIO5CJth7P/m52xLT3FdY23VJck6Rnz1uarM966I+T9VM+/YNkPfbtTdYBiT07kA3CDmSCsAOZIOxAJgg7kAnCDmSCobcGPfOXv1hY23Te7cl1h+o89w8v/2qyfuZLn0rWj//S43W2ALBnB7JB2IFMEHYgE4QdyARhBzJB2IFMEHYgE4yzV2Dn0O5kfc7yP0vW9x87mKyftnRzsp5eGxjGnh3IBGEHMkHYgUwQdiAThB3IBGEHMkHYgUwwzl6BR39yUrJ+8qLvl3p+xtFRhVJht71F0i4N/3/cHxF9VTQFoHpV7Nk/HBE/ruB5ALQQn9mBTJQNe0j6ju21theM9gDbC2z32+7fpz0lNwegWWXfxs+JiFdsT5G0wvazEbFq5AMiYomkJZJ0jCdFye0BaFKpPXtEvFK73i7pIUmzq2gKQPWaDrvt8baPPnBb0oWSNlTVGIBqlXkbP1XSQ7YPPM8/R8S3KumqC913UfG54Z/dO62NnQDNaTrsEfGCpF+rsBcALcTQG5AJwg5kgrADmSDsQCYIO5AJDnFt0Nm9Lqw9u7eNjQBNYs8OZIKwA5kg7EAmCDuQCcIOZIKwA5kg7EAmGGfHu9aYceOaXjcifdKk2HP4nUKNPTuQCcIOZIKwA5kg7EAmCDuQCcIOZIKwA5lgnB0tNWb8+OLalMnJdTd++n3J+oYrbkvWx7qnsPbEnuLzE0jS7//HqLOZ/dRRzx+ZrM+4a3OyPvjaa8l6K7BnBzJB2IFMEHYgE4QdyARhBzJB2IFMEHYgE4yzo5SeY45J1l+8d3ph7QfnfK3s1pPVVbuLx8Jf3X9sct1Nl9zRVEcHnPar85P1mb/bhePstpfa3m57w4hlk2yvsL25dj2xtW0CKKuRt/H3Srr4oGWLJK2MiFmSVtbuA+hidcMeEask7Tho8VxJy2q3l0m6rOK+AFSs2S/opkbEgCTVrqcUPdD2Atv9tvv36fA7rxfwbtHyb+MjYklE9EVE31j1tnpzAAo0G/ZttqdJUu16e3UtAWiFZsP+sKRrarevkfSNatoB0Cp1x9lt3yfpfEmTbW+V9HlJiyXdb3u+pBclfayVTaJz6o2j/+ie4nF0SVpfYiz9z189J1l//Lazk/XJaw7+XnmE7YmapC8umJWsf3PBl5P1L/U9mKzfPfEDhbXBnTuT6zarbtgjYl5B6YKKewHQQvxcFsgEYQcyQdiBTBB2IBOEHcgEh7giafD0E5P19efe0/Rzn/Lta5P1U/9kQ7I+cff3k/XBQ+7oZ6Z/MX0I6u/M/qNk/Ym+5cn60t70qahbgT07kAnCDmSCsAOZIOxAJgg7kAnCDmSCsAOZYJy9QT0u/rs4d/yW5Lp3XnlFsj7h/v9qpqW22DS/3NmFUmPppy58Jrnu0O7dpbbdSj2P1Dmhcl+6/NynTi6snfi5bU10VB97diAThB3IBGEHMkHYgUwQdiAThB3IBGEHMsE4e4MGY6iwNmFMeix6z9FO1ic01VE1jpiRPhX04xfdWucZ3pOsznig+N8+9PbbdZ67e71+Zpmj5aWZy4rnVSn3zMXYswOZIOxAJgg7kAnCDmSCsAOZIOxAJgg7kAnG2Rv0ia2/Xlj76gmrkuu+/sF9yfpxdzfVUiVeveiEZH1yT3ocfeHLH0rWe/993SH31A3GvP/UZP2OC9Pny79xW/qA9hgoHmdvlbp7dttLbW+3vWHEsptsv2x7fe1yaWvbBFBWI2/j75V08SjLb42IM2qXR6ttC0DV6oY9IlZJ2tGGXgC0UJkv6BbafrL2Nr/whFy2F9jut92/T3tKbA5AGc2G/XZJMyWdIWlA0i1FD4yIJRHRFxF9Y1Xu5IUAmtdU2CNiW0QMRsSQpDslza62LQBVayrstqeNuHu5pPTcugA6ru44u+37JJ0vabLtrZI+L+l822dICklbJKUn2j4MfHfdLxcX64yzL/vIXcn6X3/g95L1WPt0sl7GG6dFqfWHos7+YqhVR2eX03PKzGT97ZvT56z/8HvS9WtXpsfZT9m1Jllvhbphj4h5oyzu4M9AADSDn8sCmSDsQCYIO5AJwg5kgrADmeAQ1wbNeCQxRPXb6XU/2Jseftp+9jHJ+nvXpp+/jFO/MpB+wJXp8i+MeyNZf/nYyYW1wTf+N/3kZZ37/sLSmMWvJVddMeuRZP2eN9On4D7tlvThJJ0YkGTPDmSCsAOZIOxAJgg7kAnCDmSCsAOZIOxAJhhnb9BRq18orD32f+OS69Y7HPIfPvuVZP2GbQuT9aMeWp2spwxtS483X/X8aOca/Zl/mfmtZP2jcz5RWOv9t3KHee666txk/TNf+KfC2m8elR7j37gvffrvB6/+SLIem7rvFA/s2YFMEHYgE4QdyARhBzJB2IFMEHYgE4QdyIQjyp1K+FAc40lxji9o2/baZfdvpefI+O4dt5d6/if3po9+vurx4jN5H/uf6d8A1HPqH25M1u+ZsTJZP3158W8Ehsam/+9dcV769wNfmPpEsj4msS+7eOPlyXXHLkqfYyD6u28cXZJWx0q9GTs8Wo09O5AJwg5kgrADmSDsQCYIO5AJwg5kgrADmWCcvQLu7U3W/+cvzkrWb5uXntK53vHwuXo79ibrF/zVnxbWpvzrs8l1B3fubKqnTis1zm57uu3HbG+0/bTt62rLJ9leYXtz7Xpi1Y0DqE4jb+P3S7ohIk6TdK6kT9o+XdIiSSsjYpaklbX7ALpU3bBHxEBErKvd3iVpo6TjJc2VtKz2sGWSLmtVkwDKO6Qv6GyfKOlMSaslTY2IAWn4D4KkKQXrLLDdb7t/n/aU6xZA0xoOu+0Jkh6QdH1EvNnoehGxJCL6IqJvrNJfZAFonYbCbnushoO+PCIerC3eZntarT5N0vbWtAigCnWH3mxbw5/Jd0TE9SOW/42k1yNise1FkiZFxGdSz3W4Dr2V1XPcpGT9het+KVl/+JqbC2snHVHuENeyznri6sLaWwMTkuset64nWZ/yzeeT9cFt+e1/UkNvjZw3fo6kqyU9ZXt9bdmNkhZLut/2fEkvSvpYFc0CaI26YY+I70ka9S+FJHbTwLsEP5cFMkHYgUwQdiAThB3IBGEHMsEhrsBhhFNJAyDsQC4IO5AJwg5kgrADmSDsQCYIO5AJwg5kgrADmSDsQCYIO5AJwg5kgrADmSDsQCYIO5AJwg5kgrADmSDsQCYIO5AJwg5kgrADmSDsQCYIO5CJumG3Pd32Y7Y32n7a9nW15TfZftn2+trl0ta3C6BZjczPvl/SDRGxzvbRktbaXlGr3RoRN7euPQBVaWR+9gFJA7Xbu2xvlHR8qxsDUK1D+sxu+0RJZ0paXVu00PaTtpfanliwzgLb/bb792lPqWYBNK/hsNueIOkBSddHxJuSbpc0U9IZGt7z3zLaehGxJCL6IqJvrHoraBlAMxoKu+2xGg768oh4UJIiYltEDEbEkKQ7Jc1uXZsAymrk23hLulvSxoj42xHLp4142OWSNlTfHoCqNPJt/BxJV0t6yvb62rIbJc2zfYakkLRF0rUt6RBAJRr5Nv57kkab7/nR6tsB0Cr8gg7IBGEHMkHYgUwQdiAThB3IBGEHMkHYgUwQdiAThB3IBGEHMkHYgUwQdiAThB3IBGEHMuGIaN/G7Nck/WjEosmSfty2Bg5Nt/bWrX1J9NasKnubERHvHa3Q1rC/Y+N2f0T0dayBhG7trVv7kuitWe3qjbfxQCYIO5CJTod9SYe3n9KtvXVrXxK9NastvXX0MzuA9un0nh1AmxB2IBMdCbvti23/0PZzthd1oocitrfYfqo2DXV/h3tZanu77Q0jlk2yvcL25tr1qHPsdai3rpjGOzHNeEdfu05Pf972z+y2eyRtkvRRSVslrZE0LyKeaWsjBWxvkdQXER3/AYbt35D0lqSvRcSv1JZ9WdKOiFhc+0M5MSI+2yW93STprU5P412brWjayGnGJV0m6Q/Uwdcu0deVasPr1ok9+2xJz0XECxGxV9LXJc3tQB9dLyJWSdpx0OK5kpbVbi/T8H+WtivorStExEBErKvd3iXpwDTjHX3tEn21RSfCfrykl0bc36rumu89JH3H9lrbCzrdzCimRsSANPyfR9KUDvdzsLrTeLfTQdOMd81r18z052V1IuyjTSXVTeN/cyLiLEmXSPpk7e0qGtPQNN7tMso0412h2enPy+pE2LdKmj7i/gmSXulAH6OKiFdq19slPaTum4p624EZdGvX2zvcz0910zTeo00zri547To5/Xknwr5G0izbJ9k+UtLHJT3cgT7ewfb42hcnsj1e0oXqvqmoH5Z0Te32NZK+0cFefk63TONdNM24OvzadXz684ho+0XSpRr+Rv55SZ/rRA8FfZ0s6b9rl6c73Zuk+zT8tm6fht8RzZd0nKSVkjbXrid1UW//KOkpSU9qOFjTOtTbhzT80fBJSetrl0s7/dol+mrL68bPZYFM8As6IBOEHcgEYQcyQdiBTBB2IBOEHcgEYQcy8f8hhm7aijNk2wAAAABJRU5ErkJggg==\n",
+      "text/plain": [
+       "<Figure size 432x288 with 1 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "plt.imshow(data[0][2].view(28,28))\n",
+    "plt.show"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "tensor([7, 3, 7, 8, 3, 1, 2, 7, 0, 1, 2, 1, 9, 2, 3, 2, 2, 5, 0, 9])\n",
+      "tensor(7)\n"
+     ]
+    },
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 432x288 with 1 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "for data in trainset:\n",
+    "    x,y=data\n",
+    "    print(y)\n",
+    "    print(data[1][2])\n",
+    "    plt.imshow(data[0][2].view(28,28))\n",
+    "    plt.show\n",
+    "    break"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class SimpleCNN(nn.Module):\n",
+    "    def __init__(self):\n",
+    "        ##Inherit from nn.Module\n",
+    "        super(SimpleCNN, self).__init__()\n",
+    "        self.conv1 = nn.Conv2d(in_channels=1, out_channels=6,kernel_size=5)\n",
+    "        self.conv2 = nn.Conv2d(in_channels=6, out_channels=12,kernel_size=5)\n",
+    "        \n",
+    "        self.fc1 = nn.Linear(in_features=12*4*4, out_features=120)\n",
+    "        self.fc2 = nn.Linear(in_features=120, out_features=60)\n",
+    "        \n",
+    "        self.out = nn.Linear(in_features=60, out_features=10)\n",
+    "        \n",
+    "        \n",
+    "        \n",
+    "        #self.fc1 = nn.Linear(28*28,64)\n",
+    "        #self.fc2 = nn.Linear(64,64)\n",
+    "        #self.fc3 = nn.Linear(64,64)\n",
+    "        #self.fc4 = nn.Linear(63,10)\n",
+    "        #self.conv1 = torch.nn.Conv2d(3, 18, kernel_size = 3, stride = 1, padding = 1)\n",
+    "        #self.pool = torch.nn.MaxPool2d(kernel_size = 2, stride = 2, padding = 0)\n",
+    "        #4608 input features, 64 output features (see sizing flow below)\n",
+    "        #self.fc1 = torch.nn.Linear(18 * 16 * 16, 64)\n",
+    "        #64 input features, 10 output features for our 10 defined classes\n",
+    "        #self.fc2 = torch.nn.Linear(64, 10)\n",
+    "    \n",
+    "    def forward(self,t):\n",
+    "        t=t\n",
+    "        t = self.conv1(t)\n",
+    "        t = F.relu(t)\n",
+    "        t = F.max_pool2d(t,kernel_size=2,stride=2)\n",
+    "        \n",
+    "        t = self.conv2(t)\n",
+    "        t = F.relu(t)\n",
+    "        t = F.max_pool2d(t,kernel_size=2,stride=2)\n",
+    "        \n",
+    "        t = t.reshape(-1,12*4*4)\n",
+    "        t = self.fc1(t)\n",
+    "        t = F.relu(t)\n",
+    "        \n",
+    "        t = self.fc2(t)\n",
+    "        t = F.relu(t)\n",
+    "        \n",
+    "        t = self.out(t)\n",
+    "        \n",
+    "        return t\n",
+    "        #x = F.relu(self.fc1(x))\n",
+    "        #x = F.relu(self.fc2(x))\n",
+    "        #x = F.relu(self.fc2(x))\n",
+    "        #x = self.fc4(x)\n",
+    "        #return F.log_softmax(x,dim=1)\n",
+    "        \n",
+    "        \n",
+    "        "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "SimpleCNN(\n",
+      "  (conv1): Conv2d(1, 6, kernel_size=(5, 5), stride=(1, 1))\n",
+      "  (conv2): Conv2d(6, 12, kernel_size=(5, 5), stride=(1, 1))\n",
+      "  (fc1): Linear(in_features=192, out_features=120, bias=True)\n",
+      "  (fc2): Linear(in_features=120, out_features=60, bias=True)\n",
+      "  (out): Linear(in_features=60, out_features=10, bias=True)\n",
+      ")\n"
+     ]
+    }
+   ],
+   "source": [
+    "net = SimpleCNN()\n",
+    "print(net)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "optimizer = torch.optim.Adam(net.parameters(),lr=0.01)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 432x288 with 1 Axes>"
+      ]
+     },
+     "metadata": {
+      "needs_background": "light"
+     },
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "for batch in trainset:\n",
+    "    images,labels = batch\n",
+    "    plt.imshow(images[2].view(28,28))\n",
+    "    plt.show\n",
+    "    break"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def get_number_correct(preds,labels):\n",
+    "    return preds.argmax(dim=1).eq(labels).sum().item()\n",
+    "    \n",
+    "def get_all_preds(model,loader):\n",
+    "    all_preds = torch.tensor([])\n",
+    "    for batch in loader:\n",
+    "        images,labels = batch\n",
+    "        preds = model(images)\n",
+    "        all_preds = torch.cat((all_preds,preds),dim=0)\n",
+    "        \n",
+    "    return all_preds"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "metadata": {},
+   "outputs": [
+    {
+     "ename": "NameError",
+     "evalue": "name 'train_set' is not defined",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mNameError\u001b[0m                                 Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-28-8d8c0eaf7a6f>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m\u001b[0m\n\u001b[1;32m     14\u001b[0m         \u001b[0mtotal_correct\u001b[0m \u001b[0;34m+=\u001b[0m \u001b[0mget_number_correct\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mpreds\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0mlabels\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     15\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 16\u001b[0;31m     \u001b[0mprint\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m\"epoch:\"\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0mepoch\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\"total_correct:\"\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0mtotal_correct\u001b[0m\u001b[0;34m/\u001b[0m\u001b[0mlen\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mtrain_set\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\"loss\"\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0mtotal_loss\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m",
+      "\u001b[0;31mNameError\u001b[0m: name 'train_set' is not defined"
+     ]
+    }
+   ],
+   "source": [
+    "for epoch in range(10):\n",
+    "    total_loss = 0\n",
+    "    total_correct = 0\n",
+    "    for batch in trainset:\n",
+    "        images,labels = batch\n",
+    "        preds = net(images)  ##pass batch\n",
+    "        loss = F.cross_entropy(preds,labels) ###Calculate Loss\n",
+    "    \n",
+    "        optimizer.zero_grad()\n",
+    "        loss.backward() ##Calculate the gradients\n",
+    "        optimizer.step()  ##Update Weights\n",
+    "    \n",
+    "        total_loss += loss.item()\n",
+    "        total_correct += get_number_correct(preds,labels)\n",
+    "    \n",
+    "    print(\"epoch:\",epoch,\"total_correct:\",total_correct/len(train_set),\"loss\",total_loss)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "x_train = x.reshape(-1, 1).astype('float32')\n",
+    "y_train = y.reshape(-1, 1).astype('float32')\n",
+    "input_dim = x_train.shape[1]\n",
+    "output_dim = y_train.shape[1]\n",
+    "input_dim,output_dim"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import torch\n",
+    "import torch.nn as nn\n",
+    "from torch.autograd import Variable\n",
+    "x_train = x.reshape(-1, 1).astype('float32')\n",
+    "y_train = y.reshape(-1, 1).astype('float32')\n",
+    "\n",
+    "class LinearRegressionModel(nn.Module):\n",
+    "   def __init__(self, input_dim, output_dim):\n",
+    "      super(LinearRegressionModel, self).__init__()\n",
+    "      self.linear = nn.Linear(input_dim, output_dim)\n",
+    "\n",
+    "   def forward(self, x):\n",
+    "      out = self.linear(x)\n",
+    "      return out\n",
+    "input_dim = x_train.shape[1]\n",
+    "output_dim = y_train.shape[1]\n",
+    "model = LinearRegressionModel(input_dim, output_dim)\n",
+    "criterion = nn.MSELoss()\n",
+    "[w, b] = model.parameters()\n",
+    "\n",
+    "def get_param_values():\n",
+    "   return w.data[0][0], b.data[0]\n",
+    "\n",
+    "def plot_current_fit(title = \"\"):\n",
+    "    plt.figure(figsize = (12,4))\n",
+    "    plt.title(title)\n",
+    "    plt.scatter(x, y, s = 8)\n",
+    "    w1 = w.data[0][0]\n",
+    "    b1 = b.data[0]\n",
+    "    x1 = np.array([0., 1.])\n",
+    "    y1 = x1 * w1 + b1\n",
+    "    plt.plot(x1, y1, 'r', label = 'Current Fit ({:.3f}, {:.3f})'.format(w1, b1))\n",
+    "    plt.xlabel('x (input)')\n",
+    "    plt.ylabel('y (target)')\n",
+    "    plt.legend()\n",
+    "    plt.show()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "plot_current_fit('Before training')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Construct the loss function\n",
+    "criterion = torch.nn.MSELoss()\n",
+    "# Construct the optimizer (Stochastic Gradient Descent in this case)\n",
+    "optimizer = torch.optim.SGD(model.parameters(), lr = 0.01)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Gradient Descent\n",
+    "for epoch in range(50):\n",
+    "   # Forward pass: Compute predicted y by passing x to the model\n",
+    "   y_pred = model(x)\n",
+    "\n",
+    "   # Compute and print loss\n",
+    "   loss = criterion(y_pred, y)\n",
+    "   print('epoch: ', epoch,' loss: ', loss.item())\n",
+    "\n",
+    "   # Zero gradients, perform a backward pass, and update the weights.\n",
+    "   optimizer.zero_grad()\n",
+    "\n",
+    "   # perform a backward pass (backpropagation)\n",
+    "   loss.backward()\n",
+    "\n",
+    "   # Update the parameters\n",
+    "   optimizer.step()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

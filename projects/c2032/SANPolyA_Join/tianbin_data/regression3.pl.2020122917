@@ -1,0 +1,98 @@
+#!/usr/bin/perl -w
+
+use Statistics::Descriptive;
+
+my %exp_readCount;
+my %exp_totalReadCount;
+my %pas_num;
+my %pas_symbol;;
+open FILE,"bl6.pAs.subset.predict.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$chr,$pos,$strand,$symbol,$readCount,$distance) = (split)[0,2,3,4,5,7,11];
+	next if(abs($distance)>25);
+	$pas_num{$symbol}++;
+	$pas_symbol{"$chr:$pos:$strand"} = $symbol;
+	$exp_readCount{"$chr:$pos:$strand"} = $readCount;
+	$exp_totalReadCount{$symbol} += $readCount;
+}
+
+my %exp_usage;
+while(my ($key,$val) = each %exp_readCount){
+	my $totalReacCount = $exp_totalReadCount{$pas_symbol{$key}};
+	if($totalReacCount == 0){
+		$exp_usage{$key} = 0;
+	}
+	else{
+		$exp_usage{$key} = $exp_readCount{$key} / $totalReacCount;
+	}
+}
+
+
+my %predict_readCount_plus;;
+my %predict_readCount_minus;;
+my %id_plus;
+my %id_minus;
+open FILE2,"bl6.pAs.predict.newround3.readCount.txt";
+<FILE2>;
+while(<FILE2>){
+	chomp;
+	my @data = split;
+	my ($pas_id,$pas_type,$chr,$pos,$strand) = split;
+	next if !exists $pas_symbol{"$chr:$pos:$strand"};
+	my $symbol = $pas_symbol{"$chr:$pos:$strand"};
+	next if $pas_num{$symbol} <=1;
+	my @up_cov = @data[6..$#data];
+	my $stat = Statistics::Descriptive::Full->new();
+	$stat->add_data(@up_cov);
+	my $median= $stat->median();
+	if($strand eq "+"){
+		$predict_readCount_plus{$symbol}->{$pos} = $median;
+		$id_plus{$symbol}->{$pos} = "$chr:$pos:$strand";
+	}
+	else{
+		$predict_readCount_minus{$symbol}->{$pos} = $median;
+		$id_minus{$symbol}->{$pos} = "$chr:$pos:$strand";
+	}
+}
+
+my %predict_readCount;
+my %total_readCount;
+while(my ($symbol,$val) = each %predict_readCount_plus){
+	my $total = 0;
+	foreach my $pos (sort{$b <=> $a} keys %$val){
+		my $readCount = $val->{$pos}-$total;
+		$readCount = 0 if $readCount < 0;
+		my $pas_id = $id_plus{$symbol}->{$pos};
+		$predict_readCount{$symbol}->{$pas_id} = $readCount;
+		$total += $readCount;
+	}
+	$total_readCount{$symbol} = $total;
+}
+while(my ($symbol,$val) = each %predict_readCount_minus){
+	my $total = 0;
+	foreach my $pos (sort{$a <=> $b} keys %$val){
+		my $readCount = $val->{$pos}-$total;
+		$readCount = 0 if $readCount < 0;
+		my $pas_id = $id_minus{$symbol}->{$pos};
+		$predict_readCount{$symbol}->{$pas_id} = $readCount;
+		$total += $readCount;
+	}
+	$total_readCount{$symbol} = $total;
+}
+
+
+open OUT,">bl6.pAs.compare3.txt";
+print OUT "pas_id\tsymbol\tpredict_usage\texp_usage\n";
+while(my ($symbol,$val) = each %predict_readCount){
+	while(my ($pas_id,$readCount) = each %$val){
+		my $predict_usage = $readCount/$total_readCount{$symbol};
+		print OUT "$pas_id\t$symbol\t$predict_usage\t$exp_usage{$pas_id}\n";
+	}
+}
+
+
+
+
+

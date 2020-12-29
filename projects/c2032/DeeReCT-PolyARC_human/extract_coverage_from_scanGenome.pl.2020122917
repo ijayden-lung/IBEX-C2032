@@ -1,0 +1,100 @@
+#!/usr/bin/perl -w
+use List::Util qw(first max maxstr min minstr reduce shuffle sum);
+use Statistics::Regression;
+
+my ($file) = @ARGV;
+print "$file\n";
+
+my $PAS = "/home/longy/workspace/apa_predict/pas_dataset/human.pAs.brain.txt";
+open FILE,"$PAS";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$end,$srd,$symbol,$usage) = split;
+	my ($gene_id) = split /\./,$pas_id;
+	next if $usage < 0.2;
+	if($srd eq "+"){
+		my $head = $end-100;
+		my $tail = $end+75;
+		$pas_plus{"$chr:$head-$tail"} .= 'Origin';
+		$head += 3;
+		$tail += 3;
+		$pas_plus{"$chr:$head-$tail"} .= 'Up3';
+		$head += 3;
+		$tail += 3;
+		$pas_plus{"$chr:$head-$tail"} .= 'Up6';
+		$head += 3;
+		$tail += 3;
+		$pas_plus{"$chr:$head-$tail"} .= 'Up9';
+		$head -= 4*3;
+		$tail -= 4*3;
+		$pas_plus{"$chr:$head-$tail"} .= 'Dn3';
+		$head -= 3;
+		$tail -= 3;
+		$pas_plus{"$chr:$head-$tail"} .= 'Dn6';
+		$head -= 3;
+		$tail -= 3;
+		$pas_plus{"$chr:$head-$tail"} .= 'Dn9';
+	}
+	else{
+		my $head = $end-75;
+		my $tail = $end+100;
+		$pas_minus{"$chr:$head-$tail"} .= 'Origin';
+		$head += 3;
+		$tail += 3;
+		$pas_minus{"$chr:$head-$tail"} .= 'Up3';
+		$head += 3;
+		$tail += 3;
+		$pas_minus{"$chr:$head-$tail"} .= 'Up6';
+		$head += 3;
+		$tail += 3;
+		$pas_minus{"$chr:$head-$tail"} .= 'Up9';
+		$head -= 4*3;
+		$tail -= 4*3;
+		$pas_minus{"$chr:$head-$tail"} .= 'Dn3';
+		$head -= 3;
+		$tail -= 3;
+		$pas_minus{"$chr:$head-$tail"} .= 'Dn6';
+		$head -= 3;
+		$tail -= 3;
+		$pas_minus{"$chr:$head-$tail"} .= 'Dn9';
+	}
+}
+
+
+#my $file = "data/bl6.pAs.scanGenome.step1.str1.MERGE.chr2.Trimmed10.txt";
+open FILE,"$file";
+my $header = <FILE>;
+($file) = (split /\//,$file)[-1];
+$file = "train_data/$file";
+open OUT,">$file";
+#print OUT "$header";
+while(<FILE>){
+	chomp;
+	my @data = split /\t/;
+	my $pas_id = $data[0];
+	my $sum=0;
+	my $count=0;
+	for(my$i=8;$i<@data;$i++){
+		if($data[$i]>0){
+			$sum += $data[$i];
+			$count++;
+		}
+	}
+	my $trimMean = $sum/$count;
+	#next if $trimMean < 10;
+	if ($file =~ /str1/){
+		if(exists $pas_minus{$pas_id}){
+			my $val = $pas_minus{$pas_id};
+			$_ =~ s/None/$val/;
+			print OUT "$_\n";
+		}
+	}
+	elsif ($file =~ /str2/){
+		if(exists $pas_plus{$pas_id}){
+			my $val = $pas_plus{$pas_id};
+			$_ =~ s/None/$val/;
+			print OUT "$_\n";
+		}
+	}
+}

@@ -1,0 +1,42 @@
+#!/usr/bin/perl -w
+
+my ($ENS,$Inp,$Out) = @ARGV;
+
+my %all_ens_gene;
+open ENS,"zcat $ENS | awk '(\$3 ==\"gene\")' | ";
+while(<ENS>){
+	next if $_ =~ /^\#/;
+	my ($gene_name,$gene_type) = (split)[13,17];
+	$gene_name =~ s/\"|\;//g;
+	$all_ens_gene{$gene_name} = '';
+}
+
+
+
+open FILE,"$Inp";
+<FILE>;
+open OUT,">$Out";
+print OUT "pas_id\tpas_type\tchr\tposition\tstrand\tsymbol\tusage\treadCount\tmotif\tave_diff\tbiotype\textend\told_symbol\tsymbol_remark\n";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$srd,$symbol,$usage,$readCount,$motif,$ave_diff,$new_symbol,$new_pas_type,$extension,$between_gene,$biotype) = (split /\t/);
+	my $symbol_remark = "Same";
+	if($symbol ne $new_symbol){
+		if($symbol eq "na"){
+			$symbol_remark = "New_gene";
+		}
+		elsif(!exists $all_ens_gene{$symbol}){
+			$symbol_remark = "Update";
+		}
+		#elsif($new_pas_type =~ "Non"){
+		else{
+			#print "$pas_id\t$symbol\t$pas_type\t$new_symbol\t$new_pas_type\tDifferent\n";
+			$symbol_remark = "Different";
+		}
+
+	}
+	$new_symbol = $between_gene if $new_symbol eq "na";
+	print OUT "$pas_id\t$new_pas_type\t$chr\t$pos\t$srd\t$new_symbol\t$usage\t$readCount\t$motif\t$ave_diff\t$biotype\t$extension\t$symbol\t$symbol_remark\n";
+}
+	
+

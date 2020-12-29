@@ -1,0 +1,12 @@
+import pandas as pd
+import os
+
+patients=[]
+df=pd.read_csv('mark_all.txt',sep='\t')
+for i in range(len(df)):
+    patients.append([df.loc[i,'Patient'],df.loc[i,'starp'],df.loc[i,'endp']])
+
+for x in patients:
+    patient_id=x[0]
+    os.environ['ID']=patient_id
+    os.system("bash do_prediction.sh")

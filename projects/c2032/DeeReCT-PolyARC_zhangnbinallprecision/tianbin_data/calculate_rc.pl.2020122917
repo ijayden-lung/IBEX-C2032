@@ -1,0 +1,18 @@
+#!/usr/bin/perl -w
+
+open FILE,"bl6.pAs.coverage.tianbin.txt";
+open OUT,">Coverage.txt";
+while(<FILE>){
+	chomp;
+	my @data = split;
+	my $sum = 0;
+	my $count=0;
+	for(my$i=8;$i<@data;$i++){
+		if($data[$i]>0){
+			$sum+= $data[$i];
+			$count++;
+		}
+	}
+	my $trimMean = $sum/$count;
+	print OUT "$trimMean\t$_\n";
+}

@@ -1,0 +1,28 @@
+#!/usr/bin/perl -w
+
+my ($file) = @ARGV;
+
+#my $file = "data/bl6.pAs.scanGenome.step1.str1.REP3.chr19.Trimmed10.txt";
+my ($out) = (split /\//,$file)[1];
+open FILE,"$file";
+my $header = <FILE>;
+open OUT,">predict2/$out";
+print OUT "$header";
+while(<FILE>){
+	chomp;
+	my ($pas_id,undef,$chr,$pos) = split;
+	if($pas_id =~ /ENS/){
+		if($file =~ /str2/){
+			$start = $pos-100;
+			$end = $pos+76;
+		}
+		else{
+			$start = $pos -76;
+			$end = $pos + 100;
+		}
+		my $new_id = "$chr:$start-$end";
+		$_ =~ s/$pas_id/$new_id/;
+	}
+	print OUT "$_\n";
+}
+

@@ -1,0 +1,54 @@
+
+import pandas as pd
+import seaborn as sns
+import numpy as np
+import matplotlib.pyplot as plt
+
+gt=pd.read_csv('human.polyAdb3.2_gtf.hg38.bed',sep='\t',header=None)
+pred=pd.read_csv('HUM_Brain_MERGE.DeepReCT_HBM31_30_1.bed',sep='\t',header=None)
+
+#gt=pd.read_csv('HUM_Brain_MERGE.DeepReCT_HBM31_30_1.bed',sep='\t',header=None)
+#pred=pd.read_csv('human.brain.train.gt.bed',sep='\t',header=None)
+
+distance=[]
+pred_up=[]
+pred_down=[]
+for i in range(len(pred)):
+    chromosome='%s'%str(pred.iloc[i,0])
+    pos=pred.iloc[i,1]
+    strand=pred.iloc[i,5]
+    gtt=gt[(gt.iloc[:,0]==chromosome)&(gt.iloc[:,5]==strand)]
+    if strand=='+':
+        all_distance=list(pos-gtt.iloc[:,1])
+        try:
+            up=max([x for x in all_distance if x<=0])
+        except:
+            up=-np.inf
+        try:
+            down=min([x for x in all_distance if x>0])
+        except:
+            down=np.inf
+        distance.append(up)
+        distance.append(down)
+    elif strand=='-':
+        all_distance=list(pos-gtt.iloc[:,1])
+        try:
+            down=-max([x for x in all_distance if x<=0])
+        except:
+            down=np.inf
+        try:
+            up=-min([x for x in all_distance if x>0])
+        except:
+            up=-np.inf
+        distance.append(up)
+        distance.append(down)
+    pred_up.append(up)
+    pred_down.append(down)
+    print(i,len(pred),up,down)
+    
+pred['distance_up']=pred_up
+pred['distance_down']=pred_down
+
+pred.to_csv('HUM_Brain_MERGE.DeepReCT_HBM31_30_1.polyAdb3.2_gtf.distance.bed',sep='\t',index=False)
+#pred.to_csv('HUM_Brain_MERGE.recall.DeepReCT_HBM31_30_1.distance.bed',sep='\t',index=False)
+

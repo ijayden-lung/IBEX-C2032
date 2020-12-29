@@ -1,0 +1,47 @@
+#!/usr/bin/perl -w
+#
+
+my ($Trim1,$Trim2,$Trim3,$Trim) = @ARGV;
+my %hash;
+open FILE,"$Trim1";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my @data = split;
+	my @coverage = @data[8..$#data];
+	$hash{$data[0]} = \@coverage;
+}
+my %hash2;
+open FILE,"$Trim2";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my @data = split;
+	my @coverage = @data[8..$#data];
+	if(exists $hash{$data[0]}){
+		my $coverage_ref = $hash{$data[0]};
+		for (my $i=0;$i<@coverage;$i++){
+			$coverage[$i] += $coverage_ref->[$i];
+		}
+		$hash2{$data[0]} = \@coverage;
+		delete $hash{$data[0]};
+	}
+}
+
+undef %hash;
+
+open FILE,"$Trim3";
+my $header = <FILE>;
+open OUT,">$Trim";
+print OUT "$header";
+while(<FILE>){
+	chomp;
+	my @data = split;
+	if(exists $hash2{$data[0]}){
+		my $coverage_ref2 = $hash2{$data[0]};
+		for (my $i=8;$i<@data;$i++){
+			$data[$i] += $coverage_ref2->[$i-8];
+		}
+		print OUT join("\t",@data),"\n";
+	}
+}

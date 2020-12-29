@@ -1,0 +1,26 @@
+#2019.11 New Hfq Data
+
+for i in {1..12}
+do
+
+cat>tmp.sh<<EOF
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J cufflinks_SunWei-${i}
+#SBATCH --output /home/zhouj0d/zhouj0d/sunwei_hfp/log/cufflinks_SunWei-${i}.out
+#SBATCH --mail-user=juexiao.zhou@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --time=72:00:00
+#SBATCH --mem=30G
+
+module load cufflinks
+cd /home/juexiao/juexiao/15_Sunwei_ecoli_rnaseq/cufflinks
+cufflinks -p 24 -o SunWei-${i} /home/zhouj0d/zhouj0d/sunwei_hfp/tophat/SunWei-${i}/accepted_hits.bam
+EOF
+sbatch tmp.sh
+done
+
+
+
+

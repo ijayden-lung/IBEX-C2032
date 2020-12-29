@@ -1,0 +1,68 @@
+#!/usr/bin/perl -w
+
+open FILE,"polyA_seq/bl6.pAs.tianbin.train.bed.info.cutoff";
+<FILE>;
+open OUT,">usage_data/bl6.pAs.tianbin.usage.train.txt";
+print OUT "pas_id\tpas_type\tchr\tpos\tstrand\tsymbol\tusage\treadCount\tmotif\tave_diff\n";
+my %dist;
+my %readCount;
+my %ave_diff;
+my %pas_id;
+my %remove_id;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif,$ave_diff) = split;
+	if(exists $dist{$symbol}){
+		my $dist_diff = $pos - $dist{$symbol};
+		if($dist_diff <= 50){
+			#print "$pas_id\n" if $usage > 0.2;
+		#if($dist_diff <= 50){
+			if($readCount > $readCount{$symbol}){
+				$remove_id{$pas_id{$symbol}} = '';
+			}
+			elsif($readCount == $readCount{$symbol}){
+				if($ave_diff > $ave_diff{$symbol}){
+					$remove_id{$pas_id{$symbol}} = '';
+				}
+				else{
+					$remove_id{$pas_id} = '';
+				}
+			}
+			else{
+				$remove_id{$pas_id} = '';
+			}
+		
+		}
+			
+	}
+	$dist{$symbol} = $pos;
+	$readCount{$symbol} = $readCount;
+	$ave_diff{$symbol} = $ave_diff;
+	$pas_id{$symbol} = $pas_id;
+}
+
+
+=pod
+my %total;
+open FILE,"polyA_seq/bl6.pAs.tianbin.train.bed.info.cutoff";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif,$ave_diff) = split;
+	if(!exists $remove_id{$pas_id}){
+		$total{$symbol} += $readCount;
+	}
+}
+
+
+
+open FILE,"polyA_seq/bl6.pAs.tianbin.train.bed.info.cutoff";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my @data = split;
+	if(!exists $remove_id{$data[0]}){
+		$data[6] = $data[7]/$total{$data[5]};
+		print OUT join("\t",@data),"\n";
+	}
+}

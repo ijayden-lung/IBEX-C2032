@@ -1,0 +1,26 @@
+#!/usr/bin/perl -w
+
+my %gene;
+open FILE,"/ibex/scratch/longy/workspace/apa_predict/pas_dataset/Parental/nor.parental.pAs.count.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$bl1,$bl2) = split;
+	my ($gene_id) = split /\./,$pas_id;
+	$gene{$gene_id} += ($bl1+$bl2)/2;
+}
+
+
+
+open FILE,"/ibex/scratch/longy/workspace/polyA_predict/data/bl6.pAs.zhangbin.fibroblast.txt";
+my $header = <FILE>;
+open OUT,">/ibex/scratch/longy/workspace/polyA_predict/data/bl6.pAs.positive.trimmed0.txt";
+print OUT "$header";
+while(<FILE>){
+	chomp;
+	my ($pas_id) = split;
+	my ($gene_id) = split /\./,$pas_id;
+	if($gene{$gene_id} >10){
+		print OUT "$_\n";
+	}
+}

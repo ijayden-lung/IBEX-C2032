@@ -1,0 +1,19 @@
+#!/usr/bin/perl -w
+
+open FILE,"bl6.pAs.subset.tianbin.txt";
+my $pre = "No";
+my %dist;
+my $usage;
+open OUT,">Different.txt";
+print OUT "gene_id\tdist_diff\tusage_diff\n";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif) = split;
+	if(exists $dist{$symbol}){
+		my $dist_diff = $pos - $dist{$symbol};
+		my $usage_diff = $usage - $usage{$symbol};
+		print OUT "$symbol\t$dist_diff\t$usage_diff\n";
+	}
+	$dist{$symbol} = $pos;
+	$usage{$symbol} = $usage;
+}

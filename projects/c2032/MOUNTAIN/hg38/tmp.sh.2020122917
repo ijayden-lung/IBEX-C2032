@@ -1,0 +1,11 @@
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J star_index
+#SBATCH --output /home/zhouj0d/c2032/MOUNTAIN/log/star_index.log
+#SBATCH --time=72:00:00
+#SBATCH --mem=300G
+
+STAR --runThreadN 12 --runMode genomeGenerate --genomeDir /home/zhouj0d/c2032/MOUNTAIN/hg38 --genomeFastaFiles /home/zhouj0d/c2032/MOUNTAIN/hg38/Homo_sapiens.GRCh38.dna.primary_assembly.fa \ 
+--sjdbGTFfile /home/zhouj0d/c2032/MOUNTAIN/hg38/Homo_sapiens.GRCh38.95.gtf --sjdbOverhang 100
+

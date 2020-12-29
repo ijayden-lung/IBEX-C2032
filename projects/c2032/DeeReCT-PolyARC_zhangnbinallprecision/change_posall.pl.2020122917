@@ -1,0 +1,65 @@
+#!/usr/bin/perl -w
+use List::Util qw(first max maxstr min minstr reduce shuffle sum shuffle) ;
+
+my %compare;
+my %utr;
+open ENS,"awk '(\$3 == \"exon\")' /home/longy/cnda/ensembl/Mus_musculus.GRCm38.95.gtf |" ;
+while(<ENS>){
+	my ($chr,$source,$type,$start,$end,undef,$srd,undef,undef,$gene_id) = split;
+	$gene_id =~ s/\"|\;//g;
+	if($srd eq "+"){
+		if(!exists $compare{$gene_id}){
+			$compare{$gene_id} = $end;
+			$utr{$gene_id} = "$start-$end";
+		}
+		elsif($compare{$gene_id} < $end){
+			$compare{$gene_id} = $end;
+			$utr{$gene_id} = "$start-$end";
+		}
+	}
+	else{
+		if(!exists $compare{$gene_id}){
+			$compare{$gene_id} = $start;
+			$utr{$gene_id} = "$start-$end";
+		}
+		elsif($compare{$gene_id} > $start){
+			$compare{$gene_id} = $start;
+			$utr{$gene_id} = "$start-$end";
+		}
+	}
+}
+
+
+open ENS,"awk '(\$3 == \"three_prime_utr\")' /home/longy/cnda/ensembl/Mus_musculus.GRCm38.95.gtf |" ;
+my %pas_id;
+open OUT,">bl6.pAs.ensembl.txt";
+print OUT "pas_id\tpas_type\tchr\tposition\tstrand\n";
+my %uniq;
+while(<ENS>){
+	chomp;
+	my ($chr,$source,$type,$start,$end,$srd,$gene_id,$gene_name,$biotype) = (split)[0,1,2,3,4,6,9,17,27];
+	$gene_id =~ s/\"|\;//g;
+	$gene_name =~ s/\"|\;//g;
+	$biotype =~ s/\"|\;//g;
+	$pas_id{$gene_id}++;
+	my $head;
+	my $tail;
+	if($srd eq "-"){
+		$end = $start;
+	}
+	if(exists $uniq{"$chr\t$end\t$srd"}){
+		next;
+	}
+	else{
+		$uniq{"$chr\t$end\t$srd"} = '';
+	}
+	my ($exon_start,$exon_end) = split /\-/,$utr{$gene_id};
+	my $pas_type = "Non_tandemUTR";
+	if($end <=$exon_end+1 && $end>= $exon_start-1){
+		$pas_type = "tandemUTR";
+	}
+	if($end == $compare{$gene_id}){
+		$pas_type = "terminal";
+	}
+	print OUT "$gene_id\.$pas_id{$gene_id}\t$pas_type\tchr$chr\t$end\t$srd\t$gene_name\t$biotype\n";
+}

@@ -1,0 +1,21 @@
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH --partition=batch
+#SBATCH -J post_processing_chrX
+#SBATCH --time=72:00:00
+#SBATCH --mem=30G
+
+cd /home/zhouj0d/c2032/MOUNTAIN/bl6_scangenome
+
+perl /home/zhouj0d/c2032/ENCODE/scanGenome.maximum_sum4.pl 8 -0.25 bl6.pAs.scanGenome.step1.str1.REP1.chrX.Trimmed10.Optimize.txt bl6.pAs.scanGenome.step1.str1.REP1.chrX.Trimmed10.Optimize.txt.output1
+
+perl /home/zhouj0d/c2032/ENCODE/scanGenome.maximum_sum4.reverse.pl 8 -0.25 bl6.pAs.scanGenome.step1.str1.REP1.chrX.Trimmed10.Optimize.txt bl6.pAs.scanGenome.step1.str1.REP1.chrX.Trimmed10.Optimize.txt.output2
+
+perl /home/zhouj0d/c2032/ENCODE/postprocess.createALldataset.bidirection.pl bl6.pAs.scanGenome.step1.str1.REP1.chrX.Trimmed10.Optimize.txt.output1 bl6.pAs.scanGenome.step1.str1.REP1.chrX.Trimmed10.Optimize.txt.output2 bl6.pAs.scanGenome.step1.str1.REP1.chrX.Trimmed10.Optimize.txt.output
+
+perl /home/zhouj0d/c2032/ENCODE/scanGenome.maximum_sum4.pl 8 -0.25 bl6.pAs.scanGenome.step1.str2.REP1.chrX.Trimmed10.Optimize.txt bl6.pAs.scanGenome.step1.str2.REP1.chrX.Trimmed10.Optimize.txt.output1
+
+perl /home/zhouj0d/c2032/ENCODE/scanGenome.maximum_sum4.reverse.pl 8 -0.25 bl6.pAs.scanGenome.step1.str2.REP1.chrX.Trimmed10.Optimize.txt bl6.pAs.scanGenome.step1.str2.REP1.chrX.Trimmed10.Optimize.txt.output2
+
+perl /home/zhouj0d/c2032/ENCODE/postprocess.createALldataset.bidirection.pl bl6.pAs.scanGenome.step1.str2.REP1.chrX.Trimmed10.Optimize.txt.output1 bl6.pAs.scanGenome.step1.str2.REP1.chrX.Trimmed10.Optimize.txt.output2 bl6.pAs.scanGenome.step1.str2.REP1.chrX.Trimmed10.Optimize.txt.output
+

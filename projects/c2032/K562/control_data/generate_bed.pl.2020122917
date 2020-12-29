@@ -1,0 +1,14 @@
+#!/usr/bin/perl -w
+
+my ($inp,$out) = @ARGV;
+
+open FILE,"sort -k 3,3 -k 4,4n $inp | ";
+open OUT,">$out";
+while(<FILE>){
+	next if $_ =~ /^pas_id/;
+	my ($gene_id,$pas_type,$chr,$pos,$strand) = split;
+	my @data = split;
+	my $pre = $pos-24;
+	my $end = $pos+24;
+	print OUT "$chr\t$pre\t$end\t$gene_id\t$pos\t$strand\n";
+}

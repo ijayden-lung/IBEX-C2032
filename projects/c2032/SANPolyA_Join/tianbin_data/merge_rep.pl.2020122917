@@ -1,0 +1,26 @@
+#!/usr/bin/perl -w
+
+my ($count1,$count2,$out) = @ARGV;
+
+
+my %hash;
+open FILE,"$count1";
+while(<FILE>){
+	chomp;
+	my ($chr,$pre,$end,$pas_id,$pos,$strand,$readCount) = split;
+	$hash{"$chr:$pos-$strand"} = $readCount;
+}
+
+
+open OUT,">$out";
+open FILE,"$count2";
+print OUT "pas_id\tchr\tstart\tend\tposition\tstrand\trep1\trep2\n";
+while(<FILE>){
+	chomp;
+	my ($chr,$pre,$end,$pas_id,$pos,$strand,$readCount) = split;
+	if(exists $hash{"$chr:$pos-$strand"}){
+		my $readCount1 =  $hash{"$chr:$pos-$strand"};
+		print OUT "$pas_id\t$chr\t$pre\t$end\t$pos\t$strand\t$readCount1\t$readCount\n";
+	}
+}
+

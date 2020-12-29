@@ -1,0 +1,48 @@
+#!/usr/bin/perl -w
+
+
+my %predict_zb;
+my $total = 0;
+foreach my $file (glob "../maxSum/bl6.pAs.scanGenome.step1.str*.REP1.chr*.Trimmed10.txt.newround3.txt.bidirection.6.2.txt"){
+	open FILE,"$file";
+	<FILE>;
+	while(<FILE>){
+		chomp;
+		my ($predict_pos,$pas_id,$diff,$gt_pasid,$gt_diff,$ens_pasid,$ens_diff,$db_pasid,$db_diff) = split;
+		my ($srd,$chr) = (split /\./,$file)[6,8];
+		if(abs($diff)<25 && $ens_pasid ne "None"){
+			$total++;
+			$predict_zb{$pas_id} = '';
+			my $pos = $predict_pos-$ens_diff;
+			if($srd eq "str2"){
+				$predict_zb{"$chr:$pos:+"} = '';
+			}
+			else{
+				$predict_zb{"$chr:$pos:-"} = '';
+			}
+
+		}
+	}
+}
+
+
+open FILE,"pAs_ensembl.info";
+open OUT,">bl6.pAs.ens_fn.txt";
+#print OUT "pas_id\tread_count\n";
+<FILE>;
+ $total = 0;
+my $pass = 0;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$chr,$start,$end,$pos,$strand,$rep1,$rep2) = split;
+	if (!exists $predict_zb{"$chr:$pos:$strand"}){
+		my $ave_read = ($rep1+$rep2)/2;
+		if($ave_read>10){
+			$pass++;
+		}
+		$total++;
+		print OUT "$pas_id\t$ave_read\tFN(vsENS)\n";
+	}
+}
+
+print "$pass\t$total\n";
