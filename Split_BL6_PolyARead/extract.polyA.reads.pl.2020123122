@@ -1,0 +1,170 @@
+#!/usr/bin/perl -w
+use strict;
+=use
+extract non-template polyA reads from Bam file or fastq/fasta file ...
+...
+=cut
+
+my $polyAcut = 3;
+
+### get alignment score from sam file columns 
+sub getAS {
+	my @Columns = @_;
+	my $AS = "";
+	for(11..$#Columns){
+		my $p = $_;
+		if($Columns[$p] =~ /AS:/){
+			$AS = $Columns[$p];
+			$AS =~ s/\D//g; 
+		}
+	}
+	return($AS);
+}
+
+### extract polyA/polyT reads from bam file for single-end RNA-seq data 
+sub extractFromSEBam {
+	my ($bam,$out) = @_;
+	print "open the bam file $bam\n";
+	open IN,"-|","samtools view $bam" or die $!;
+	#open IN,"-|","samtools sort -n  $bam" or die $!;
+	open OUT,">$out" or die $!;
+	## counting the number of 5', 3' and no softclip reads, as well as polyA reads and polyT reads
+	my $sc5 = 0; my $sc3 = 0;my $ns = 0;my $polyan = 0; my $polytn = 0;
+	my $i = 0;
+	while(<IN>){
+		chomp;
+		next if(/^@/);
+		$i ++;
+		print "processed $i reads\n" if($i % 1000000 == 0);
+		my $line = $_;
+		my @Columns = split(/\s+/,$line);
+		## skip juncion reads 
+		next if($Columns[5] =~ /N/);
+		## skip secondary alignment,not passing filters and PCR duplication 
+		next if($Columns[1] & 256);
+		next if($Columns[1] & 512);
+		next if($Columns[1] & 1024);
+		## get alignment score 
+		my $AS = &getAS(@Columns);
+		#if($Columns[5] =~ /(([$polyAcut-9]|[1-9]\d+)S)$/){
+		if($Columns[5] =~ /(([$polyAcut-9]|[0-9]\d+)S)$/){
+			$sc3 ++;
+			my $index = $1;
+			$index =~ s/\D//g;
+			if($Columns[9] =~ /(A)\1{$polyAcut,}$/){
+				$polyan ++;
+				my $end = $Columns[3] + length($Columns[9]) - $index;
+				print OUT "$Columns[2]\t$Columns[3]\t$end\t$Columns[0]\t$AS\+\n";
+			}
+		#}elsif($Columns[5] =~ /^(([$polyAcut-9]|[1-9]\d+)S)/){
+		}elsif($Columns[5] =~ /^(([$polyAcut-9]|[0-9]\d+)S)/){
+			$sc5 ++;
+			my $index = $1;
+			$index =~ s/\D//g;
+			if($Columns[9] =~ /^(T)\1{$polyAcut,}/){
+				$polytn ++;
+				my $end = $Columns[3] + length($Columns[9]) - $index;
+				print OUT "$Columns[2]\t$Columns[3]\t$end\t$Columns[0]\t$AS\t-\n";
+			}
+		}else{
+			$ns ++;	
+		}
+	}
+	close IN;
+	close OUT;
+	print "#5softclip\t3softclip\tnonsoftclip\tpolya\tpolyt\n";
+	print "$sc5\t$sc3\t$ns\t$polyan\t$polytn\n";
+}
+
+### extract polyA/polyT reads from bam file for paired-end RNA-seq data 
+sub extractFromPEBam{
+	my ($bam,$out) = @_;
+	print "open the bam file $bam\n";
+	open IN,"-|","samtools view $bam" or die $!;
+	#open IN,"-|","samtools sort -n  $bam" or die $!;
+	open OUT,">$out" or die $!;
+	## counting the number of 5', 3' and no softclip reads, as well as polyA reads and polyT reads
+	my $sc5 = 0; my $sc3 = 0;my $ns = 0;my $polyan = 0; my $polytn = 0;
+	my $i = 0;
+	while(<IN>){
+		chomp;
+		next if (/^@/);
+		my $line1 = $_;
+		my $line2 = <IN>;
+		chomp $line2;
+		my @Columns1 = split(/\s+/,$line1);
+		my @Columns2 = split(/\s+/,$line2);
+		if($Columns1[0] ne $Columns2[0]){
+			$line1 = $line2;
+			$line2 = <IN>;
+			chomp $line2;
+			@Columns2 = split(/\s+/,$line2);
+			if($Columns1[0] ne $Columns2[0]){
+				print "error:bam file were not sorted by read name for paired-end RNA-seq data\n";
+				last;
+			}
+		}
+		$i ++;
+		print "processed $i reads\n" if($i % 1000000 == 0);
+		if(($Columns2[5] !~ /(([$polyAcut-9]|[1-9]\d+)S)$/) and ($Columns1[5] !~ /^(([$polyAcut-9]|[1-9]\d+)S)/)){
+			$ns ++;
+		}else{
+			### read2 contaning soft-clipped polyA 
+			if($Columns2[5] =~ /(([$polyAcut-9]|[1-9]\d+)S)$/){
+				## skip juncion reads 
+				next if($Columns2[5] =~ /N/);
+				## skip secondary alignment,not passing filters and PCR duplication 
+				next if($Columns2[1] & 256);
+				next if($Columns2[1] & 512);
+				next if($Columns2[1] & 1024);
+				$sc3 ++;
+				my $AS2 = &getAS(@Columns2);
+				my $index = $1;
+				$index =~ s/\D//g;
+				if($Columns2[9] =~ /(A)\1{$polyAcut,}$/){
+					$polyan ++;
+					my $end = $Columns2[3] + length($Columns2[9]) - $index;
+					print OUT "$Columns2[2]\t$Columns2[3]\t$end\t$Columns2[0]\t$AS2\t+\n";
+				}
+			}
+			### read1 contaning soft-clipped polyT 
+			if($Columns1[5] =~ /^(([$polyAcut-9]|[1-9]\d+)S)/){
+				## skip juncion reads 
+				next if($Columns1[5] =~ /N/);
+				## skip secondary alignment,not passing filters and PCR duplication 
+				next if($Columns1[1] & 256);
+				next if($Columns1[1] & 512);
+				next if($Columns1[1] & 1024);
+				$sc5 ++;
+				my $AS1 = &getAS(@Columns1);
+				my $index = $1;
+				$index =~ s/\D//g;
+				if($Columns1[9] =~ /^(T)\1{$polyAcut,}/){
+					$polytn ++;
+					my $end = $Columns1[3] + length($Columns1[9]) - $index;
+					print OUT "$Columns1[2]\t$Columns1[3]\t$end\t$Columns1[0]\t$AS1\t\-\n";
+				}
+			}
+		}
+	}
+	close IN;
+	close OUT;
+	print "#5softclip\t3softclip\tnonsoftclip\tpolya\tpolyt\n";
+	print "$sc5\t$sc3\t$ns\t$polyan\t$polytn\n";	
+}
+
+if(@ARGV < 3){
+	print "Usage:input_bam\toutput_bed\tSE or PE\n";
+}else{
+	$polyAcut = $ARGV[3] if(defined $ARGV[3]);
+	if($ARGV[2] =~ /SE/){
+		&extractFromSEBam($ARGV[0],$ARGV[1]);
+	}elsif($ARGV[2] =~ /PE/){
+		&extractFromPEBam($ARGV[0],$ARGV[1]);
+	}else{
+		print "error:RNA-seq data is undermined, it should be either SE or PE\n";
+	}
+#	print "polyAcut is $polyAcut\n";
+}
+
+

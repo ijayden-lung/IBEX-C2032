@@ -1,0 +1,56 @@
+#!/bin/bash
+#SBATCH --job-name=train
+#SBATCH --partition=batch
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --output=LOG/log.%J
+#SBATCH --time=3:00:00
+#SBATCH --mem=50G
+##SBATCH --gres=gpu:1
+##SBATCH -a 0-39
+##SBATCH --dependency afterok:6686802_[1-100] 
+
+echo "This is job #${SLURM_ARRAY_JOB_ID}, task id ${SLURM_ARRAY_TASK_ID}"
+#cd /home/longy/project/Split_BL6/
+#python split_chr.py
+
+#########TRAIN
+######Dec 27, 2020
+polyASeqRC_threshold=10
+RNASeqRC_thoreshold=30
+round="p${polyASeqRC_threshold}r${RNASeqRC_thoreshold}round0"
+number=${round: -1}
+((number-=1))
+oldround=${round:0:-1}$number
+bestEpoch=0029
+model="Model/bl6.pAs.${oldround}-${bestEpoch}.ckpt"
+
+perl extract.polyA.reads.pl BAM/BL6_REP1.sortedByName.bam BAM/BL6_REP1.bed PE
+
+#####Prepare data
+#sbatch --job-name='Prepare' --array=0-200 --export=round=$round,task='pre',polyASeqRC_threshold=$polyASeqRC_threshold,RNASeqRC_thoreshold=$RNASeqRC_thoreshold run_array_blocks.sh
+
+
+#python3 prep_data.py --root_dir data --round $round  --out bl6.pAst.text.npz
+#python3 train.py --root_dir data --block_dir ../Split_BL6/scanGenome_data/Blocks --round $round  --trainid bl6.pAs.${round} --model $model --polyAfile BAM/BL6_REP1.PolyACount.txt
+
+
+bestEpoch=0006
+Testid="bl6.pAs.${round}-${bestEpoch}"
+model="Model/bl6.pAs.${round}-${bestEpoch}.ckpt"
+pas="usage_data/bl6.pAs.usage.txt"
+db="usage_data/bl6.pAs.coverage.txt"
+info="scanGenome_data/Blocks/info.txt"
+
+##Train
+###Num of Train: 144, Num of valid 36, Num of test: 21
+#sbatch --job-name='Eva_train' --array=0-143 --export=Testid=$Testid,model=$model,round=$round,setName='train',task='eva' run_array_blocks.sh
+#sbatch --job-name='Eva_valid' --array=0-35 --export=Testid=$Testid,model=$model,round=$round,setName='valid',task='eva' run_array_blocks.sh
+#sbatch --job-name='Eva_test' --array=0-20 --export=Testid=$Testid,model=$model,round=$round,setName='test',task='eva'  run_array_blocks.sh
+
+#python merge_postpropose.py --root_dir=./scanGenome_data/Blocks --round=$round --trainid=$Testid --sets='train'
+#python merge_postpropose.py --root_dir=./scanGenome_data/Blocks --round=$round --trainid=$Testid --sets='valid'
+#python merge_postpropose.py --root_dir=./scanGenome_data/Blocks --round=$round --trainid=$Testid --sets='test'
