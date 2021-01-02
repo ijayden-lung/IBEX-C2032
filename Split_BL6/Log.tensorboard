@@ -1,0 +1,21 @@
+nohup: ignoring input
+Serving TensorBoard on localhost; to expose to the network, use a proxy or pass --bind_all
+TensorBoard 2.1.1 at http://localhost:8009/ (Press CTRL+C to quit)
+Traceback (most recent call last):
+  File "/home/longy/anaconda3/envs/ML/bin/tensorboard", line 10, in <module>
+    sys.exit(run_main())
+  File "/home/longy/anaconda3/envs/ML/lib/python3.7/site-packages/tensorboard/main.py", line 66, in run_main
+    app.run(tensorboard.main, flags_parser=tensorboard.configure)
+  File "/home/longy/anaconda3/envs/ML/lib/python3.7/site-packages/absl/app.py", line 299, in run
+    _run_main(main, args)
+  File "/home/longy/anaconda3/envs/ML/lib/python3.7/site-packages/absl/app.py", line 250, in _run_main
+    sys.exit(main(argv))
+  File "/home/longy/anaconda3/envs/ML/lib/python3.7/site-packages/tensorboard/program.py", line 268, in main
+    return runner(self.flags) or 0
+  File "/home/longy/anaconda3/envs/ML/lib/python3.7/site-packages/tensorboard/program.py", line 284, in _run_serve_subcommand
+    self._register_info(server)
+  File "/home/longy/anaconda3/envs/ML/lib/python3.7/site-packages/tensorboard/program.py", line 330, in _register_info
+    manager.write_info_file(info)
+  File "/home/longy/anaconda3/envs/ML/lib/python3.7/site-packages/tensorboard/manager.py", line 268, in write_info_file
+    with open(_get_info_file_path(), "w") as outfile:
+PermissionError: [Errno 13] Permission denied: '/tmp/.tensorboard-info/pid-229366.info'

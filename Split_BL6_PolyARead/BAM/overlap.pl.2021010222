@@ -1,0 +1,50 @@
+#!/usr/bin/perl -w
+
+use Statistics::Descriptive;
+my ($PAS,$input) = @ARGV;
+
+open FILE,$input;
+<FILE>;
+while(<FILE>){
+	my ($chr,$strand,$pos) = (split /\t/)[0,5,7]
+	$PAS_pos{"chr$chr:$strand"}->{$pos} = '';
+}
+
+
+my %nearest;
+my %nearReal;
+my $ground_truth = 0 ;
+open FILE,"$PAS";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$end,$srd,$symbol,$usage) = split;
+	$ground_truth++;
+	$POS = $PAS_pos{"$chr:$srd"};
+	while(my($pos,$val) = each %$POS){
+		if(!exists $nearest{$pos} || abs($pos-$end)<abs($nearest{$pos})){
+			$nearest{$pos} = $pos-$end;
+			$nearReal{$pos} = "$pas_id";
+		}
+	}
+}
+
+my $RealNum25 = 0;
+my $RealNum50 = 0;
+my $RealNum100 = 0;
+while(my($pas_id,$diff) = each %nearest){
+	if(abs($diff)<100){
+		$RealNum100++;
+		if(abs($diff)<50){
+			$RealNum50++;
+			if(abs($diff)<25){
+				$RealNum25++;
+			}
+		}
+	}
+}
+$recall25 = $RealNum25/$ground_truth;
+$recall50 = $RealNum50/$ground_truth;
+$recall100 = $RealNum100/$ground_truth;
+print STAT "ground truth in $CHR\t$RealNum25\t$RealNum50\t$RealNum100\t$ground_truth\n";
+print STAT "recall\t$recall25\t$recall50\t$recall100\n";
