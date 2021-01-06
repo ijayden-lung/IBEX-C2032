@@ -1,0 +1,63 @@
+#p
+#p
+#q
+#q
+#!/usr/bin/perl -w
+#
+#
+#Update: 2020/12/12 Yongkang Long
+
+my ($PAS,$file,$round,$polyASeqRCThreshold,$RNASeqRCThreshold,$prob) = @ARGV;
+my $Threshold  = 25;
+my ($baseName) = (split /\//,$file)[-1];
+my ($CHR,$SRD) = split /\_/,$baseName;
+
+
+my %true_pas;
+open FILE,"$PAS";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$end,$srd,$symbol,$usage,$polyASeqRC,undef,undef,$RNASeqRC) = split;
+	next if $chr ne $CHR;
+	next if $srd ne $SRD;
+	next if $polyASeqRC < $polyASeqRCThreshold;
+	next if $RNASeqRC   < $RNASeqRCThreshold;
+	$true_pas{$end} = '';
+}
+
+my @sort_true_pas = sort{$a<=>$b} keys %true_pas;
+
+open FILE,"$file";
+my $header = <FILE>;
+
+$out = "data/negative/$round/$baseName";
+open OUT,">$out";
+my $index = 0;
+while(<FILE>){
+	chomp;
+	my @data = split /\t/;
+	my ($chr,$pos,$srd) =  @data[2..4];
+	my $pas_id = "$data[2]:$data[3]:$data[4]";
+	#my $p = 0.000248;
+	my $p = $prob;
+	if(rand() < $p){
+		my $accept = 1;
+		for(my$i=$index;$i<@sort_true_pas;$i++){
+			if($sort_true_pas[$i] - $pos < -$Threshold){
+				$index = $i;
+				next;
+			}
+			elsif($sort_true_pas[$i] - $pos < $Threshold){
+				$accept = 0;
+			}
+			else{
+				last;
+			}
+		}
+		if($accept == 1){
+			$data[0] = $pas_id;
+			print OUT join("\t",@data),"\n";
+		}
+	}
+}
