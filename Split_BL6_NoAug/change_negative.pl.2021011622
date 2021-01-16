@@ -1,0 +1,87 @@
+#!/usr/bin/perl -w
+#
+#Yongkang Long 2020/12/27 Change to Block version
+#
+#
+use List::Util qw(first max maxstr min minstr reduce shuffle sum shuffle) ;
+
+my ($input,$scanTranscriptome,$negative,$out,$round,$RNASeqRCThreshold) = @ARGV;
+my $Threshold  = 50;
+open FILE,"$input";
+<FILE>;
+my %fp_pas;
+while(<FILE>){
+	chomp;
+	my ($pos,$id,$diff,$chr,$srd,$gt_id,$gt_diff) = split;
+	next if (abs($gt_diff) <= $Threshold);
+	my $end = sprintf("%.0f",$pos);
+	$fp_pas{"$chr:$end:$srd"} = '';
+}
+
+
+my %pas;
+open FILE,"$scanTranscriptome";
+my $header=<FILE>;
+my @lines = <FILE>;
+#while(<FILE>){
+for (my $i=0;$i<@lines;$i++){
+	chomp $lines[$i];
+	my @data = split /\t/,$lines[$i];
+	if(exists $fp_pas{$pas_id}){
+		my $trimMean = &TrimmedMean(@data[8..108]);
+		next if $trimMean < $RNASeqRCThreshold;
+		my $pas_id = $data[0];
+		$data[5] = "Origin$round";
+		$data[6] = $pas_id;
+		$pas{$pas_id} = join("\t",@data);
+		for (my $j=$i-$Shift;$j<=$i+$Shift;$j++){
+			next if $j==$i;
+			chomp $lines[$j];
+			my @shift_data = split /\t/,$lines[$j];
+			my $shift_pos = $shift_data[3];
+			my $shift_diff = $pos-$shift_pos;
+
+		}
+	}
+}
+
+
+foreach my $pas_id (keys %fp_pas){
+	if (!exists $pas{$pas_id}){
+		print "$pas_id\n";
+	}
+}
+
+
+my @shuffle = keys %pas;
+open FILE,"$negative";
+my $i=0;
+open OUT,">$out";
+my @line = <FILE>;
+@line = &shuffle(@line);
+foreach (@line){
+	chomp;
+	if(rand()<0.5 && $i<@shuffle){
+		print OUT "$pas{$shuffle[$i]}\n";
+		$i++;
+	}
+	else{
+		print OUT "$_\n";
+	}
+}
+
+
+
+sub TrimmedMean{
+	my @data = @_;
+	my $sum = 0;
+	my $count = 0;
+	foreach my $ele (@data){
+		if($ele>0){
+			$sum += $ele;
+			$count++;
+		}
+	}
+	my $ave = $count>0 ? $sum/$count : 0;
+	return $ave;
+}
