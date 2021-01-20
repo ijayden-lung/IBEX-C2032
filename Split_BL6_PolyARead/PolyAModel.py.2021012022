@@ -1,0 +1,209 @@
+import tensorflow as tf
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Dense, Flatten, Add,Lambda,LeakyReLU
+from tensorflow.keras.layers import Dropout, Conv1D, MaxPooling1D,MaxPooling1D,GlobalMaxPooling1D,SpatialDropout1D
+from tensorflow.keras.layers import Activation,concatenate,BatchNormalization
+from tensorflow.keras.optimizers import SGD,Adam,schedules
+from tensorflow.keras.utils import plot_model
+
+
+from tensorflow.keras import regularizers
+from tensorflow.keras import initializers
+from tensorflow.keras import constraints
+from tensorflow.keras import backend as K
+#from tensorflow.keras.engine import Layer, InputSpec
+from tensorflow.keras.layers import Layer, InputSpec
+from tensorflow.keras.metrics import binary_accuracy
+from tensorflow.keras.initializers import Ones, Zeros
+#from tensorflow.keras.utils.generic_utils import get_custom_objects
+
+# from tensorflow.keras.models import Sequential, Model
+# from tensorflow.keras.layers.convolutional import MaxPooling2D, Convolution2D
+# from tensorflow.keras.layers.core import Dense, Dropout, Activation, Flatten
+
+
+
+class GroupNormalization(Layer):
+	def __init__(self,groups=32,axis=-1,epsilon=1e-5,center=True,scale=True,beta_initializer='zeros',gamma_initializer='ones',beta_regularizer=None,
+				 gamma_regularizer=None,beta_constraint=None,gamma_constraint=None,**kwargs):
+		super(GroupNormalization, self).__init__(**kwargs)
+		self.supports_masking = True
+		self.groups = groups
+		self.axis = axis
+		self.epsilon = epsilon
+		self.center = center
+		self.scale = scale
+		self.beta_initializer = initializers.get(beta_initializer)
+		self.gamma_initializer = initializers.get(gamma_initializer)
+		self.beta_regularizer = regularizers.get(beta_regularizer)
+		self.gamma_regularizer = regularizers.get(gamma_regularizer)
+		self.beta_constraint = constraints.get(beta_constraint)
+		self.gamma_constraint = constraints.get(gamma_constraint)
+
+	def build(self, input_shape):
+		dim = input_shape[self.axis]
+
+		if dim is None:
+			raise ValueError('Axis '+str(self.axis)+' of input tensor should have a defined dimension but the layer received an input with shape '+str(input_shape)+'.')
+
+		if dim < self.groups:
+			raise ValueError('Number of groups ('+str(self.groups)+') cannot be more than the number of channels ('+str(dim)+').')
+
+		if dim % self.groups != 0:
+			raise ValueError('Number of groups ('+str(self.groups)+') must be a multiple of the number of channels ('+str(dim)+').')
+
+		self.input_spec = InputSpec(ndim=len(input_shape),axes={self.axis: dim})
+		shape = (dim,)
+
+		if self.scale:
+			self.gamma = self.add_weight(shape=shape,name='gamma',initializer=self.gamma_initializer,regularizer=self.gamma_regularizer,constraint=self.gamma_constraint)
+		else:
+			self.gamma = None
+
+		if self.center:
+			self.beta = self.add_weight(shape=shape,name='beta',initializer=self.beta_initializer,regularizer=self.beta_regularizer,constraint=self.beta_constraint)
+		else:
+			self.beta = None
+
+		self.built = True
+
+	def call(self, inputs, **kwargs):
+		input_shape = K.int_shape(inputs)
+		tensor_input_shape = K.shape(inputs)
+
+		# Prepare broadcasting shape.
+		reduction_axes = list(range(len(input_shape)))
+		del reduction_axes[self.axis]
+		broadcast_shape = [1] * len(input_shape)
+		broadcast_shape[self.axis] = input_shape[self.axis] // self.groups
+		broadcast_shape.insert(1, self.groups)
+
+		reshape_group_shape = K.shape(inputs)
+		group_axes = [reshape_group_shape[i] for i in range(len(input_shape))]
+		group_axes[self.axis] = input_shape[self.axis] // self.groups
+		group_axes.insert(1, self.groups)
+
+		# reshape inputs to new group shape
+		group_shape = [group_axes[0], self.groups] + group_axes[2:]
+		group_shape = K.stack(group_shape)
+		inputs = K.reshape(inputs, group_shape)
+
+		group_reduction_axes = list(range(len(group_axes)))
+		group_reduction_axes = group_reduction_axes[2:]
+
+		mean = K.mean(inputs, axis=group_reduction_axes, keepdims=True)
+		variance = K.var(inputs, axis=group_reduction_axes, keepdims=True)
+		inputs = (inputs - mean) / (K.sqrt(variance + self.epsilon))
+
+		# prepare broadcast shape
+		inputs = K.reshape(inputs, group_shape)
+		outputs = inputs
+
+		# In this case we must explicitly broadcast all parameters.
+		if self.scale:
+			broadcast_gamma = K.reshape(self.gamma, broadcast_shape)
+			outputs = outputs * broadcast_gamma
+
+		if self.center:
+			broadcast_beta = K.reshape(self.beta, broadcast_shape)
+			outputs = outputs + broadcast_beta
+
+		outputs = K.reshape(outputs, tensor_input_shape)
+
+		return outputs
+
+	def get_config(self):
+		config = {'groups': self.groups,'axis': self.axis,'epsilon': self.epsilon,'center': self.center,'scale': self.scale,
+			'beta_initializer': initializers.serialize(self.beta_initializer),'gamma_initializer': initializers.serialize(self.gamma_initializer),
+			'beta_regularizer': regularizers.serialize(self.beta_regularizer),'gamma_regularizer': regularizers.serialize(self.gamma_regularizer),
+			'beta_constraint': constraints.serialize(self.beta_constraint),'gamma_constraint': constraints.serialize(self.gamma_constraint)}
+		base_config = super(GroupNormalization, self).get_config()
+		return dict(list(base_config.items()) + list(config.items()))
+
+	def compute_output_shape(self, input_shape):
+		return input_shape
+
+
+def CNN(inputs):
+	#conv_initializer = initializers.TruncatedNormal(mean=0., stddev=0.12)
+	#fc_initializer =   initializers.TruncatedNormal(mean=0., stddev=0.26)
+	x = Conv1D(filters= 32, kernel_size= 6, padding = 'valid', kernel_regularizer = regularizers.l2(1e-4), bias_regularizer = regularizers.l2(1e-4))(inputs)
+	x = GroupNormalization(groups = 4, axis = -1)(x) 
+	x = Activation('relu')(x)
+	#x = LeakyReLU(alpha=0.1)(x)
+	x = MaxPooling1D(pool_size = 6)(x)
+	x = Dropout(0.25)(x)
+	x = Flatten()(x)
+	x = Dense(64,  kernel_regularizer = regularizers.l2(1e-4),bias_regularizer = regularizers.l2(1e-4))(x)
+	x = Activation('relu')(x)
+	#x = LeakyReLU(alpha=0.1)(x)
+	x = Dropout(0.25)(x)
+	return x
+
+def FC(inputs):
+	z = Flatten()(inputs)
+	z = Dense(64, kernel_regularizer = regularizers.l2(1e-4),bias_regularizer = regularizers.l2(1e-4))(z)
+	#z = Activation('relu')(z)
+	z = LeakyReLU(alpha=0.1)(z)
+	return z
+
+
+def PolyA_CNN(combination):
+
+	input_shape1 = (176,4)
+	input_shape2 = (176,1)
+	input_shape3 = (176,1)
+	input_shape4 = (176,2)
+	seq_input = Input(shape = input_shape1,name="seq_input")
+	cov_input = Input(shape = input_shape2,name="cov_input")
+	pol_input = Input(shape = input_shape3,name="pol_input")
+	cop_input = Input(shape = input_shape3,name="cop_input")
+
+	#
+	if combination == 'SCP':
+		print ('input_layers = [seq_input,cov_input,pol_input]')
+		#print ('input_layers = [seq_input,cop_input]')
+		x = CNN(seq_input)
+		y = CNN(cov_input)
+		z = CNN(pol_input)
+		input_layers = [seq_input,cov_input,pol_input]
+		outLayer= Dense(1, activation='sigmoid')(concatenate([x,y,z]))
+	elif combination == 'SC' or combination == 'sc' :
+		print ('input_layers = [seq_input,cov_input]')
+		x = CNN(seq_input)
+		y = CNN(cov_input)
+		input_layers = [seq_input,cov_input]
+		outLayer= Dense(1, activation='sigmoid')(concatenate([x,y]))
+	elif combination == 'SP':
+		print ('input_layers = [seq_input,pol_input]')
+		x = CNN(seq_input)
+		y = CNN(pol_input)
+		input_layers = [seq_input,pol_input]
+		outLayer= Dense(1, activation='sigmoid')(concatenate([x,y]))
+	elif combination == 'CP':
+		print ('input_layers = [cov_input,pol_input]')
+		x = CNN(cov_input)
+		y = CNN(pol_input)
+		input_layers = [cov_input,pol_input]
+		outLayer= Dense(1, activation='sigmoid')(concatenate([x,y]))
+	elif combination == 'S':
+		print ('input_layers = [seq_input]')
+		x = CNN(seq_input)
+		input_layers = seq_input
+		outLayer= Dense(1, activation='sigmoid')(x)
+	elif combination == 'C':
+		print ('input_layers = [cov_input]')
+		x = CNN(cov_input)
+		input_layers = cov_input
+		outLayer= Dense(1, activation='sigmoid')(x)
+	elif combination == 'P':
+		print ('input_layers = [pol_input]')
+		x = CNN(pol_input)
+		input_layers = pol_input
+		outLayer= Dense(1, activation='sigmoid')(x)
+	else:
+		sys.exit("Invalid combination parameter. Plese try again with combination in [SCP SC SP CP S C P]")
+
+	model = Model(inputs=input_layers, outputs=outLayer)
+
+	return model
