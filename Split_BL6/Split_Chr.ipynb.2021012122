@@ -1,0 +1,395 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import os\n",
+    "import glob\n",
+    "from collections import OrderedDict,defaultdict\n",
+    "import pipes\n",
+    "import pprint\n",
+    "import tempfile\n",
+    "import re"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 32,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "root_dir = 'K562_ZRANB2_data'"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "####Fixed length 1e6 = 100 blocks. \n",
+    "####Fixed length 5e5 = 200 blocks. "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "#!genome-build GRCh38.p13\n",
+      "#!genome-version GRCh38\n",
+      "#!genome-date 2013-12\n",
+      "#!genome-build-accession NCBI:GCA_000001405.28\n",
+      "#!genebuild-last-updated 2020-03\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "from subprocess import Popen, PIPE\n",
+    "\n",
+    "cmd = 'zcat /home/longy/cnda/ensembl/Homo_sapiens.GRCh38.101.gtf.gz | head -5'\n",
+    "proc = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE)\n",
+    "outs, errs = proc.communicate(input=\"\"\"\n",
+    "        Popen.communicate(input=None, timeout=None)\n",
+    "        Interact with process: Send data to stdin. Read data from stdout and stderr, until end-of-file is reached. Wait for process to terminate. The optional input argument should be data to be sent to the child process, or None, if no data should be sent to the child. The type of input must be bytes or, if universal_newlines was True, a string.\n",
+    "        communicate() returns a tuple (stdout_data, stderr_data).\n",
+    "        Note that if you want to send data to the process’s stdin, you need to create the Popen object with stdin=PIPE. Similarly, to get anything other than None in the result tuple, you need to give stdout=PIPE and/or stderr=PIPE too.\n",
+    "        If the process does not terminate after timeout seconds, a TimeoutExpired exception will be raised. Catching this exception and retrying communication will not lose any output.\n",
+    "        The child process is not killed if the timeout expires, so in order to cleanup properly a well-behaved application should kill the child process and finish communication:\n",
+    "    \"\"\".encode('UTF-8'))\n",
+    "print(outs.decode('UTF-8'))\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 26,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def binary_locate(array,ele,start,end):\n",
+    "    middle = (end+start)//2\n",
+    "    if(end-start>1):\n",
+    "        if(array[middle]<ele):\n",
+    "            return binary_locate(array,ele,middle,end)\n",
+    "        elif(array[middle+1]>ele):\n",
+    "            return binary_locate(array,ele,start,middle)\n",
+    "        else:\n",
+    "            return middle,middle+1\n",
+    "    else:\n",
+    "        return middle,middle+1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "p = pipes.Template()\n",
+    "p.append(\"zcat\", '--')\n",
+    "Gene_Loc = defaultdict(list)\n",
+    "f = p.open('/home/longy/cnda/ensembl/Homo_sapiens.GRCh38.101.gtf.gz', 'r')\n",
+    "\n",
+    "for line in f.readlines():\n",
+    "    if re.match('^#',line):\n",
+    "        continue\n",
+    "    line = line.rstrip('\\n')\n",
+    "    data = line.split('\\t')\n",
+    "    if(data[2] == 'gene'):\n",
+    "        Gene_Loc['chr'+data[0]+data[6]].append(int(data[3]))\n",
+    "        Gene_Loc['chr'+data[0]+data[6]].append(int(data[4]))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(1527, 1528)"
+      ]
+     },
+     "execution_count": 28,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "import sys\n",
+    "sys.setrecursionlimit(10000)\n",
+    "array = Gene_Loc['chr1+']\n",
+    "binary_locate(array,46104790,0,3505)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 33,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "writing file K562_ZRANB2_data/Blocks/chr4_+_0_53299-40097626\n",
+      "writing file K562_ZRANB2_data/Blocks/chr4_+_1_40102068-109491499\n",
+      "writing file K562_ZRANB2_data/Blocks/chr4_+_2_109494612-190200372\n",
+      "writing file K562_ZRANB2_data/Blocks/chr16_-_0_10209-19698677\n",
+      "writing file K562_ZRANB2_data/Blocks/chr16_-_1_19700616-67741287\n",
+      "writing file K562_ZRANB2_data/Blocks/chr16_-_2_67744202-90226969\n",
+      "writing file K562_ZRANB2_data/Blocks/chr19_+_0_507682-11451051\n",
+      "writing file K562_ZRANB2_data/Blocks/chr19_+_1_11538848-34405081\n",
+      "writing file K562_ZRANB2_data/Blocks/chr19_+_2_34409158-48470757\n",
+      "writing file K562_ZRANB2_data/Blocks/chr19_+_3_48472323-58605036\n",
+      "writing file K562_ZRANB2_data/Blocks/chr9_-_0_14458-95150094\n",
+      "writing file K562_ZRANB2_data/Blocks/chr9_-_1_95170987-125521725\n",
+      "writing file K562_ZRANB2_data/Blocks/chr9_-_2_125542972-137618809\n",
+      "writing file K562_ZRANB2_data/Blocks/chr21_-_0_5099909-46458099\n",
+      "writing file K562_ZRANB2_data/Blocks/chr3_+_0_3126963-38255486\n",
+      "writing file K562_ZRANB2_data/Blocks/chr3_+_1_38346876-64011998\n",
+      "writing file K562_ZRANB2_data/Blocks/chr3_+_2_66221032-152465800\n",
+      "writing file K562_ZRANB2_data/Blocks/chr3_+_3_152835154-198220964\n",
+      "writing file K562_ZRANB2_data/Blocks/chr4_-_0_36920-67545526\n",
+      "writing file K562_ZRANB2_data/Blocks/chr4_-_1_67609945-109714501\n",
+      "writing file K562_ZRANB2_data/Blocks/chr4_-_2_109717456-188741205\n",
+      "writing file K562_ZRANB2_data/Blocks/chr21_+_0_5553728-46664907\n",
+      "writing file K562_ZRANB2_data/Blocks/chr14_+_0_19062485-69462395\n",
+      "writing file K562_ZRANB2_data/Blocks/chr14_+_1_69611847-106520473\n",
+      "writing file K562_ZRANB2_data/Blocks/chr11_+_0_130661-34147704\n",
+      "writing file K562_ZRANB2_data/Blocks/chr11_+_1_34149074-65506546\n",
+      "writing file K562_ZRANB2_data/Blocks/chr11_+_2_65525109-83183164\n",
+      "writing file K562_ZRANB2_data/Blocks/chr11_+_3_83184222-134572909\n",
+      "writing file K562_ZRANB2_data/Blocks/chr8_+_0_232487-55942081\n",
+      "writing file K562_ZRANB2_data/Blocks/chr8_+_1_55946441-145056036\n",
+      "writing file K562_ZRANB2_data/Blocks/chr19_-_0_60476-9749876\n",
+      "writing file K562_ZRANB2_data/Blocks/chr19_-_1_9751835-27763276\n",
+      "writing file K562_ZRANB2_data/Blocks/chr19_-_2_27785892-46850848\n",
+      "writing file K562_ZRANB2_data/Blocks/chr19_-_3_46859672-58599221\n",
+      "writing file K562_ZRANB2_data/Blocks/chr8_-_0_69695-92667574\n",
+      "writing file K562_ZRANB2_data/Blocks/chr8_-_1_92671227-145002864\n",
+      "writing file K562_ZRANB2_data/Blocks/chr1_-_0_14340-17439753\n",
+      "writing file K562_ZRANB2_data/Blocks/chr1_-_1_17440804-33031650\n",
+      "writing file K562_ZRANB2_data/Blocks/chr1_-_2_33036644-53772495\n",
+      "writing file K562_ZRANB2_data/Blocks/chr1_-_3_53773997-108247580\n",
+      "writing file K562_ZRANB2_data/Blocks/chr1_-_4_108263378-153922833\n",
+      "writing file K562_ZRANB2_data/Blocks/chr1_-_5_153929454-175108942\n",
+      "writing file K562_ZRANB2_data/Blocks/chr1_-_6_175157168-222504560\n",
+      "writing file K562_ZRANB2_data/Blocks/chr1_-_7_222555129-248873622\n",
+      "writing file K562_ZRANB2_data/Blocks/chr12_+_0_41206-45907985\n",
+      "writing file K562_ZRANB2_data/Blocks/chr12_+_1_46383692-68392456\n",
+      "writing file K562_ZRANB2_data/Blocks/chr12_+_2_68402435-111901820\n",
+      "writing file K562_ZRANB2_data/Blocks/chr12_+_3_112005296-133205011\n",
+      "writing file K562_ZRANB2_data/Blocks/chr5_-_0_202707-77996107\n",
+      "writing file K562_ZRANB2_data/Blocks/chr5_-_1_78001340-138946000\n",
+      "writing file K562_ZRANB2_data/Blocks/chr5_-_2_138947048-181261087\n",
+      "writing file K562_ZRANB2_data/Blocks/chr15_+_0_22304619-64455324\n",
+      "writing file K562_ZRANB2_data/Blocks/chr15_+_1_64460831-101976624\n",
+      "writing file K562_ZRANB2_data/Blocks/chr17_-_0_62377-21535545\n",
+      "writing file K562_ZRANB2_data/Blocks/chr17_-_1_21550904-43170938\n",
+      "writing file K562_ZRANB2_data/Blocks/chr17_-_2_43246572-64822386\n",
+      "writing file K562_ZRANB2_data/Blocks/chr17_-_3_64824551-83051764\n",
+      "writing file K562_ZRANB2_data/Blocks/chr10_-_0_809541-49815425\n",
+      "writing file K562_ZRANB2_data/Blocks/chr10_-_1_49818308-97393767\n",
+      "writing file K562_ZRANB2_data/Blocks/chr10_-_2_97396136-133373335\n",
+      "writing file K562_ZRANB2_data/Blocks/chr3_-_0_2533846-47610333\n",
+      "writing file K562_ZRANB2_data/Blocks/chr3_-_1_47622115-101637589\n",
+      "writing file K562_ZRANB2_data/Blocks/chr3_-_2_101649494-156711772\n",
+      "writing file K562_ZRANB2_data/Blocks/chr3_-_3_156713511-198076929\n",
+      "writing file K562_ZRANB2_data/Blocks/chr12_-_0_14502-49131407\n",
+      "writing file K562_ZRANB2_data/Blocks/chr12_-_1_49184815-75688949\n",
+      "writing file K562_ZRANB2_data/Blocks/chr12_-_2_76026143-116237704\n",
+      "writing file K562_ZRANB2_data/Blocks/chr12_-_3_116276974-133122031\n",
+      "writing file K562_ZRANB2_data/Blocks/chr20_+_0_298108-38571438\n",
+      "writing file K562_ZRANB2_data/Blocks/chr20_+_1_38572579-64276034\n",
+      "writing file K562_ZRANB2_data/Blocks/chr16_+_0_24334-20849660\n",
+      "writing file K562_ZRANB2_data/Blocks/chr16_+_1_20900471-67148567\n",
+      "writing file K562_ZRANB2_data/Blocks/chr16_+_2_67160012-90227080\n",
+      "writing file K562_ZRANB2_data/Blocks/chr18_-_0_214389-80033863\n",
+      "writing file K562_ZRANB2_data/Blocks/chr14_-_0_19267768-60977643\n",
+      "writing file K562_ZRANB2_data/Blocks/chr14_-_1_60979146-106482274\n",
+      "writing file K562_ZRANB2_data/Blocks/chr5_+_0_216267-72209568\n",
+      "writing file K562_ZRANB2_data/Blocks/chr5_+_1_72320396-138187982\n",
+      "writing file K562_ZRANB2_data/Blocks/chr5_+_2_138332152-181477953\n",
+      "writing file K562_ZRANB2_data/Blocks/chrX_-_0_304107-78103828\n",
+      "writing file K562_ZRANB2_data/Blocks/chrX_-_1_78129859-156015485\n",
+      "writing file K562_ZRANB2_data/Blocks/chr22_-_0_10751708-29181822\n",
+      "writing file K562_ZRANB2_data/Blocks/chr22_-_1_29183099-50776613\n",
+      "writing file K562_ZRANB2_data/Blocks/chr22_+_0_10924872-31496729\n",
+      "writing file K562_ZRANB2_data/Blocks/chr22_+_1_31508248-50801337\n",
+      "writing file K562_ZRANB2_data/Blocks/chr6_+_0_292510-30592829\n",
+      "writing file K562_ZRANB2_data/Blocks/chr6_+_1_30594178-43450310\n",
+      "writing file K562_ZRANB2_data/Blocks/chr6_+_2_43477596-132817651\n",
+      "writing file K562_ZRANB2_data/Blocks/chr6_+_3_133953230-170745657\n",
+      "writing file K562_ZRANB2_data/Blocks/chr10_+_0_135607-60796168\n",
+      "writing file K562_ZRANB2_data/Blocks/chr10_+_1_62805221-97433451\n",
+      "writing file K562_ZRANB2_data/Blocks/chr10_+_2_97448384-133780162\n",
+      "writing file K562_ZRANB2_data/Blocks/chr17_+_0_717182-27172449\n",
+      "writing file K562_ZRANB2_data/Blocks/chr17_+_1_27294108-42508269\n",
+      "writing file K562_ZRANB2_data/Blocks/chr17_+_2_42509295-63819405\n",
+      "writing file K562_ZRANB2_data/Blocks/chr17_+_3_63827423-83240405\n",
+      "writing file K562_ZRANB2_data/Blocks/chr7_-_0_20875-43866988\n",
+      "writing file K562_ZRANB2_data/Blocks/chr7_-_1_43868872-99466331\n",
+      "writing file K562_ZRANB2_data/Blocks/chr7_-_2_99470109-130612245\n",
+      "writing file K562_ZRANB2_data/Blocks/chr7_-_3_130613452-158871435\n",
+      "writing file K562_ZRANB2_data/Blocks/chr20_-_0_270953-37022820\n",
+      "writing file K562_ZRANB2_data/Blocks/chr20_-_1_37032600-64076885\n",
+      "writing file K562_ZRANB2_data/Blocks/chr9_+_0_40342-93566146\n",
+      "writing file K562_ZRANB2_data/Blocks/chr9_+_1_93576806-128334134\n",
+      "writing file K562_ZRANB2_data/Blocks/chr9_+_2_128342626-138221304\n",
+      "writing file K562_ZRANB2_data/Blocks/chr2_+_0_264912-54647343\n",
+      "writing file K562_ZRANB2_data/Blocks/chr2_+_1_54648979-99406118\n",
+      "writing file K562_ZRANB2_data/Blocks/chr2_+_2_100562977-158577472\n",
+      "writing file K562_ZRANB2_data/Blocks/chr2_+_3_158588892-201824962\n",
+      "writing file K562_ZRANB2_data/Blocks/chr2_+_4_202036549-242180411\n",
+      "writing file K562_ZRANB2_data/Blocks/chr13_+_0_18171447-114327069\n",
+      "writing file K562_ZRANB2_data/Blocks/chr1_+_0_137788-23083744\n",
+      "writing file K562_ZRANB2_data/Blocks/chr1_+_1_23369063-39007364\n",
+      "writing file K562_ZRANB2_data/Blocks/chr1_+_2_39026328-62453337\n",
+      "writing file K562_ZRANB2_data/Blocks/chr1_+_3_62784162-109632109\n",
+      "writing file K562_ZRANB2_data/Blocks/chr1_+_4_109652085-154264295\n",
+      "writing file K562_ZRANB2_data/Blocks/chr1_+_5_154265692-174637580\n",
+      "writing file K562_ZRANB2_data/Blocks/chr1_+_6_174683515-212104899\n",
+      "writing file K562_ZRANB2_data/Blocks/chr1_+_7_212285746-248939103\n",
+      "writing file K562_ZRANB2_data/Blocks/chr7_+_0_524172-56080745\n",
+      "writing file K562_ZRANB2_data/Blocks/chr7_+_1_56104416-100336429\n",
+      "writing file K562_ZRANB2_data/Blocks/chr7_+_2_100338173-131496617\n",
+      "writing file K562_ZRANB2_data/Blocks/chr7_+_3_133253086-159033325\n",
+      "writing file K562_ZRANB2_data/Blocks/chr15_-_0_20365874-62248788\n",
+      "writing file K562_ZRANB2_data/Blocks/chr15_-_1_62362040-101745042\n",
+      "writing file K562_ZRANB2_data/Blocks/chr18_+_0_158626-80150750\n",
+      "writing file K562_ZRANB2_data/Blocks/chrX_+_0_276375-71375371\n",
+      "writing file K562_ZRANB2_data/Blocks/chrX_+_1_71376943-156025651\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "writing file K562_ZRANB2_data/Blocks/chr6_-_0_485261-31356283\n",
+      "writing file K562_ZRANB2_data/Blocks/chr6_-_1_31394391-53337848\n",
+      "writing file K562_ZRANB2_data/Blocks/chr6_-_2_53340908-119076093\n",
+      "writing file K562_ZRANB2_data/Blocks/chr6_-_3_119078049-170584409\n",
+      "writing file K562_ZRANB2_data/Blocks/chr2_-_0_229926-45573349\n",
+      "writing file K562_ZRANB2_data/Blocks/chr2_-_1_45574553-86162086\n",
+      "writing file K562_ZRANB2_data/Blocks/chr2_-_2_86166416-127811155\n",
+      "writing file K562_ZRANB2_data/Blocks/chr2_-_3_127843602-190998315\n",
+      "writing file K562_ZRANB2_data/Blocks/chr2_-_4_190999534-241801247\n",
+      "writing file K562_ZRANB2_data/Blocks/chr11_-_0_120721-20055898\n",
+      "writing file K562_ZRANB2_data/Blocks/chr11_-_1_22623065-62855878\n",
+      "writing file K562_ZRANB2_data/Blocks/chr11_-_2_63574900-82689660\n",
+      "writing file K562_ZRANB2_data/Blocks/chr11_-_3_82824330-134253359\n",
+      "writing file K562_ZRANB2_data/Blocks/chr13_-_0_18206530-114291739\n"
+     ]
+    }
+   ],
+   "source": [
+    "total = 0\n",
+    "files = glob.glob(root_dir+\"/*.txt\")\n",
+    "info = open(root_dir+'/Blocks/info.txt','w')\n",
+    "info.write('ID\\tstart\\tend\\tlength\\tsites_num\\n')\n",
+    "for file in files:\n",
+    "    num_lines = sum(1 for line in open(file))\n",
+    "    num_blocks = round(num_lines/5e5)\n",
+    "    len_blocks = num_lines/num_blocks\n",
+    "    \n",
+    "    f= open(file,'r')\n",
+    "    pre_pos = 0\n",
+    "    dict_line = OrderedDict()\n",
+    "    #dict_line = dict()\n",
+    "    count = 0\n",
+    "    separate_num=0\n",
+    "    save_block = 0\n",
+    "    start = 0\n",
+    "    \n",
+    "    for i, line in enumerate(f):\n",
+    "        line = line.rstrip('\\n')\n",
+    "        if(i==0):\n",
+    "            continue ###Skip header\n",
+    "        chromosome,pos,strand = line.split('\\t')[0].split(':')\n",
+    "        pos = int(pos)\n",
+    "        count += 1\n",
+    "        if(i==1):\n",
+    "            start=pos\n",
+    "        if(count>len_blocks and pos-pre_pos>1000 and save_block<num_blocks-1):\n",
+    "            array = Gene_Loc[chromosome+strand]\n",
+    "            index1,index2 = binary_locate(array,pre_pos,0,len(array)-1)\n",
+    "            if(index1%2==1 and index2%2==0):\n",
+    "                ww = open(root_dir+'/Blocks/%s_%s_%d'%(chromosome,strand,save_block),'w')\n",
+    "                print('writing file '+root_dir+'/Blocks/%s_%s_%d_%d-%d'%(chromosome,strand,save_block,start,pre_pos))\n",
+    "                info.write('%s_%s_%d\\t%d\\t%d\\t%d\\t%d\\n'%(chromosome,strand,save_block,start,pre_pos,pre_pos-start,count))\n",
+    "                #print('%s_%s_%d\\t%d\\t%d\\t%d\\t%d\\n'%(chromosome,strand,save_block,start,pre_pos,pre_pos-start,count))\n",
+    "                for key,val in dict_line.items():\n",
+    "                    ww.write('%s\\n'%val)\n",
+    "                ww.close()\n",
+    "                dict_line.clear()\n",
+    "                count = 0\n",
+    "                save_block += 1\n",
+    "                start  = pos\n",
+    "            \n",
+    "        \n",
+    "        dict_line[pos] = line\n",
+    "        pre_pos = pos\n",
+    "        \n",
+    "    out = open(root_dir+'/Blocks/%s_%s_%d'%(chromosome,strand,save_block),'w')\n",
+    "    print('writing file '+root_dir+'/Blocks/%s_%s_%d_%d-%d'%(chromosome,strand,save_block,start,pre_pos))\n",
+    "    info.write('%s_%s_%d\\t%d\\t%d\\t%d\\t%d\\n'%(chromosome,strand,save_block,start,pre_pos,pre_pos-start,count))\n",
+    "    for key,val in dict_line.items():\n",
+    "        out.write('%s\\n'%(val))\n",
+    "    out.close()\n",
+    "\n",
+    "info.close()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 80,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(46066315, 46373550)"
+      ]
+     },
+     "execution_count": 80,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "array[678],array[679]"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}
