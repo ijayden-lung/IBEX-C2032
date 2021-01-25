@@ -1,0 +1,30 @@
+#!/usr/bin/perl -w
+
+my $pt = 5;
+my $rt = 5;
+my %hash;
+open FILE,"K562_Control.pAs.usage.txt";
+<FILE>;
+
+while(<FILE>){
+	chomp;
+	my @data = split;
+	next if $data[7]<$pt;
+	next if $data[10]<$rt;
+	$hash{$data[5]}++;
+}
+
+
+open FILE,"K562_Control.pAs.usage.txt";
+<FILE>;
+open OUT,">K562_Control.pAs.multipAs.usage.txt";
+print OUT "pas_id\tusage\n";
+while(<FILE>){
+	chomp;
+	my @data = split;
+	next if $data[7]<$pt;
+	next if $data[10]<$rt;
+	if($hash{$data[5]}>1){
+		print OUT "$data[0]\t$data[6]\n";
+	}
+}
