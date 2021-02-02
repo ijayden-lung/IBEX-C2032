@@ -1,0 +1,4 @@
+$a = "lncRNA";
+if($a =~ /s.*RNA/){
+	print "$a\n";
+}
