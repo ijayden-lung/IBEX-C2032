@@ -1,0 +1,4 @@
+$string = "AC00304343.399AFDFAfa ";
+my $count = () = $string =~ /\d/g;
+print "$count\n";
+
