@@ -1,0 +1,65 @@
+#!/usr/bin/perl -w
+
+my $pt = -1;
+my $rt = -1;
+my $ut = -1;
+my %hash;
+my %gene_total;
+my %tp_pas;
+open FILE,"BL6_Fibroblast.pAs.predict.coverage.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my @data = split;
+	next if $data[5] eq "unassigned";
+	$tp_pas{$data[0]} = '';
+}
+
+open FILE,"BL6_Fibroblast.pAs.predict.usage.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my @data = split;
+	next if $data[6] <= $ut;
+	next if $data[7]<=$pt;
+	next if $data[10]<=$rt;
+	$hash{$data[5]}++;
+	$gene_total{$data[5]} += $data[7];
+}
+
+
+open FILE,"BL6_Fibroblast.pAs.predict.usage.txt";
+<FILE>;
+open OUT,">BL6_Fibroblast.pAs.predict.multipAs.usage.txt";
+print OUT "pas_id\tusage\n";
+my $pas_count=0;
+my %gene_count;
+while(<FILE>){
+	chomp;
+	my @data = split;
+	next if $data[6] <= $ut;
+	next if $data[7]<=$pt;
+	next if $data[10]<=$rt;
+	next if !exists $tp_pas{$data[0]};
+	my $usage = 0;
+	if(exists $gene_total{$data[5]} && $gene_total{$data[5]}>0){
+		$usage = $data[7]/$gene_total{$data[5]};
+	}
+	print OUT "$data[0]\t$usage\n";
+	$pas_count++;
+	$gene_count{$data[5]}++;
+}
+
+my $gene_count = keys %gene_count;
+my $pas_per_gene = $pas_count/$gene_count;
+print "$pas_count\t$gene_count\t$pas_per_gene\n";
+
+my $multi_gene_count=0;
+while(my($key,$val) = each %gene_count){
+	if($val>1){
+		$multi_gene_count++;
+	}
+}
+my $per_multi_pas_gene = $multi_gene_count/$gene_count;
+print "$multi_gene_count\t$gene_count\t$per_multi_pas_gene\n";
+
