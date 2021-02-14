@@ -1,0 +1,125 @@
+#!/usr/bin/perl -w
+#
+#
+#2021/01/24 Fixed bugs. usage files should be sorted.
+my $dist_threshold = 24;
+
+=pod
+my $usage = "../../Split_BL6/polyA_seq/BL6_Fibroblast.pAs.predict.usage.txt";
+my $out = "BL6_Fibroblast.pAs.predict.usage.txt";
+my $db = "/home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.tianbin.txt";
+my $COV = "BL6_Fibroblast.pAs.predict.coverage.txt";
+=cut
+my $usage = "../../Split_BL6/polyA_seq/bl6.pAs.usage.txt";
+my $out = "bl6.pAs.usage.txt";
+my $db = "/home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.tianbin.txt";
+my $COV = "bl6.pAs.coverage.txt";
+=pod
+my $usage = "/home/longy/project/Split_BL6/polyA_seq/K562_Control.usage.txt";
+my $out = "K562_Control.pAs.usage.txt";
+my $db = "/home/longy/workspace/apa_predict/pas_dataset/hg38.pAs.tianbin.txt";
+my $COV = "K562_Control.pAs.coverage.txt";
+=cut
+open DB,$db;
+<DB>;
+my %ConserveOf;
+while(<DB>){
+	chomp;
+	my ($pas_id,$conserve) = (split /\t/)[0,-1];
+	$ConserveOf{$pas_id} = $conserve;
+}
+
+
+
+open FILE,"sort -k 3,3 -k 5,5 -k 4,4n $usage |";
+my $header = <FILE>;
+chomp $header;
+my @USAGE = <FILE>;
+open OUT,">$out";
+print OUT "$header\tArich\tConservation\n";
+my %dist;
+my %readCount;
+my %ave_diff;
+my %pas_id;
+my %remove_id;
+#my $pre_pos = 0;
+foreach(@USAGE){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif,$ave_diff) = split;
+	if(exists $dist{$symbol}){
+		my $dist_diff = abs($pos - $dist{$symbol});
+		#my $dist_diff = abs($pos - $pre_pos);
+		if($dist_diff <= $dist_threshold){
+			print "$dist_diff\t$_\n";
+			if($readCount > $readCount{$symbol}){
+				$remove_id{$pas_id{$symbol}} = '';
+			}
+			elsif($readCount == $readCount{$symbol}){
+				if($ave_diff > $ave_diff{$symbol}){
+					$remove_id{$pas_id{$symbol}} = '';
+				}
+				else{
+					$remove_id{$pas_id} = '';
+				}
+			}
+			else{
+				$remove_id{$pas_id} = '';
+			}
+		}
+	}
+	$dist{$symbol} = $pos;
+	#$pre_pos = $pos;
+	$readCount{$symbol} = $readCount;
+	$ave_diff{$symbol} = $ave_diff;
+	$pas_id{$symbol} = $pas_id;
+}
+
+
+my %total;
+foreach(@USAGE){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif,$ave_diff) = split;
+	if(!exists $remove_id{$pas_id}){
+		$total{$symbol} += $readCount;
+		if($readCount =~ /motif/){
+			print "$_\n";
+			last;
+		}
+	}
+}
+
+
+
+my %hasArich;
+open FILE,$COV;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$sequence) = (split)[0,7];
+	if (length($sequence) < 125){
+		print "$pas_id\t$sequence\n";
+	}
+	#my $seq = substr($sequence,99,25);
+	my $seq = '';
+	if($seq =~ /AAAAAA/){
+		$hasArich{$pas_id} = "Arich";
+	}
+	else{
+		 $hasArich{$pas_id} = "No";
+	 }
+ }
+
+
+my $remove_num = keys %remove_id;
+print "$remove_num\n";
+
+foreach(@USAGE){
+	chomp;
+	my @data = split;
+	if(!exists $remove_id{$data[0]}){
+		$data[6] = 0;
+		if(exists $total{$data[5]} && $total{$data[5]}>0){
+			$data[6] = $data[7]/$total{$data[5]};
+		}
+		print OUT join("\t",@data,$hasArich{$data[0]},$ConserveOf{$data[0]}),"\n";
+	}
+}
