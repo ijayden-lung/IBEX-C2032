@@ -1,0 +1,42 @@
+#!/usr/bin/perl -w
+use List::Util qw(first max maxstr min minstr reduce shuffle sum shuffle) ;
+
+my ($PAS,$input,$scanGenome,$out1,$out2) = @ARGV;
+open FILE,"$input";
+<FILE>;
+my %predict;
+while(<FILE>){
+	chomp;
+	my ($pos,$id,$diff,$chr,$strand,$gt_pasid,$gt_diff,$db_pasid,$db_diff) = split;
+	my $end = sprintf("%.0f",$pos);
+	my $pas_id = "$chr:$end:$strand";
+	$predict{$pas_id}  = "$gt_diff\t$gt_pasid\t$db_pasid\t$db_diff";
+}
+
+my %pas2gene;
+open PAS,$PAS;
+<PAS>;
+while(<PAS>){
+	chomp;
+	my ($pas_id,$gene_name) = (split)[0,5];
+	$pas2gene{$pas_id} = $gene_name;
+}
+
+open FILE,"$scanGenome";
+my $header  =<FILE>;
+open OUT1,">$out1";
+open OUT2,">$out2";
+while(<FILE>){
+	chomp;
+	my @data = split;
+	if(exists $predict{$data[0]}){
+		my ($gt_diff,$gt_pasid,$db_pasid,$db_diff) = split /\t/, $predict{$data[0]};
+		print OUT1 join("\t",@data[0..4],$gt_diff,$gt_pasid,$db_pasid,$db_diff),"\n";
+		$data[6] = $gt_pasid;
+		$data[5] = "unassigned";
+		if(abs($gt_diff) < 25){
+			$data[5] = $pas2gene{$gt_pasid};
+		}
+		print OUT2 join("\t",@data),"\n";
+	}
+}

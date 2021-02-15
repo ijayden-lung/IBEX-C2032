@@ -1,0 +1,127 @@
+#!/usr/bin/perl -w
+
+my $pt = 40;
+my $rt = 50;
+my $ut = 0;
+my %hash;
+my %gene_total;
+my %tp_pas;
+my %near_pas;
+my %rever_pas;
+open FILE,"BL6_Fibroblast.pAs.predict.nearby.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my @data = split;
+	if(abs($data[5])<25){
+		$rever_pas{$data[6]} = $data[0];
+		$near_pas{$data[0]} = $data[6];
+	}
+}
+open FILE,"BL6_Fibroblast.pAs.predict.coverage.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my @data = split;
+	next if $data[5] eq "unassigned";
+	$tp_pas{$near_pas{$data[0]}} = '';
+}
+
+
+open OUT,">BL6_Fibroblast.pAs.multipAs.usage.txt";
+print OUT "pas_id\tpas_type\tusage\tpredicted\n";
+open FILE,"BL6_Fibroblast.pAs.usage.txt";
+<FILE>;
+my %distal_pas;
+while(<FILE>){
+	chomp;
+	my @data = split;
+	next if $data[6] <= $ut;
+	next if $data[7]<=$pt;
+	next if $data[10]<=$rt;
+	my ($pas_id,$pas_type,$chr,$end,$srd,$gene,$usage,$polyASeqRC,undef,undef,$RNASeqRC) = split;
+	if(exists $tp_pas{$pas_id}){
+		print OUT "$data[0]\t$pas_type\t$usage\tYes\n";
+	}
+	else{
+		print OUT "$data[0]\t$pas_type\t$usage\tNo\n";
+	}
+	if ($srd eq "+"){
+		if(exists $distal_pas{$gene}){
+			if($distal_pas{$gene}->[1]<$end){
+				$distal_pas{$gene} = [$pas_id,$end];
+			}
+		}
+		else{
+			$distal_pas{$gene} = [$pas_id,$end];
+		}
+	}
+	else{
+		if(exists $distal_pas{$gene}){
+			if($distal_pas{$gene}->[1]>$end){
+				$distal_pas{$gene} = [$pas_id,$end];
+			}
+		}
+		else{
+			$distal_pas{$gene} = [$pas_id,$end];
+		}
+	}
+}
+
+
+
+open FILE,"BL6_Fibroblast.pAs.predict.usage.txt";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my @data = split;
+	$hash{$data[5]}++;
+	$gene_total{$data[5]} += $data[7];
+}
+
+
+open FILE,"BL6_Fibroblast.pAs.predict.usage.txt";
+<FILE>;
+my $pas_count=0;
+my %gene_count;
+my $proximal_pas_count = 0;
+while(<FILE>){
+	chomp;
+	my @data = split;
+	my ($pas_id,$pas_type,$chr,$end,$srd,$gene,undef,$polyASeqRC,undef,undef,$RNASeqRC) = split;
+	#next if !exists $near_pas{$pas_id};
+	my $usage = 0;
+	if(exists $gene_total{$gene} && $gene_total{$gene}>0){
+		$usage = $polyASeqRC/$gene_total{$gene};
+	}
+	$pas_count++;
+	$gene_count{$gene}++;
+	#if($data[9]<1.8){
+	#$proximal_pas_count++;
+		#}
+	if(exists $distal_pas{$gene}){
+		if($srd eq "+" && $end < $distal_pas{$gene}->[1]-25){
+			$proximal_pas_count++;
+		}
+		elsif($srd eq "-" && $end > $distal_pas{$gene}->[1]+25){
+			$proximal_pas_count++;
+		}
+
+	}
+}
+
+my $gene_count = keys %gene_count;
+my $pas_per_gene = $pas_count/$gene_count;
+print "$pas_count\t$gene_count\t$pas_per_gene\n";
+
+my $multi_gene_count=0;
+while(my($key,$val) = each %gene_count){
+	if($val>1){
+		$multi_gene_count++;
+	}
+}
+my $per_multi_pas_gene = $multi_gene_count/$gene_count;
+print "$multi_gene_count\t$gene_count\t$per_multi_pas_gene\n";
+
+my $per_proximal_pas = $proximal_pas_count/$pas_count;
+print "$per_proximal_pas\n";
