@@ -1,0 +1,71 @@
+#!/usr/bin/perl -w
+package CalCov;
+require Exporter;
+use List::Util qw/shuffle sum/;
+use POSIX;
+
+our @ISA = qw/Exporter/;
+our @EXPORT = qw/calCov/;
+
+sub calCov{
+	my ($WIG,$out,$window,$step) = @_;
+	open FILE,$WIG;
+	open OUT,">$out";
+	my $chr = "chr1";
+	my @pasBeg;
+	my %cov;
+	for(my$i=0;$i<$window/$step;$i++){
+		$pasBeg[$i] = 0+$step*$i;
+		my @array = (0)x($window);
+		$cov{$i} = \@array;
+	}
+	while(<FILE>){
+		chomp;
+		my ($pos,$read) = split;
+		if($pos eq "variableStep"){
+			(undef,$chr) = split /\=/,$read;
+			$chr="chr$chr" if $chr !~ /^chr/;
+			for(my$i=0;$i<$window/$step;$i++){
+				$pasBeg[$i] = 0+$step*$i;
+				my @array = (0)x($window);
+				$cov{$i} = \@array;
+			}
+		}
+		else{
+			$read = -$read if $read < 0;
+			for(my$i=0;$i<$window/$step;$i++){
+				my $finished = 0; 
+				for(my $j=$i-ceil($window/$step)+1;$j<$i;$j++){
+					if($pasBeg[$j]+($i-$j)*$step>$pos){
+						$finished++;
+					}
+				}
+				if($finished==0 && $pasBeg[$i]+$window <= $pos){ 
+					#print OUT "For Scan$i, Begin,$pasBeg[$i],last Begin,$pasBeg[$i-1]\n";
+					my $cov_ref = $cov{$i};
+					my $trimMean = &TrimmedMean(@$cov_ref);
+					my $pasEnd = $pasBeg[$i]+$window;
+					print OUT join("\t","Scan$i",$trimMean,"$chr:$pasBeg[$i]-$pasEnd",@$cov_ref),"\n" if $trimMean>0;
+					$pasBeg[$i] = $pos;
+					my @array = (0)x($window);
+					$cov{$i} = \@array;
+				}
+				if($pos<$pasBeg[$i]+$window){
+					my $index = $pos-$pasBeg[$i];
+					#print OUT "For Scan$i, Begin,$pasBeg[$i],$index\n";
+					$cov{$i}->[$index] = $read;
+				}
+			}
+
+		}
+	}
+}
+
+sub TrimmedMean{
+	my @sort = sort{$a<=>$b} @_;
+	my $len = @sort;
+	my $ltrim = int($len*0.2);
+	my $utrim = $len-$ltrim-1;
+	my $ave =  sum(@sort[$ltrim..$utrim])/($utrim-$ltrim+1);
+	return $ave;
+}

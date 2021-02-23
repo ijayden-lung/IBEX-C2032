@@ -1,0 +1,65 @@
+#!/usr/bin/perl -w
+
+#Test
+#open FILE,"grep Origin train_data/bl6.pAs.positive.REP1.newround0.txt | sort -k 3,3 -k 5,5 -k 4,4n  |";
+#open FILE,"sort -k 3,3 -k 5,5 -k 4,4n /home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.zhangbin.fibroblast.txt |";
+open FILE,"sort -k 3,3 -k 5,5 -k 4,4n /home/longy/workspace/apa_predict/pas_dataset/bl6.pAs.tianbin.txt |";
+<FILE>;
+my $pre_pos = 0;
+my $pre_ave = 0;
+my $pre_id = "NA";
+my %pointer;
+my %record;
+my %position;
+my @total;
+open OUT,">tianbin_data/bl6.pAs.raw2.tianbin.txt";
+print OUT "pas_id\tpas_type\tchr\tpos\tstrand\tsymbol\tmotif\tusage\treadCount\n";
+$record{"NA"} = 0;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand) = split;
+	next if $pas_id =~ "^na";
+	next if $pas_id =~ "^NO";
+	next if $chr =~ /chrY/;
+	$record{$pas_id} = "$_";
+	$position{$pas_id} = $pos;
+	######还要搞个开头pas_id和他的位置。
+	if(abs($pos-$pre_pos)<25){
+		#print "$_\n";
+		$pointer{$pas_id} = $pre_id;
+	}
+	else{
+		if(exists $pointer{$pre_id}){
+			#####my %total 很有用，这个可以
+			my %total;
+			my %reverse;
+			while(exists $pointer{$pre_id}){
+				$total{$pre_id} = $position{$pre_id};
+				$reverse{$position{$pre_id}} = $pre_id;
+				$pre_id = $pointer{$pre_id};
+				$total{$pre_id} = $position{$pre_id};
+				$reverse{$position{$pre_id}} = $pre_id;
+			}
+			my @keys = keys %total;
+			my @pos = sort{$a<=>$b} keys %reverse;
+			my $key_num = @keys;
+			if(abs($pos[$#pos]-$pos[0]) < 25){
+				my $index = int(@pos/2);
+				print OUT "$record{$reverse{$pos[$index]}}\n";
+			}
+			else{
+				print "liwai\n";
+				print OUT "$record{$reverse{$pos[1]}}\n";
+			}
+		}
+
+
+		else{
+			print OUT "$record{$pre_id}\n";
+		}
+		
+	}
+	$pre_pos = $pos;
+	$pre_id = $pas_id;
+}
+

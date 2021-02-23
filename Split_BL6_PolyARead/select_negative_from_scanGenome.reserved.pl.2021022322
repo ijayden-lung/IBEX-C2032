@@ -1,0 +1,152 @@
+#!/usr/bin/perl -w
+#
+#
+#Update: 2021/02/22 Yongkang Long ###Same Propotation
+
+my ($ENS,$scanTranscriptome,$round,$RNASeqRCThreshold,$prob,$Shift) = @ARGV;
+my $Threshold  = 50;
+my ($baseName) = (split /\//,$scanTranscriptome)[-1];
+my ($CHR,$SRD) = split /\_/,$baseName;
+my $baseround = substr($round,0,-2);
+
+my $positive = "data/positive/$baseround/$baseName";
+my %true_pas;
+open FILE,"$positive";
+my $true_pas_with_motif_num = 0;
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$motif_pas_type,$chr,$end,$srd,$shift) = split;
+	next if $shift ne "Origin";
+	my ($motif,$pas_type) = split /\_/,$motif_pas_type;
+	$true_pas{$end} = '';
+	if($motif ne "motif=0"){
+		$true_pas_with_motif_num++;
+	}
+}
+
+my @sort_true_pas = sort{$a<=>$b} keys %true_pas;
+my $true_pas_num = @sort_true_pas;
+
+open FILE,"$scanTranscriptome";
+my $header = <FILE>;
+
+my $out = "data/negative/$round/$baseName";
+print "$out\n";
+open OUT,">$out";
+my $index = 0;
+my @lines = <FILE>;
+my $aug_count = 0;
+my $parent_pasid = '';
+my %negative_candidate;
+for (my $i=0;$i<@lines;$i++){
+	chomp $lines[$i];
+	my @data = split /\t/,$lines[$i];
+	my ($pas_id,$motif,$chr,$pos) =  @data[0..3];
+	my $p = $prob;
+	if(rand() < $p){
+		my $accept = 1;
+		for(my$i=$index;$i<@sort_true_pas;$i++){
+			if($sort_true_pas[$i] - $pos < -$Threshold){
+				$index = $i;
+				next;
+			}
+			elsif($sort_true_pas[$i] - $pos < $Threshold){
+				$accept = 0;
+			}
+			else{
+				last;
+			}
+		}
+		if($accept == 1){
+			my $before = &TrimmedMean(@data[8..108]);
+			next if $before <= $RNASeqRCThreshold;
+			if($motif eq "motif=0"){
+				$negative_candidate{$pas_id} = [$i,$pos,0];
+			}
+			else{
+				$negative_candidate{$pas_id} = [$i,$pos,1];
+			}
+			#&Augmentation($i,$pos,$pas_id);
+		}
+	}
+}
+
+my $motif_count = 0;
+my $nomotif_count = 0;
+my $total_count = 0;
+my $true_pas_without_motif_num = $true_pas_num-$true_pas_with_motif_num;
+while(my ($pas_id,$val) = each %negative_candidate){
+	my ($i,$pos,$motif_info) = @$val;
+	last if $total_count > $true_pas_num;
+	if($motif_info == 1){
+		$motif_count++;
+		next if $motif_count > $true_pas_with_motif_num;
+		&Augmentation($i,$pos,$pas_id);
+	}
+	else{
+		$nomotif_count++;
+		next if $nomotif_count > $true_pas_without_motif_num;
+		&Augmentation($i,$pos,$pas_id);
+	}
+	$total_count++;
+
+}
+
+if($motif_count<$true_pas_with_motif_num){
+	warn "Number of pseudo PAS with motif=$motif_count ";
+	warn "It is not enough compared to ground truth=$true_pas_with_motif_num\n";
+}
+if($total_count<$true_pas_num){
+	warn "Number of pseudo PAS=$total_count ";
+	warn "It is not enough compared to ground truth=$true_pas_num\n";
+}
+
+sub Augmentation{
+	my ($i,$pos,$pas_id) = @_;
+	for (my $j=$i-$Shift;$j<=$i+$Shift;$j++){
+		chomp $lines[$j];
+		my @shift_data = split /\t/,$lines[$j];
+		my $shift_pos = $shift_data[3];
+		my $shift_diff = $pos-$shift_pos;
+		if (abs($shift_diff) <= $Shift){
+			$shift_data[6] = $pas_id;
+			if($shift_diff<0){
+				if ($SRD eq "+"){
+					$shift_data[5] = "Up".abs($shift_diff);
+				}
+				else{
+					$shift_data[5] = "Dn".abs($shift_diff);
+				}
+			}
+			elsif($shift_diff>0){
+				if ($SRD eq "+"){
+					$shift_data[5] = "Dn".abs($shift_diff);
+				}
+				else{
+					$shift_data[5] = "Up".abs($shift_diff);
+				}
+			}
+			else{
+				$shift_data[5] = 'Origin';
+			}
+			my $before = &TrimmedMean(@shift_data[8..108]);
+			next if $before <= $RNASeqRCThreshold;
+			print OUT join("\t",@shift_data),"\n";
+		}
+	}
+}
+
+sub TrimmedMean{
+	my @data = @_;
+	my $sum = 0;
+	my $count = 0;
+	foreach my $ele (@data){
+		if($ele>0){
+			$sum += $ele;
+			$count++;
+		}
+	}
+	my $ave = $count>20 ? $sum/$count : 0;
+	return $ave;
+}
