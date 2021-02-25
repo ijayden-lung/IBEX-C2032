@@ -1,0 +1,220 @@
+#!/usr/bin/perl -w
+#
+#Yongakng Long 2020/02/02 fixed filter gene option
+#2020/02/03 fixed some exon shared by multiple genes.
+##To be fixed, intergene length
+
+my ($data,$inp,$out,$ENS) = @ARGV;
+use TrimmedMean;
+use ReadGene;
+
+my $Extend = 10000;  ###Maximum extension: 10k;
+my $Inter_extend = 10000; #####Maximum inter gene extension;
+my $Window = 25;   ###Window size for predict
+
+my ($utr_ref,$gene_start_ref,$gene_end_ref,$biotype_ref,$intergene_length_ref,$count_for_ref,$gene_location_ref,$gene_start_of_ref) = &GetGeneInfo($ENS);
+my %utr = %$utr_ref;
+my %gene_start = %$gene_start_ref;
+my %gene_end = %$gene_end_ref;
+my %biotype = %$biotype_ref;
+my %intergene_length = %$intergene_length_ref;
+my %count_for = %$count_for_ref;
+
+print $intergene_length{"Mrpl15"},"\n";
+
+my %valid_pas;
+open FILE,"sort -k2,2 -k6,6 -k5,5n $inp |";
+my $header = <FILE>;
+my @INP = <FILE>;
+foreach(@INP){
+	chomp;
+	my ($pas_id,$chr,$pos,$strand,$rep1,$rep2) = (split)[0,1,4,5,6,7];
+	my $ave = ($rep1+$rep2)/2;
+	next if $ave <= 0;
+	$valid_pas{$pas_id} = '';
+}
+
+my %pas_gene;
+my %pas_type;
+my %filter;
+my %symbol_of;
+my %remark;
+my @remain_plus;
+open FILE,"awk '(\$5 == \"+\")' $data | sort -k 3,3 -k 4,4n | ";
+while(<FILE>){
+	chomp;
+	next if $_ =~ /^pas_id/;
+	my @data = split /\t/;
+	my $pas_id = $data[0];
+	next if !exists $valid_pas{$pas_id};
+	&Assign_pAs_To_Gene(\@data,1);
+}
+
+my @remain_minus;
+open FILE,"awk '(\$5 == \"-\")' $data | sort -k 3,3 -k 4,4nr | ";
+while(<FILE>){
+	chomp;
+	next if $_ =~ /^pas_id/;
+	my @data = split /\t/;
+	my $pas_id = $data[0];
+	next if !exists $valid_pas{$pas_id};
+	&Assign_pAs_To_Gene(\@data,-1);
+}
+
+my %total;
+foreach(@INP){
+	chomp;
+	my ($pas_id,$chr,$pos,$strand,$rep1,$rep2) = (split)[0,1,4,5,6,7];
+	my $ave = ($rep1+$rep2)/2;
+	next if $ave <= 0;
+	my $symbol = $pas_gene{$pas_id};
+	$total{$symbol} += $ave;
+}
+
+open OUT,">$out";
+print OUT "pas_id\tpas_type\tchr\tposition\tstrand\tsymbol\tusage\treadCount\tmotif\tave_diff\n";
+foreach(@INP){
+	chomp;
+	next if $_ =~ /^pas_id/;
+	my ($pas_id,$chr,$pos,$strand,$rep1,$rep2) = (split)[0,1,4,5,6,7];
+	my $ave = ($rep1+$rep2)/2;
+	next if $ave <=0;
+	my $symbol = $symbol_of{$pas_id};
+	my $new_symbol = $pas_gene{$pas_id};
+	next if !exists $total{$new_symbol} || $total{$new_symbol} == 0;
+	my $usage = $ave/$total{$new_symbol};
+	my $remark = $remark{$pas_id};
+	my $biotype = $biotype{$new_symbol};
+	print OUT "$pas_id\t$pas_type{$pas_id}\t$usage\t$ave\t$filter{$pas_id}\t$remark\t$biotype\n";
+}
+
+
+sub Assign_pas_type{
+	my ($pas_type) = @_;
+	my $new_pas_type;
+	if($pas_type =~ /3.*UTR/){
+		$new_pas_type = "LE";
+	}
+	elsif($pas_type eq "CDS" || $pas_type eq "Intron"){
+		$new_pas_type = "UR";
+	}
+	else{
+		$new_pas_type = "ncRNA";
+	}
+	return $new_pas_type;
+}
+
+
+
+
+sub Assign_pAs_To_Gene{
+	my ($data_ref,$sign) = @_;
+	my @data = @$data_ref;
+	my $before = &TrimmedMean(@data[8..108]);
+	my $after = &TrimmedMean(@data[109..$#data]);
+	return if $before <= 0;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$motif) = @data[0..6];
+	my $new_pas_type = "intergenic";
+	my $new_symbol = "na";
+	my $extend_length = "No";
+	my $val = $gene_start{"$chr:$strand"};
+	my $val2 = $gene_end{"$chr:$strand"};
+	my $sort_genes_ref = $gene_start_of_ref->{"$chr:$strand"};
+	my $between_gene = "inter_$sort_genes_ref->[0]";
+
+	for(my $i=$count_for{"$chr:$strand"};$i<@$sort_genes_ref;$i++){
+		my $gene_name = $sort_genes_ref->[$i];
+		my $start = $val->{$gene_name};
+		my $end =  $val2->{$gene_name};
+		my $ext_start = $start;
+		my $ext_end   = $end;
+		my $extend  = $Extend;
+		$extend = $intergene_length{$gene_name} if  $extend > $intergene_length{$gene_name};
+		$extend = $Window if $extend < $Window;
+		$ext_end += $sign*$extend;
+
+		if($ext_start*$sign > $pos*$sign){
+			last;
+		}
+		elsif($ext_end*$sign >= $pos*$sign){
+			$new_symbol = $gene_name;
+			my ($utr_start,$utr_end) = split /\-/,$utr{$gene_name};
+			if($utr_start*$sign <= $pos*$sign){
+				$new_pas_type = "LE";
+				$extend_length = ($pos - $end)*$sign if ($pos-$end)*$sign>0;
+			}
+			else{
+				$new_pas_type = "UR";
+				for(my $j=$i+1;$j<$i+60 && $j < @$sort_genes_ref;$j++){
+					my $new_gene_name = $sort_genes_ref->[$j];
+					next if $biotype{$new_gene_name} ne "protein_coding";
+					my ($new_utr_start,$new_utr_end) = split /\-/,$utr{$new_gene_name};
+					my $new_start = $val->{$new_gene_name};
+					my $new_extend = $intergene_length{$new_gene_name};
+					$new_extend = ($utr_start-$new_utr_end)*$sign if $new_extend>($utr_start-$new_utr_end)*$sign;
+					$new_extend = $Inter_extend if $new_extend > $Inter_extend;
+					$new_extend = $Window if $new_extend < $Window;
+					$utr_ext_end = $new_utr_end +  $new_extend*$sign;
+					if($gene_name eq "PTP4A2"){
+						print "$i,$j,$new_gene_name\t$new_utr_end,$utr_ext_end,$pos\n";
+					}
+					if($new_utr_start*$sign <= $pos*$sign && $utr_ext_end*$sign >= $pos*$sign){
+						if($gene_name eq "PTP4A2"){
+							print "Last Exon,$new_utr_start,$i,$j,$new_gene_name\t$new_utr_end,$utr_ext_end,$pos\n";
+						}
+						$new_pas_type = "LE";
+						$new_symbol = $new_gene_name;
+						$extend_length = ($pos-$utr_end)*$sign if ($pos-$utr_end)*$sign>0;
+						last;
+					}
+					elsif($new_start*$sign <= $pos*$sign && $new_utr_start*$sign > $pos*$sign && $new_utr_end*$sign <= $utr_start*$sign){
+						if($gene_name eq "PTP4A2"){
+							print "UR,$new_start,$i,$j,$new_gene_name\t$new_utr_end,$utr_ext_end,$pos\n";
+						}
+						$new_pas_type = "UR";
+						$new_symbol = $new_gene_name;
+						last;
+					}
+					elsif($new_utr_end*$sign > $utr_start*$sign){
+						last;
+					}
+				}
+			}
+			last;
+		}
+		$count_for{"$chr:$strand"} = $i;
+		if($i+1 < @$sort_genes_ref){
+			$between_gene = "inter_$sort_genes_ref->[$i]_$sort_genes_ref->[$i+1]";
+		}
+		else{
+			$between_gene = "inter_$sort_genes_ref->[$i]_";
+		}
+	}
+	$biotype{$between_gene} = 'intergenic';
+	if($new_symbol eq "na"){
+		$new_symbol = $between_gene;
+		if(exists $utr{$symbol}){
+			my ($utr_start2,$utr_end2) = split /\-/,$utr{$symbol};
+			$new_pas_type = &Assign_pas_type($pas_type);
+			$new_symbol = $symbol;
+			$extend_length = ($pos-$utr_end2)*$sign if ($pos-$utr_end2)*$sign>0;
+		}
+	}
+	elsif($biotype{$new_symbol} ne "protein_coding"){
+		$new_pas_type = "ncRNA";
+	}
+	my $ave = ($before+$after)/2;
+	my $diff = $before-$after;
+	my $ave_diff = $diff/$ave;
+	$pas_type{$pas_id} = "$pas_type\t$chr\t$pos\t$strand\t$symbol";
+	$filter{$pas_id} = "$motif\t$ave_diff\t$before";
+	$symbol_of{$pas_id} = $symbol;
+	$pas_gene{$pas_id}  = $new_symbol;
+	$remark{$pas_id} = "$new_symbol\t$new_pas_type\t$extend_length\t$between_gene";
+}
+
+sub Init_count{
+	while(my ($location,$gene) = each %$gene_location_ref){
+		$count_for{$location} = 0;
+	}
+}
