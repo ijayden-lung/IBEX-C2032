@@ -1,0 +1,212 @@
+#!/usr/bin/perl -w
+#
+#
+#Update: 2021/02/22 Yongkang Long ###Same Propotation
+use TrimmedMean;
+use ReadGene;
+use Assign;
+
+my ($ENS,$scanTranscriptome,$round,$RNASeqRCThreshold,$prob,$Shift) = @ARGV;
+my $Threshold  = 50;
+my $Extend = 10000;  ###Maximum extension: 10k;
+my $Inter_extend = 10000; #####Maximum inter gene extension;
+my $Window = 25;   ###Window size for predict
+my $Extend_Info = [$Extend,$Inter_extend,$Window];
+my ($baseName) = (split /\//,$scanTranscriptome)[-1];
+my ($CHR,$SRD) = split /\_/,$baseName;
+my $baseround = substr($round,0,-2);
+
+
+print "Start getting gene information\n";
+my ($utr_ref,$gene_start_ref,$gene_end_ref,$biotype_ref,$intergene_length_ref,$gene_location_ref,$gene_start_of_ref) = &GetGeneInfo($ENS,$Extend);
+my $count_for_ref = &Init_count($gene_location_ref);
+print "End getting gene information\n\n";
+
+
+print "Start randomly selecting negative pas\n";
+my %true_pas;
+my %true_motif_count;
+my %true_pas_type_count = ("LE"=>0,"UR"=>0,"ncRNA"=>0,"intergenic"=>0);
+my $positive = "data/positive/$baseround/$baseName";
+open FILE,"$positive";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$motif_pas_type,$chr,$end,$srd,$shift) = split;
+	next if $shift ne "Origin";
+	my ($motif,$pas_type,$gene_name) = split /\_/,$motif_pas_type;
+	$true_pas_type_count{$pas_type}++;
+	$true_pas{$end} = '';
+	if($motif eq "motif=0"){
+		$true_motif_count{0}++;
+	}
+	else{
+		$true_motif_count{1}++;
+	}
+}
+
+my @sort_true_pas = sort{$a<=>$b} keys %true_pas;
+my $true_pas_num = @sort_true_pas;
+
+open FILE,"$scanTranscriptome";
+my $header = <FILE>;
+
+my $out = "data/negative/$round/$baseName";
+print "$out\n";
+open OUT,">$out";
+my $index = 0;
+my @lines = <FILE>;
+my $aug_count = 0;
+my $parent_pasid = '';
+my %negative_candidate;
+for (my $i=0;$i<@lines;$i++){
+	chomp $lines[$i];
+	my @data = split /\t/,$lines[$i];
+	my ($pas_id,$motif,$chr,$pos,$strand) =  @data[0..4];
+	my $p = $prob;
+	if(rand() < $p){
+		my $accept = 1;
+		for(my$i=$index;$i<@sort_true_pas;$i++){
+			if($sort_true_pas[$i] - $pos < -$Threshold){
+				$index = $i;
+				next;
+			}
+			elsif($sort_true_pas[$i] - $pos < $Threshold){
+				$accept = 0;
+			}
+			else{
+				last;
+			}
+		}
+		if($accept == 1){
+			my $before = &TrimmedMean(@data[8..108]);
+			next if $before <= $RNASeqRCThreshold;
+			if($motif eq "motif=0"){
+				$negative_candidate{$pas_id} = [$i,$chr,$pos,$strand,0];
+			}
+			else{
+				$negative_candidate{$pas_id} = [$i,$chr,$pos,$strand,1];
+			}
+		}
+	}
+}
+print "End randomly selecting negative pas\n\n";
+
+my $total_count = 0;
+my %negative_pas_type_count;
+my %negative_motif_count;
+if ($SRD eq "+"){
+	foreach my $pas_id (sort{$negative_candidate{$a}->[2] <=> $negative_candidate{$b}->[2]} keys %negative_candidate){
+		my $val = $negative_candidate{$pas_id};
+		my $sign = 1;
+		my ($i,$chr,$pos,$strand,$motif_info) = @$val;
+		my ($count,$pas_type,$symbol) = &Assign_pAs_To_Gene($count_for_ref->{"$chr:$strand"},$sign,$pos,$Extend_Info,$utr_ref,$gene_start_ref->{"$chr:$strand"},$gene_end_ref->{"$chr:$strand"},$biotype_ref,$gene_start_of_ref->{"$chr:$strand"},$intergene_length_ref);  ####modified count later;
+		#####Initiaze hash;
+		next if $negative_motif_count{$motif_info} >= $true_motif_count{$motif_info};
+		next if $negative_pas_type_count{$pas_type} >= $true_pas_type_count{$pas_type};
+		$negative_motif_count{$motif_info}++;
+		$negative_pas_type_count{$pas_type}++;
+		&Augmentation($i,$pos,$pas_id);
+		$total_count++;
+		if($total_count % 10 == 0){
+			print "processing $total_count pas\n";
+		}
+		last if $total_count >=  $true_pas_num;
+		$count_for_ref->{"$chr:$strand"} = $count;
+	}
+}
+else{
+	foreach my $pas_id (sort{$negative_candidate{$b}->[2] <=> $negative_candidate{$a}->[2]} keys %negative_candidate){
+		my $val = $negative_candidate{$pas_id};
+		my $sign = -1;
+		my ($i,$chr,$pos,$strand,$motif_info) = @$val;
+		my ($count,$pas_type,$symbol) = &Assign_pAs_To_Gene($count_for_ref->{"$chr:$strand"},$sign,$pos,$Extend_Info,$utr_ref,$gene_start_ref->{"$chr:$strand"},$gene_end_ref->{"$chr:$strand"},$biotype_ref,$gene_start_of_ref->{"$chr:$strand"},$intergene_length_ref);  ####modified count later;
+		$negative_motif_count{$motif_info}++;
+		$negative_pas_type_count{$pas_type}++;
+		next if $negative_motif_count{$motif_info} > $true_motif_count{$motif_info};
+		next if $negative_pas_type_count{$pas_type} > $true_pas_type_count{$pas_type};
+		&Augmentation($i,$pos,$pas_id);
+		$total_count++;
+		if($total_count % 10 == 0){
+			print "processing $total_count pas\n";
+		}
+		#$total_count = &Assign_pAs($pas_id,$val,$sign);
+		last if $total_count >=  $true_pas_num;
+	}
+}
+
+sub Assign_pAs{
+	my ($pas_id,$val,$sign) = @_;
+	my ($i,$chr,$pos,$strand,$motif_info) = @$val;
+	print "$i,$chr,$pos,$strand,$motif_info\n";
+	my ($count,$pas_type,$symbol) = &Assign_pAs_To_Gene($count_for_ref->{"$chr:$strand"},$sign,$pos,$Extend_Info,$utr_ref,$gene_start_ref->{"$chr:$strand"},$gene_end_ref->{"$chr:$strand"},$biotype_ref,$gene_start_of_ref->{"$chr:$strand"},$intergene_length_ref);  ####modified count later;
+	$negative_motif_count{$motif_info}++;
+	$negative_pas_type_count{$pas_type}++;
+	#print "$pas_type\tne:$negative_pas_type_count{$pas_type}\ttu:$true_pas_type_count{$pas_type}\n";
+	return if $negative_motif_count{$motif_info} > $true_motif_count{$motif_info};
+	return if $negative_pas_type_count{$pas_type} > $true_pas_type_count{$pas_type};
+	print "$pas_id\n";
+	&Augmentation($i,$pos,$pas_id);
+	$total_count++;
+	if($total_count % 10 == 0){
+		print "processing $total_count pas\n";
+	}
+	$count_for_ref->{"$chr:$strand"} = $count;
+}
+
+while(my ($key,$true_count) = each %negative_motif_count){
+	print "$key\t$true_count\n";
+}
+
+while(my ($key,$true_count) = each %true_motif_count){
+	$negative_count = $negative_motif_count{$key};
+	if($negative_count<$true_count){
+		warn "Number of pseudo PAS with $key motif = $negative_count";
+		warn "It is not enough compared to ground truth = $true_count\n";
+	}
+}
+while(my ($key,$true_count) = each %true_pas_type_count){
+	$negative_count = $negative_pas_type_count{$key};
+	if($negative_count<$true_count){
+		warn "Number of pseudo PAS with pastype $key = $negative_count";
+		warn "It is not enough compared to ground truth = $true_count\n";
+	}
+}
+if($total_count<$true_pas_num){
+	warn "Number of pseudo PAS=$total_count\n";
+	warn "It is not enough compared to ground truth=$true_pas_num\n";
+}
+sub Augmentation{
+	my ($i,$pos,$pas_id) = @_;
+	for (my $j=$i-$Shift;$j<=$i+$Shift;$j++){
+		chomp $lines[$j];
+		my @shift_data = split /\t/,$lines[$j];
+		my $shift_pos = $shift_data[3];
+		my $shift_diff = $pos-$shift_pos;
+		if (abs($shift_diff) <= $Shift){
+			$shift_data[6] = $pas_id;
+			if($shift_diff<0){
+				if ($SRD eq "+"){
+					$shift_data[5] = "Up".abs($shift_diff);
+				}
+				else{
+					$shift_data[5] = "Dn".abs($shift_diff);
+				}
+			}
+			elsif($shift_diff>0){
+				if ($SRD eq "+"){
+					$shift_data[5] = "Dn".abs($shift_diff);
+				}
+				else{
+					$shift_data[5] = "Up".abs($shift_diff);
+				}
+			}
+			else{
+				$shift_data[5] = 'Origin';
+			}
+			my $before = &TrimmedMean(@shift_data[8..108]);
+			next if $before <= $RNASeqRCThreshold;
+			print OUT join("\t",@shift_data),"\n";
+		}
+	}
+}
