@@ -1,0 +1,13 @@
+sub Test{
+	my @array;
+	my @a = (1,2,3);
+	my @b = (4,5,6);
+	push @array,\@a;
+	push @array,\@b;
+	return @array;
+}
+
+my @array = &Test();
+foreach my $ref (@array){
+	print "@$ref\n";
+}
