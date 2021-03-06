@@ -1,0 +1,22 @@
+my %pastype;
+push @{$pastype{'A'}},1;
+push @{$pastype{'A'}},2;
+push @{$pastype{'A'}},3;
+push @{$pastype{'B'}},4;
+push @{$pastype{'B'}},5;
+
+
+while (my($key,$val) = each %pastype){
+	my $id = pop @{$val};
+	my $id2 = pop @{$val};
+	my $id3 = pop @{$val};
+	#if($id3 eq ""){
+	if(!defined $id3){
+		print "$key undef id3\t";
+		print "$id\t$id2\n";
+	}
+	else{
+		print "$id\t$id2\t$id3\n";
+	}
+}
+
