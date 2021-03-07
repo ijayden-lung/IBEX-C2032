@@ -1,0 +1,27 @@
+#!/bin/bash
+#PBS -N human_pAs
+#PBS -l nodes=1:ppn=12
+#PBS -l walltime=10:00:00
+#PBS -q ser
+#PBS -j oe
+#PBS -V
+
+re=HepG2
+mkdir -p ${re}
+
+grep -v "ZS:i:" ${re}.sam | samtools view -b -f 0x2 >${re}.bam
+rm ${re}.sam
+bedtools bamtobed -i ${re}.bam > ${re}.bed
+python3 /home/bio-liys/zm/Hek293/line.py ${re}
+rm ${re}.bed
+sort -k1,1 -k2,2n mod${re}.bed >${re}.bed.sorted
+mv ${re}.bed.sorted mod${re}.bed
+
+bedtools coverage -a /home/bio-liys/human_pAs/human_PAS_hg38.all.bed -b mod${re}.bed -S -sorted -counts > ${re}.bed.all.counts
+
+awk '$6 == "-"' mod${re}.bed |sort -k1,1 >${re}_5.minus
+awk '$6 == "+"' mod${re}.bed |sort -k1,1 >${re}_5.plus
+bedtools genomecov -i ${re}_5.minus -g /home/bio-ligp/reference/hisat2/hg38.chrom.sizes -bg >total_${re}_5.minus.bedgraph
+/home/bio-ligp/.local/bin/bedGraphToBigWig total_${re}_5.minus.bedgraph /home/bio-ligp/reference/hisat2/hg38.chrom.sizes total_${re}_5.minus.bw
+bedtools genomecov -i ${re}_5.plus -g /home/bio-ligp/reference/hisat2/hg38.chrom.sizes -bg >total_${re}_5.plus.bedgraph
+/home/bio-ligp/.local/bin/bedGraphToBigWig total_${re}_5.plus.bedgraph /home/bio-ligp/reference/hisat2/hg38.chrom.sizes total_${re}_5.plus.bw
