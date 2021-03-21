@@ -1,0 +1,69 @@
+#!/usr/bin/perl -w
+
+open FILE,"/home/longy/project/Split_BL6/polyA_seq/BL6_REP1.pAs.predict.aug8_SC_p5r10u0.05_4-0042.12.1.usage.txt";
+#open FILE,"/home/longy/project/Split_BL6/polyA_seq/HepG2_Control.pAs.predict.aug8_SC_p1r5u0.05_3-0060.12.1.usage.txt";
+<FILE>;
+my %high_usage;
+my %polyAseq;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$usage,$polyASeq) = (split /\t/)[0,6,7];
+	$high_usage{$pas_id} = '' if $usage>0.05;
+	$polyASeq{$pas_id} = $polyASeq if $polyASeq > 5;
+}
+	
+open FILE,"BL6_REP1.pAs.predict.aug8_SC_p5r10u0.05_4-0042.12.1.txt";
+#open FILE,"HepG2_Control.pAs.predict.aug8_SC_p1r5u0.05_3-0060.12.1.txt";
+<FILE>;
+my %gene_count;
+my $total_pas;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$motif_pastype_gene,$near_pas) = (split /\t/)[0,1,6];
+	my ($gt_pas,$gt_diff,$db_pas,$db_diff)  = split /,/,$near_pas;
+	#next if !exists $high_usage{$pas_id};
+	my ($motif,$pastype,$gene) = split /\_/,$motif_pastype_gene;
+	$gene_count{$gene}++;
+	$total_pas++;
+}
+open FILE,"BL6_REP1.pAs.predict.aug8_SC_p5r10u0.05_4-0042.12.1.txt";
+#open FILE,"HepG2_Control.pAs.predict.aug8_SC_p1r5u0.05_3-0060.12.1.txt";
+<FILE>;
+my $multi = 0;
+my $multi_true = 0;
+my $single = 0;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$motif_pastype_gene,$near_pas) = (split /\t/)[0,1,6];
+	my ($gt_pas,$gt_diff,$db_pas,$db_diff)  = split /,/,$near_pas;
+	my ($motif,$pastype,$gene) = split /\_/,$motif_pastype_gene;
+	if($gene_count{$gene}>1){
+		$multi++;
+		if(abs($gt_diff)<25 || exists $polyASeq{$pas_id}){
+			$multi_true++;
+		}
+	}
+	else{
+		$single++;
+		#if(abs($gt_diff)<25 || exists $polyASeq{$pas_id} ){
+		if(abs($gt_diff)<25){
+			$single_true++;
+		}
+	}
+}
+print "$multi_true\t$multi\n";
+print "$single_true\t$single\n";
+
+
+my $total = 0;
+my $multi_pas = 0;
+while(my ($key,$val) = each %gene_count){
+	if($val>1){
+		$multi_pas++;
+	}
+	$total++;
+}
+my $per = $multi_pas/$total;
+print "$multi_pas,$total,$per\n";
+my $paspergene = $total_pas/$total;
+print "$paspergene\n";
