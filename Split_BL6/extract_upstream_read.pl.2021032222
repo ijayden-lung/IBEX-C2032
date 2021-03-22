@@ -1,0 +1,36 @@
+#!/usr/bin/perl -w
+
+
+my ($data,$WIG,$out,$polyASeqThreshod,$window,$SRD,$CHR) = @ARGV;
+
+open FILE,$WIG;
+open OUT,">$out";
+my %cov;
+<FILE>;
+while(<FILE>){
+	chomp;
+	my ($pos,$read) = split;
+	$cov{$pos} = $read;
+}
+
+open DATA,"$data";
+<DATA>;
+while(<DATA>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$srd,$symbol,undef,$polyASeq) = split;
+	next if $chr ne $CHR;
+	next if $srd ne $SRD;
+	next if $polyASeq < $polyASeqThreshod;
+	my $new_pos = $pos;
+	$new_pos += $window-1 if $srd eq "-";
+	my @array = (0)x($window);
+	for(my $i=0;$i<$window;$i++){
+		my $each_pos = $new_pos-$i;
+		if(exists $cov{$each_pos}){
+			$array[$i] = $cov{$each_pos};
+		}
+	}
+	@array = reverse @array if $SRD eq "+";
+	print OUT "$pas_id\t$pas_type\t$chr\t$pos\t$srd\t$symbol\t$polyASeq\t";
+	print OUT join ("\t",@array),"\n";
+}
