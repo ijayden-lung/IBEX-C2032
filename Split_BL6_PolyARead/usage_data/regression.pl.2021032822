@@ -1,0 +1,58 @@
+#!/usr/bin/perl -w
+
+use Statistics::Descriptive;
+
+my ($READCOUNT,$OUT) = @ARGV;
+
+my %polyA_readCount;
+my %polyA_totalReadCount;
+my %RNA_readCount;
+my %RNA_totalReadCount;
+my %pas_num;
+my %pas_type;
+open FILE,"$READCOUNT";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$polyAseq,$readCount) = split;
+	$polyA_readCount{$symbol}->{$pas_id} = $polyAseq;
+	$polyA_totalReadCount{$symbol} += $polyAseq;
+	$RNA_readCount{$symbol}->{$pas_id} = $readCount;
+	$RNA_totalReadCount{$symbol} += $readCount;
+	$pas_num{$symbol}++;
+	$pas_type{$pas_id} = $pas_type;
+}
+
+my %polyA_usage;
+while(my ($symbol,$val) = each %polyA_readCount){
+	my $totalReadCount = $polyA_totalReadCount{$symbol};
+	while(my ($pas_id,$readCount) = each %$val){
+		if($totalReadCount == 0){
+			$polyA_usage{$pas_id} = 0;
+		}
+		else{
+			$polyA_usage{$pas_id} = $val->{$pas_id} / $totalReadCount;
+		}
+	}
+}
+my %RNA_usage;
+while(my ($symbol,$val) = each %RNA_readCount){
+	my $totalReadCount = $RNA_totalReadCount{$symbol};
+	while(my ($pas_id,$readCount) = each %$val){
+		if($totalReadCount == 0){
+			$RNA_usage{$pas_id} = 0;
+		}
+		else{
+			$RNA_usage{$pas_id} = $val->{$pas_id} / $totalReadCount;
+		}
+	}
+}
+
+open OUT,">$OUT";
+print OUT "pas_id\tpas_type\tsymbol\tpolyA_readCount\tRNA_readCount\tpolyA_usage\tRNA_usage\n";
+while(my ($symbol,$val) = each %RNA_readCount){
+	next if $pas_num{$symbol} <=1;
+	#next if $pas_num{$symbol} >2;
+	while(my ($pas_id,$readCount) = each %$val){
+		print OUT "$pas_id\t$pas_type{$pas_id}\t$symbol\t$polyA_readCount{$symbol}->{$pas_id}\t$readCount\t$polyA_usage{$pas_id}\t$RNA_usage{$pas_id}\n";
+	}
+}
