@@ -1,0 +1,133 @@
+#!/usr/bin/env python3
+
+import numpy as np
+import os
+import sys
+import argparse
+import glob
+from sklearn.model_selection import KFold
+from collections import defaultdict
+from tensorflow.keras.utils import Sequence
+
+def get_data(file_path):
+	"""
+	Process all files in the input directory to read sequences.
+	Sequences are encoded with one-hot.
+	data_root: input directory
+	label: the label (True or False) for the sequences in the input directory
+	"""
+	#data1 = dict() # coverage
+	#labels= dict() # labels
+	#meta_data = defaultdict(list)
+	data1 = []
+	labels = []
+	with open(file_path,'r') as f:
+		for line in f:
+			line=line.rstrip('\n').split('\t')
+			if (line[0] !='#pas_id' and line[0] !='pas_id'):
+				pas_id = line[0]
+				COVERAGE = np.array(line[7:len(line)]).astype(np.float32)
+				#data1[pas_id] = COVERAGE.reshape([-1,1])
+				#labels[pas_id] = line[6]
+				data1.append(COVERAGE)
+				labels.append(line[6])
+	return data1,labels
+
+def shuffle(dataset1,labels, randomState=None):
+	"""
+	Shuffle sequences and labels jointly
+	"""
+	if randomState is None:
+		permutation = np.random.permutation(labels.shape[0])
+	else:
+		permutation = randomState.permutation(labels.shape[0])
+	shuffled_data1 = dataset1[permutation,:,:]
+	shuffled_labels = labels[permutation]
+	return shuffled_data1, shuffled_labels
+
+
+def prep_data(file_path,OUT=None):
+	data1,labels = get_data(file_path)
+	print('Size of dataset: %d'%(len(data1)))
+
+	#dataset = ({"cov_input": data1,"meta_data":meta_data}, labels)
+	dataset = defaultdict(dict)
+	dataset = {"cov_input": data1,"label":labels}
+	#dataset['cov_input'] = data1
+	#dataset['label'] = labels
+
+	if OUT is not None:
+		np.savez(OUT, **dataset)
+		print('Finish writing dataset to %s'%OUT)
+
+	return dataset
+	
+class DataGenerator(Sequence):
+	'Generates data for Keras'
+	def __init__(self, datasets, labels, batch_size=32,n_classes=2, shuffle=True):
+		'Initialization'
+		self.batch_size = batch_size
+		self.labels = labels
+		self.n_classes = n_classes
+		self.shuffle = shuffle
+		self.datasets = datasets
+		#####Original pas id. data augmentation to shift the pas  
+		self.list_IDs = [*datasets['meta_data']]
+		self.sizes = len(self.list_IDs)
+		self.on_epoch_end()
+
+	def __len__(self):
+		'Denotes the number of batches per epoch'
+		return int(np.floor(self.sizes / self.batch_size))
+
+	def __getitem__(self, index):
+		'Generate one batch of data'
+		# Generate indexes of the batch
+		indexes = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
+
+		# Find list of IDs
+		list_IDs_temp = [self.list_IDs[k] for k in indexes]
+
+		# Generate data
+		X, y = self.__data_generation(list_IDs_temp)
+
+		return X, y
+
+	def on_epoch_end(self):
+		self.indexes = np.arange(self.sizes)
+		if self.shuffle == True:
+			np.random.shuffle(self.indexes)
+
+	def __data_generation(self, list_IDs_temp):
+		'Generates data containing batch_size samples' 
+		# Initialization
+		cov_input = self.datasets['cov_input']
+		
+		cov_data = np.empty((self.batch_size, next(iter(cov_input.values())).shape[0], next(iter(cov_input.values())).shape[1]))
+		y = np.empty((self.batch_size), dtype=int)
+		# Generate data
+		for i, ID in enumerate(list_IDs_temp):
+			# Store sample
+			#####Data augmentation
+			PASID = np.random.choice(meta_data[ID]) ###Randomly selected one
+			cov_data[i,] = cov_input[PASID] 
+			# Store class
+			y[i] = self.labels[PASID]
+		X = {"cov_input": cov_data}
+
+		return X,y	
+
+if __name__ == "__main__":
+	### Argument Parser
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--file_path', help='coverage file to predict expression level of PAS')
+	parser.add_argument('--out', help='Save the processed dataset to')
+	parser.add_argument('--nfolds', default=5, type=int, help='Seperate the data into how many folds')
+	opts = parser.parse_args()
+
+	############Global Parameters ############
+	NUM_FOLDS = opts.nfolds
+	FILE_PATH  = opts.file_path
+	OUT	   = opts.out
+	############Global  Parameters ############
+	prep_data(FILE_PATH,OUT)
