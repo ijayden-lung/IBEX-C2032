@@ -1,0 +1,43 @@
+#!/bin/bash
+#SBATCH --job-name=PolyAMap
+#SBATCH --partition=batch
+#SBATCH --nodes=16
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --output=log.%J
+#SBATCH --error=err.%J
+#SBATCH --time=4:00:00
+#SBATCH --mem=50G
+##SBATCH -a 0
+##SBATCH --gres=gpu:1
+
+
+fq1="/home/longy/project/Split_BL6/STAR/K562_Chen/K562-3-seq_R1_001.fastq.gz"
+fq2="/home/longy/project/Split_BL6/STAR/K562_Chen/K562-3-seq_R2_001.fastq.gz"
+trimfq1="/home/longy/project/Split_BL6/STAR/K562_Chen/trimmed/K562-3-seq_R1_001.fastq.gz"
+trimfq2="/home/longy/project/Split_BL6/STAR/K562_Chen/trimmed/K562-3-seq_R2_001.fastq.gz"
+cutfq1="/home/longy/project/Split_BL6/STAR/K562_Chen/trimmed/K562-3-seq_cutpolyA_R1_001.fastq.gz"
+cutfq2="/home/longy/project/Split_BL6/STAR/K562_Chen/trimmed/K562-3-seq_cutpolyA_R2_001.fastq.gz"
+ADAPTER_FWD=AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+ADAPTER_REV=AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+cutadapt --minimum-length 30 -g "T{10}" -a $ADAPTER_FWD -A "A{10}"$ADAPTER_REV -q 20 -j 16 -o $trimfq1 -p $trimfq2 $fq1 $fq2
+#cutadapt --minimum-length 30 -a "A{100}"  -q 20 -j 16 -o $cutfq1 -p $cutfq2 $trimfq1 $trimfq2
+
+:<<BL
+grep -v "ZS:i:" ${re}.sam | samtools view -b -f 0x2 >${re}.bam
+rm ${re}.sam
+bedtools bamtobed -i ${re}.bam > ${re}.bed
+python3 /home/bio-liys/zm/Hek293/line.py ${re}
+rm ${re}.bed
+sort -k1,1 -k2,2n mod${re}.bed >${re}.bed.sorted
+mv ${re}.bed.sorted mod${re}.bed
+
+bedtools coverage -a /home/bio-liys/human_pAs/human_PAS_hg38.all.bed -b mod${re}.bed -S -sorted -counts > ${re}.bed.all.counts
+
+awk '$6 == "-"' mod${re}.bed |sort -k1,1 >${re}_5.minus
+awk '$6 == "+"' mod${re}.bed |sort -k1,1 >${re}_5.plus
+bedtools genomecov -i ${re}_5.minus -g /home/bio-ligp/reference/hisat2/hg38.chrom.sizes -bg >total_${re}_5.minus.bedgraph
+/home/bio-ligp/.local/bin/bedGraphToBigWig total_${re}_5.minus.bedgraph /home/bio-ligp/reference/hisat2/hg38.chrom.sizes total_${re}_5.minus.bw
+bedtools genomecov -i ${re}_5.plus -g /home/bio-ligp/reference/hisat2/hg38.chrom.sizes -bg >total_${re}_5.plus.bedgraph
+/home/bio-ligp/.local/bin/bedGraphToBigWig total_${re}_5.plus.bedgraph /home/bio-ligp/reference/hisat2/hg38.chrom.sizes total_${re}_5.plus.bw
+BL
