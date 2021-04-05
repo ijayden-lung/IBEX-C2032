@@ -1,0 +1,48 @@
+from RegressionModel import *
+import re
+import os, sys, copy, getopt, re, argparse
+import random
+import pandas as pd 
+import numpy as np
+from prep_data_regression import prep_data,DataGenerator
+
+
+
+def trimmedMean(UpCoverage):
+	total = 0
+	count=0
+	for cov in UpCoverage:
+		if(cov>0):
+			total += cov
+			count += 1
+	trimMean = 0
+	if count >20:
+		trimMean = total/count;
+	return trimMean
+
+
+def main():
+	parser = argparse.ArgumentParser(description="predict the exrepsssion level of PAS")
+	parser.add_argument("--model", help="the model weights file", required=True)
+	parser.add_argument("--file_path", help="input  sequence and coverage", required=True)
+	parser.add_argument("--out", help="prediction files", required=True)
+	parser.add_argument('--nfolds', default=5, type=int, help='Seperate the data into how many folds')
+	args = parser.parse_args()
+
+	length = 2001
+	MODEL_PATH = args.model
+	FILE_PATH = args.file_path
+	out  = args.out
+	NUM_FOLDS = args.nfolds
+
+	OUT=open(out,'w')
+	train_data,train_labels,valid_data,valid_labels = prep_data(FILE_PATH,NUM_FOLDS)
+	model = Regression_CNN(length);
+	model.load_weights(MODEL_PATH)
+	pred = model.predict(train_data)
+
+	for i in range(len(pred)):
+		OUT.write('%.f\t%.f\n'%(pred[i],train_labels[i]))
+	
+if __name__ == "__main__":
+	main()
