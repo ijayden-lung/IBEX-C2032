@@ -1,0 +1,14 @@
+#!/usr/bin/perl -w
+
+open FILE,"zcat K562-3-seq_R2_001.fastq.gz";
+<FILE>;
+while(<FILE>){
+	chomp;
+	my $head = $_;
+	my $seq = <FILE>;
+	chomp $seq;
+	my $plus = <FILE>;
+	chomp $plus;
+	my $qua = <FILE>;
+	chomp $qua;
+	if($seq = ~ /
