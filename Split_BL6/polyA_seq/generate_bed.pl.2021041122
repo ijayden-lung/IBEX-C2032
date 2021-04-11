@@ -1,0 +1,37 @@
+#!/usr/bin/perl -w
+
+my ($inp,$output) = @ARGV;
+use TrimmedMean;
+
+my $dist_threshold = 38;
+open FILE,"sort -k 3,3 -k 5,5 -k 4,4n $inp";
+open OUT,">$output.tmp";
+my %dist;
+my $previous_pos = 0;
+while(<FILE>){
+	next if $_ =~ /^pas_id/;
+	my ($gene_id,$pas_type,$chr,$pos,$strand) = split;
+	my @data = split;
+	my $before = &TrimmedMean(@data[8..108]);
+	next if $before <= 0;
+	my $pre;
+	my $end;
+	if($strand eq "+"){
+		$pre = $pos-24;
+		$end = $pos+12;
+	}
+	elsif($strand eq "-"){
+		$pre = $pos-12;
+		$end = $pos+24;
+	}
+	my $dist_diff = abs($pos - $previous_pos);
+	if($dist_diff < $dist_threshold){
+
+	}
+	$dist{$symbol} = $pos;
+	$previous_pos = $pos;
+	#print OUT "$chr\t$pre\t$end\t$gene_id\t$pos\t$strand\n";
+}
+
+system("sort -k1,1 -k2,2n -S 30G $output.tmp -o $output");
+system("rm $output.tmp");
