@@ -1,0 +1,16 @@
+#!/usr/bin/perl -w
+
+#open FILE,"BL6_REP1.pAs.usage.txt";
+open FILE,"awk '(\$7>0.05 && \$8>5 && \$11>10)' K562_Chen.pAs.usage.txt | ";
+<FILE>;
+my $pre_pos = 0;
+my $pre_line = '';
+while(<FILE>){
+	chomp;
+	my ($pos) = (split /\t/)[3];
+	if(abs($pos-$pre_pos)<36){
+		print "$pre_line\n$_\n";
+	}
+	$pre_pos = $pos;
+	$pre_line = $_;
+}
