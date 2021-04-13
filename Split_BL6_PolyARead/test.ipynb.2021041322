@@ -1,0 +1,143 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from scipy import stats\n",
+    "import numpy as np"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "file = open('BL6_stat/bl6.pAs.compare2.txt', 'r') \n",
+    "gene_predict_usage = {}\n",
+    "gene_exp_usage = {}\n",
+    "for i, line in enumerate(file): \n",
+    "    if(i>0):\n",
+    "        line=line.rstrip('\\n')\n",
+    "        (pas_id,symbol,predict_usage,exp_usage)= line.split('\\t')\n",
+    "        gene_predict_usage.setdefault(symbol,[]).append(predict_usage)\n",
+    "        gene_exp_usage.setdefault(symbol,[]).append(exp_usage)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "0.16989404457435148\n",
+      "0.33727810650887574\n"
+     ]
+    }
+   ],
+   "source": [
+    "total = 0\n",
+    "high_correlate = 0\n",
+    "wrong_total=0\n",
+    "near = 0\n",
+    "for key,value1 in gene_predict_usage.items():\n",
+    "    #print(value1,value2)\n",
+    "    index1 = np.argsort(value1)\n",
+    "    value2 = gene_exp_usage[key]\n",
+    "    value2 = np.array(value2)\n",
+    "    index2 = np.argsort(value2)\n",
+    "    tau, p_value = stats.weightedtau(index1,index2)\n",
+    "    total += 1\n",
+    "    if(tau > 0.75):\n",
+    "        high_correlate+=1\n",
+    "    else:\n",
+    "        if(len(value1)==2):\n",
+    "            wrong_total += 1\n",
+    "            if(abs(float(value1[0])-float(value1[1]))<0.2):\n",
+    "            #print(float(value1[1]))\n",
+    "                near +=1\n",
+    "print(high_correlate/total)\n",
+    "print(near/wrong_total)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Size of dataset: 15234\n"
+     ]
+    }
+   ],
+   "source": [
+    "from prep_data_regression import prep_data,DataGenerator\n",
+    "train_data,train_labels,valid_data,valid_labels = prep_data('usage_data/BL6_REP1.pAs.predict.coverage.txt',5)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 30,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "input_layers = [seq_input,cov_input]\n"
+     ]
+    },
+    {
+     "ename": "NotFoundError",
+     "evalue": "Unsuccessful TensorSliceReader constructor: Failed to find any matching files for Model/BL6_REP1.pAs.single_kermax6.BL6_REP1_aug8_SC_p5r10u0.05_4-0042.cpkt",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mRuntimeError\u001b[0m                              Traceback (most recent call last)",
+      "\u001b[0;32m~/anaconda3/envs/ML/lib/python3.7/site-packages/tensorflow_core/python/training/py_checkpoint_reader.py\u001b[0m in \u001b[0;36mNewCheckpointReader\u001b[0;34m(filepattern)\u001b[0m\n\u001b[1;32m     94\u001b[0m   \u001b[0;32mtry\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 95\u001b[0;31m     \u001b[0;32mreturn\u001b[0m \u001b[0mCheckpointReader\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mcompat\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mas_bytes\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mfilepattern\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     96\u001b[0m   \u001b[0;31m# TODO(b/143319754): Remove the RuntimeError casting logic once we resolve the\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mRuntimeError\u001b[0m: Unsuccessful TensorSliceReader constructor: Failed to find any matching files for Model/BL6_REP1.pAs.single_kermax6.BL6_REP1_aug8_SC_p5r10u0.05_4-0042.cpkt",
+      "\nDuring handling of the above exception, another exception occurred:\n",
+      "\u001b[0;31mNotFoundError\u001b[0m                             Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-30-2941d3e41720>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m\u001b[0m\n\u001b[1;32m      2\u001b[0m \u001b[0mPath\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0;34m'Model/BL6_REP1.pAs.single_kermax6.BL6_REP1_aug8_SC_p5r10u0.05_4-0042.cpkt'\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      3\u001b[0m \u001b[0mmodel\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mPolyA_CNN\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m'SC'\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;36m201\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m----> 4\u001b[0;31m \u001b[0mmodel\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mload_weights\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mPath\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m",
+      "\u001b[0;32m~/anaconda3/envs/ML/lib/python3.7/site-packages/tensorflow_core/python/keras/engine/training.py\u001b[0m in \u001b[0;36mload_weights\u001b[0;34m(self, filepath, by_name, skip_mismatch)\u001b[0m\n\u001b[1;32m    232\u001b[0m         raise ValueError('Load weights is not yet supported with TPUStrategy '\n\u001b[1;32m    233\u001b[0m                          'with steps_per_run greater than 1.')\n\u001b[0;32m--> 234\u001b[0;31m     \u001b[0;32mreturn\u001b[0m \u001b[0msuper\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mModel\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mload_weights\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mfilepath\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mby_name\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mskip_mismatch\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    235\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    236\u001b[0m   \u001b[0;34m@\u001b[0m\u001b[0mtrackable\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mno_automatic_dependency_tracking\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/anaconda3/envs/ML/lib/python3.7/site-packages/tensorflow_core/python/keras/engine/network.py\u001b[0m in \u001b[0;36mload_weights\u001b[0;34m(self, filepath, by_name, skip_mismatch)\u001b[0m\n\u001b[1;32m   1185\u001b[0m     \u001b[0;32melse\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1186\u001b[0m       \u001b[0;32mtry\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 1187\u001b[0;31m         \u001b[0mpy_checkpoint_reader\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mNewCheckpointReader\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mfilepath\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   1188\u001b[0m         \u001b[0msave_format\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0;34m'tf'\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1189\u001b[0m       \u001b[0;32mexcept\u001b[0m \u001b[0merrors_impl\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mDataLossError\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/anaconda3/envs/ML/lib/python3.7/site-packages/tensorflow_core/python/training/py_checkpoint_reader.py\u001b[0m in \u001b[0;36mNewCheckpointReader\u001b[0;34m(filepattern)\u001b[0m\n\u001b[1;32m     97\u001b[0m   \u001b[0;31m# issue with throwing python exceptions from C++.\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     98\u001b[0m   \u001b[0;32mexcept\u001b[0m \u001b[0mRuntimeError\u001b[0m \u001b[0;32mas\u001b[0m \u001b[0me\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 99\u001b[0;31m     \u001b[0merror_translator\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0me\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m",
+      "\u001b[0;32m~/anaconda3/envs/ML/lib/python3.7/site-packages/tensorflow_core/python/training/py_checkpoint_reader.py\u001b[0m in \u001b[0;36merror_translator\u001b[0;34m(e)\u001b[0m\n\u001b[1;32m     33\u001b[0m       \u001b[0;34m'Failed to find any '\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     34\u001b[0m       'matching files for') in error_message:\n\u001b[0;32m---> 35\u001b[0;31m     \u001b[0;32mraise\u001b[0m \u001b[0merrors_impl\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mNotFoundError\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;32mNone\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;32mNone\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0merror_message\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     36\u001b[0m   elif 'Sliced checkpoints are not supported' in error_message or (\n\u001b[1;32m     37\u001b[0m       \u001b[0;34m'Data type '\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mNotFoundError\u001b[0m: Unsuccessful TensorSliceReader constructor: Failed to find any matching files for Model/BL6_REP1.pAs.single_kermax6.BL6_REP1_aug8_SC_p5r10u0.05_4-0042.cpkt"
+     ]
+    }
+   ],
+   "source": [
+    "from PolyAModel import *\n",
+    "Path='Model/BL6_REP1.pAs.single_kermax6.BL6_REP1_aug8_SC_p5r10u0.05_4-0042.cpkt'\n",
+    "model = PolyA_CNN('SC',201)\n",
+    "model.load_weights(Path)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}
