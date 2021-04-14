@@ -1,0 +1,105 @@
+#!/usr/bin/perl -w
+#
+#2021/01/24 Fixed bugs. usage files should be sorted.
+my $dist_threshold = 50;
+
+my $usage = "K562_Chen.pAs.usage.m4.txt";
+my $out =   "K562_Chen.pAs.usage.m5.txt";
+
+
+
+open FILE,"sort -k 3,3 -k 5,5 -k 4,4n $usage |";
+#open FILE,"$usage";
+my $header = <FILE>;
+chomp $header;
+my @USAGE = <FILE>;
+open OUT,">$out";
+print OUT "$header\n";
+my %dist;
+my %readCount;
+my %pas_id;
+my %remove_id;
+my %count;
+my %pas_readCount;
+my %merge;
+my %actual;
+my @NEW;
+my $i=0;
+my %i;
+my %info;
+foreach(@USAGE){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount,$motif,$ave_diff,$upstream_rc,$biotpe,$extend,$old_symbol,$remark) = split;
+	push @NEW,"$pas_id\t$pas_type\t$chr\t$pos\t$strand\t$symbol\t$usage\t$readCount";
+	$info{$pas_id} = "$pas_id\t$pas_type\t$chr\t$pos\t$strand\t$symbol\t$usage\t$readCount\t$motif\t$ave_diff\t$upstream_rc\t$biotpe\t$extend\t$old_symbol\t$remark";
+	if(exists $dist{$symbol}){
+		my $dist_diff = abs($pos - $dist{$symbol});
+		if($dist_diff <= $dist_threshold){
+			print "$pas_id\n";
+			my $new_pos =  ($pos*$readCount+$dist{$symbol}*$readCount{$symbol})/($readCount+$readCount{$symbol});
+			my $actual_pas = $readCount>$readCount{$symbol} ? $pas_id : $pas_id{$symbol};
+			my $new_pas_id = "$chr:$new_pos:$strand";
+			$actual{$new_pas_id} = $actual_pas;
+			####some pas id my count 2 times. 1 5 10, the miiddle pas count 2 times;
+			if($pas_id eq $pas_id{$symbol}){
+				$pas_id = "$pas_id,$i";
+				$pas_id{$symbol} = "$pas_id{$symbol},$i{$symbol}";
+			}
+			$count{$pas_id}++;
+			$count{$pas_id{$symbol}}++;
+			$pas_readCount{$pas_id} = $readCount;
+			$pas_readCount{$pas_id{$symbol}} = $readCount{$symbol};
+			$merge{$new_pas_id} = [$pas_id{$symbol},$pas_id];
+			pop @NEW;
+			if($count{$pas_id{$symbol}}<=1){
+				pop @NEW;
+			}
+			push @NEW,"$new_pas_id\t$pas_type\t$chr\t$new_pos\t$strand\t$symbol\t0\t-1";
+		}
+	}
+	$dist{$symbol} = $pos;
+	$readCount{$symbol} = $readCount;
+	$pas_id{$symbol} = $pas_id;
+	$i{$symbol} = $i;
+	$i++;
+}
+
+
+my %total;
+foreach(@NEW){
+	chomp;
+	my ($pas_id,$pas_type,$chr,$pos,$strand,$symbol,$usage,$readCount) = split;
+	if(exists $merge{$pas_id}){
+		my ($pas1,$pas2) = @{$merge{$pas_id}};
+		$readCount = $pas_readCount{$pas1}/$count{$pas1}+$pas_readCount{$pas2}/$count{$pas2}; 
+		$_ =  "$pas_id\t$pas_type\t$chr\t$pos\t$strand\t$symbol\t$usage\t$readCount";
+	}
+	$total{$symbol} += $readCount;
+}
+
+
+my $remove_num = keys %merge;
+print "$remove_num\n";
+
+foreach(@NEW){
+	chomp;
+	my @data = split;
+	my $pas_id = $data[0];
+	if(exists $actual{$pas_id}){
+		$pas_id = $actual{$pas_id};
+		($pas_id) = split /,/,$pas_id;
+		#my (undef,$pos) = split /\:/,$data[0];
+		#$data[3] = $pos;
+	}
+	if(!exists $info{$pas_id}){
+		print "$pas_id\n";
+		next;
+	}
+	my @info = split /\t/,$info{$pas_id};
+	if(exists $total{$data[5]} && $total{$data[5]}>0){
+		#$data[6] = $data[7]/$total{$data[5]};
+		$info[6] = $data[7]/$total{$data[5]};
+		$info[7] = $data[7];
+	}
+	print OUT join("\t",@info),"\n";
+}
