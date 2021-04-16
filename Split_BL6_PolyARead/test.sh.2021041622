@@ -1,0 +1,22 @@
+#!/bin/bash
+#SBATCH --job-name=STAR
+#SBATCH --partition=batch
+#SBATCH --nodes=4
+#SBATCH --cpus-per-task=1
+#SBATCH --time=4:00:00
+#SBATCH --output=log.%J
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --dependency=afterok:8186700
+#SBATCH --mem=100G
+
+#####Modify parameter
+num=492
+valid_num=$(($num/5-1))
+train_num=$(($num/5*4-1))
+echo $valid_num
+echo $train_num
+
+round='p4r4_4'
+number=${round: -1}
+echo $number

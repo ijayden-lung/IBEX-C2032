@@ -1,0 +1,28 @@
+#!/usr/bin/perl -w
+#
+
+
+open FILE,"modK562_Chen.bed";
+
+open OUT,">stackK562_Chen.bed";
+print OUT "position\treadCount\n";
+
+my %hash;
+
+while(<FILE>){
+	chomp;
+	my ($chr,undef,$pos,undef,undef,$strand) = split;
+	if($strand eq "+"){
+		$strand = "-";
+	}
+	else{
+		$strand = "+";
+	}
+	$hash{"$chr:$pos:$strand"}++;
+}
+
+foreach my $key (keys %hash){
+	my ($chr,$pos,$strand) = split /\:/,$key;
+	my $pos0 = $pos-1;
+	print OUT "$chr\t$pos0\t$pos\t$hash{$key}\t225\t$strand\n";
+}
