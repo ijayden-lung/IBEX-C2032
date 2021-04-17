@@ -1,0 +1,49 @@
+#!/bin/bash
+#SBATCH --job-name=train
+#SBATCH --partition=batch
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mail-user=yongkang.long@kaust.edu.sa
+#SBATCH --mail-type=END
+#SBATCH --output=LOG/log.%J
+#SBATCH --time=4:00:00
+#SBATCH --mem=100G
+#SBATCH --gres=gpu:1
+##SBATCH -a 0-39
+#SBATCH --dependency afterok:14128576_[50-80] 
+
+#########TRAIN
+######Yongkang Long Update at Jan 05, 2021. 
+echo "This is job #${SLURM_ARRAY_JOB_ID}, task id ${SLURM_ARRAY_TASK_ID}"
+
+##########################################################################
+#########PARAMETER CHANGED
+prob=1 ##### K562 0.00922
+Shift=0
+epochs=1000
+
+spe='BL6'
+bestEpoch=0999
+learning_rate=1e-4 #####small learning rate for fine tuning
+task='evaluation'   ##task = [preparation training evaluation statistics]
+
+if [ "$spe" == "BL6" ]; then
+	file_path="usage_data/BL6_REP1.pAs.predict.coverage.txt"
+	trainid="BL6_REP1_log_mae"
+fi
+
+model="Model/${trainid}-${bestEpoch}.ckpt"
+
+if [ "$task" == "training" ]; then
+	echo "starting task $task"
+	python3 train.regression.py --file_path $file_path --trainid $trainid --learning_rate $learning_rate --epochs $epochs --shift $Shift
+
+
+elif [ "$task" == "evaluation" ]; then
+	python3 evaluate.regression.py --file_path $file_path --model $model --out test.txt
+
+else
+	echo "Invalid task parameter"
+	echo "task = [preparation training evaluation statistics]"
+fi
