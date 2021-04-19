@@ -1,0 +1,39 @@
+#!/usr/bin/perl -w
+
+
+open FILE,"K562_Old.pAs.usage.txt";
+<FILE>;
+my %hash_count;
+my %hash_info;
+my %hash_geneCount;
+while(<FILE>){
+	chomp;
+	my ($pas_id,$symbol,$count) = (split /\t/)[0,5,7];
+	$count *= 2;
+	$hash_count{$pas_id} = $count;
+	$hash_info{$pas_id} = $_;
+	$hash_geneCount{$symbol} += $count;
+}
+
+open FILE,"K562_Chen.pAs.usage.txt";
+my $header = <FILE>;
+open OUT,">K562_Merge.pAs.usage.txt.tmp";
+print OUT "$header";
+while(<FILE>){
+	chomp;
+	my ($pas_id,$symbol,$count) = (split /\t/)[0,5,7];
+	$hash_count{$pas_id} += $count;
+	$hash_info{$pas_id} = $_;
+	$hash_geneCount{$symbol} += $count;
+}
+
+while(my ($pas_id,$val) = each %hash_info){
+	my @data = split /\t/,$val;
+	my $symbol = $data[5];
+	$data[6] = $hash_count{$pas_id}/$hash_geneCount{$symbol};
+	$data[7] = $hash_count{$pas_id};
+	print OUT join("\t",@data),"\n";
+}
+
+system("sort -k 3,3 -k 5,5 -k4,4n -S 30G K562_Merge.pAs.usage.txt.tmp -o K562_Merge.pAs.usage.txt");
+system("rm K562_Merge.pAs.usage.txt.tmp");
