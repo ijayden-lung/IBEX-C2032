@@ -1,0 +1,24 @@
+#!/bin/bash
+#
+#SBATCH --partition=batch
+#SBATCH --ntasks=1
+#SBATCH --time=18:00:00
+#SBATCH --mem=128G
+#SBATCH --mincpus=10
+
+ONT_dir=${1}
+ILL_bam=${2}
+OUT_dir=${3}
+
+#ONT_dir=/encrypted0/biocorelab/BCLCustomers/gaox/GridION/20210310_P14U1_THLE-2_1st_FlowCell/20210310_1226_X2_FAL35681_4d91d68f/THLE-2/fastq_pass
+#ILL_bam=/encrypted0/biocorelab/BCLCustomers/gaox/NovaSeq6000/210323_A01018_0072_BHMV5VDMXX/Lane1/version_01/meta/M-21-1304_THLE-2-10x_SI-TT-A1_L001_HMV5VDMXX/possorted_genome_bam.bam
+#OUT_dir="THLE"
+## 
+JAR_path=/home/zhanb0d/sicelore/Jar
+
+echo Parsing of Illumina Data
+java -Xmx120G -jar $JAR_path/IlluminaParser-1.0.jar -i $ILL_bam --tsv ./$OUT_dir/barcodes.tsv -o $OUT_dir/parsedForNanopore.illumina.bam.obj --cellBCflag CB --umiFlag UB --geneFlag GN
+
+## 
+echo scanning nanopore reads
+java -Xmx120G -jar $JAR_path/NanoporeReadScanner-0.5.jar -d $ONT_dir -o $ONT_dir

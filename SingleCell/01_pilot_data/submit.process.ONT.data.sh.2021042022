@@ -1,0 +1,8 @@
+#!/bin/bash
+:<<USE
+USE
+
+
+#cat 
+sbatch --get-user-env --job-name=THLE --output=THLE.log --error=THLE.elog process.ONT.data.sh /encrypted0/biocorelab/BCLCustomers/gaox/GridION/20210310_P14U1_THLE-2_1st_FlowCell/20210310_1226_X2_FAL35681_4d91d68f/THLE-2/fastq_pass /encrypted0/biocorelab/BCLCustomers/gaox/NovaSeq6000/210323_A01018_0072_BHMV5VDMXX/Lane1/version_01/meta/M-21-1304_THLE-2-10x_SI-TT-A1_L001_HMV5VDMXX/possorted_genome_bam.bam THLE
+sbatch --get-user-env --job-name=Hep3B --output=Hep3B.log --error=Hep3B.elog process.ONT.data.sh /encrypted0/biocorelab/BCLCustomers/gaox/GridION/20210310_P14U1_Hep3p_1st_FlowCell/20210310_1226_X3_FAL35858_6f58a1d0/Hep3p/fastq_pass /encrypted0/biocorelab/BCLCustomers/gaox/NovaSeq6000/210323_A01018_0072_BHMV5VDMXX/Lane1/version_01/meta/M-21-1305_Hep3B-10x_SI-TT-A2_L001_HMV5VDMXX/possorted_genome_bam.bam Hep3B
