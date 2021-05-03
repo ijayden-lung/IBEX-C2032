@@ -1,0 +1,20 @@
+#!/bin/bash
+:<<USE
+USE
+
+
+# rename the fastq file ... 
+# mkdir fastq
+if [ ! -f ./fastq/THLE3_S1_L001_I1_001.fastq.gz ]; then
+	cat Sit-seq/STHLE3/STHLE3-N703_S47_L004_HYFJ5DSXY_I1_001.fastq.gz >  ./fastq/THLE3_S1_L001_I1_001.fastq.gz
+	cat Sit-seq/STHLE3/STHLE3-N703_S47_L004_HYFJ5DSXY_R1_001.fastq.gz >  ./fastq/THLE3_S1_L001_R1_001.fastq.gz
+	cat Sit-seq/STHLE3/STHLE3-N703_S47_L004_HYFJ5DSXY_R2_001.fastq.gz >  ./fastq/THLE3_S1_L001_R2_001.fastq.gz
+	cat Sit-seq/SHEP3B/SHEP3B-N704_S48_L004_HYFJ5DSXY_I1_001.fastq.gz >  ./fastq/Hep3B_S2_L001_I1_001.fastq.gz
+	cat Sit-seq/SHEP3B/SHEP3B-N704_S48_L004_HYFJ5DSXY_R1_001.fastq.gz >  ./fastq/Hep3B_S2_L001_R1_001.fastq.gz
+	cat Sit-seq/SHEP3B/SHEP3B-N704_S48_L004_HYFJ5DSXY_R2_001.fastq.gz >  ./fastq/Hep3B_S2_L001_R2_001.fastq.gz
+fi
+
+sbatch --get-user-env --job-name=Hep3B --output=Hep3B.sitseq.log --error=Hep3B.sitseq.elog process.SITseq.data.sh ./fastq Hep3B 
+sbatch --get-user-env --job-name=Hep3B --output=Hep3B.sitseq.log --error=Hep3B.sitseq.elog process.SITseq.data.sh ./fastq THLE3
+
+

@@ -1,0 +1,8 @@
+#!/bin/bash
+:<<USE
+...
+USE
+
+scp *.* zhanb0d@ilogin.ibex.kaust.edu.sa:/ibex/scratch/projects/c2032/SingleCell/02_SITseq
+# rsync -azP -e 'ssh -J zhangbin@137.132.97.62:60010' zhangbin@137.132.108.12:/media/zb2/Raw_data/Sit-seq/X401SC21012159-Z01-F001/raw_data/SHEP3B ./Sit-seq/ 1>hep3b.log 2>hep3b.elog 
+# rsync -azP -e 'ssh -J zhangbin@137.132.97.62:60010' zhangbin@137.132.108.12:/media/zb2/Raw_data/Sit-seq/X401SC21012159-Z01-F001/raw_data/STHLE3 ./Sit-seq/ 1>thle.log 2>thle.elog 

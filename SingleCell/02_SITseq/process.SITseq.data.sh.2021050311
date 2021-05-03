@@ -1,0 +1,21 @@
+#!/bin/bash
+#
+#SBATCH --partition=batch
+#SBATCH --ntasks=1
+#SBATCH --time=10:00:00
+#SBATCH --mem=255G
+#SBATCH --mincpus=20
+
+FASTQ_dir=${1}
+ID=${2}
+#SAMPLE=${3}
+
+#FASTQ_dir=./fastq
+#ID=$SAMPLE
+#SAMPLE=STHLE3
+module load cellranger
+REF=/ibex/sw/csi/cellranger/5.0.1/el7.9_binary/refdata-gex-GRCh38-2020-A
+cellranger count --id=$ID --transcriptome=$REF --fastqs=$FASTQ_dir --sample $ID --expect-cells=6000 --localcores=30 --localmem=200
+
+
+

@@ -1,0 +1,8 @@
+#!/bin/bash
+:<<USE
+...
+USE
+
+scp *.* zhanb0d@ilogin.ibex.kaust.edu.sa:/ibex/scratch/projects/c2032/SingleCell/01_pilot_data
+#scp *.* zhanb0d@10.73.42.6:/mnt/zb4t/SingleCell/01_pilot_data
+

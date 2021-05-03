@@ -1,0 +1,27 @@
+
+
+
+import os
+Path='Model/bl6.pAs.NOAUG_SC_p10r30_0-0056.ckpt'
+if os.path.exists(Path+'.index'):
+	print ('exists')
+
+import re
+
+a = '0.354534.2342'
+if re.match('[1-9]\d*\.\d*|0\.\d*[1-9]\d*$',a):
+	print("float"+a)
+
+
+if re.match("[1-9]\d*$",a):
+	print("int"+a)
+a = 4
+b  = 5.6
+print(type(a))
+print(type(b))
+c = a+b
+print(c)
+if (a>b):
+	print('a>b')
+else:
+	print('a<b')
