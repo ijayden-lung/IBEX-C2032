@@ -1,0 +1,38 @@
+#!/usr/bin/perl -w
+
+use Bio::Cigar;
+
+my $Cigar = Bio::Cigar->new("50M1000N61M");
+my $ops_ref = $Cigar->ops;
+print "$ops_ref->[-2]->[0],$ops_ref->[-2]->[1]\n";
+
+open FILE, "samtools view -f 2 -q 255 Aligned.out.bam | ";
+open OUT, ">Mate.distance.txt";
+while(<FILE>){
+	chomp;
+	my ($read,$flag1,$chr,$coor1,$cigar1) = (split /\t/)[0,1,2,3,5];
+	my $line2 = <FILE>;
+	chomp $line2;
+	my ($flag2,$coor2,$cigar2) = (split /\t/,$line2)[1,3,5];
+	my $distance;
+	my $strand;
+	if($flag1 == 163 && $flag2==83){
+		my $Cigar1 = Bio::Cigar->new($cigar1);
+		$coor1 += $Cigar1->reference_length;
+		my $Cigar2 = Bio::Cigar->new($cigar2);
+		$coor2 += $Cigar2->reference_length;
+		$distance = $coor2-$coor1;
+		$strand = "+";
+	}
+	elsif($flag1 == 99 && $flag2==147){
+		$distance = $coor1-$coor2;
+		$strand = "-";
+	}
+	else{
+		print "unproper mapped\n$read\n";
+	}
+	if (abs($distance)>10000){
+		print OUT "$read\t$chr\t$strand\t$coor1\t$cigar1\t$coor2\t$cigar2\t$distance\n";
+	}
+}
+
