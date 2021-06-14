@@ -1,0 +1,107 @@
+#!/usr/bin/perl -w
+
+use TrimmedMean;
+
+my $window = 24;
+my $polya_db = "/home/longy/project/Split_BL6_PolyARead/usage_data/K562_Chen.pAs.coverage.txt";
+my $ens_db = "/home/longy/project/Split_BL6_PolyARead/usage_data/K562_Chen.pAs.ens.coverage.txt";
+
+sub get_pas{
+	my ($file) = @_;
+	my %pas;
+	open FILE,"$file";
+	while(<FILE>){
+		next if $_ =~ /^pas_id/;
+		my ($pas_id,$pas_type,$chr,$pos,$strand) = split;
+		my @data = split;
+		my $length = int((@data-8)/2);
+		my $before = &TrimmedMean(@data[8..8+$length]);
+		next if $before <=0;
+		$pas{$pas_id} = '';
+	}
+	return \%pas;
+}
+
+sub forward{
+	my ($j,$data_ref,$max_pos,$max_readCount,$max_status,$db_pas_ref,$ens_pas_ref) = @_;
+	return $max_readCount,$max_pos,$max_status,$j if $j >=@$data_ref;
+	my $total_readCount = $max_readCount;
+	my $pos = $max_pos;
+	my $forward_line = $data_ref->[$j];
+	chomp $forward_line;
+	my ($chr,$forward_pos,undef,$forward_readCount,undef,$strand) = split /\t/,$forward_line;
+	while($forward_pos-$pos<=$window && $forward_pos-$max_pos<=2*$window){
+		$total_readCount += $forward_readCount;
+		my $potential_max_readCount = $forward_readCount;
+		my $potential_max_pos = $forward_pos;
+		my $potential_max_pas_id = "$chr:$potential_max_pos:$strand";
+		my $potential_max_status = &get_max_status($potential_max_pas_id,$db_pas_ref,$ens_pas_ref);
+		if($potential_max_status ne "None"){
+			if($max_status eq "None"){
+				$max_pos = $potential_max_pos;
+				$max_readCount = $potential_max_readCount;
+				$max_status = $potential_max_status;
+			}
+			elsif($max_readCount<$potential_max_readCount){
+				$max_pos = $potential_max_pos;
+				$max_readCount = $potential_max_readCount;
+				$max_status = $potential_max_status;
+			}
+		}
+		elsif($max_readCount<$potential_max_readCount){
+			$max_pos = $potential_max_pos;
+			$max_readCount = $potential_max_readCount;
+			$max_status = $potential_max_status;
+		}
+		$j++;
+		last if $j >= @$data_ref;
+		$forward_line = $data_ref->[$j];
+		chomp $forward_line;
+		$pos = $forward_pos;
+		(undef,$forward_pos,undef,$forward_readCount) = split /\t/,$forward_line;
+	}
+	return $total_readCount,$max_pos,$max_status,$j;
+}
+
+sub get_max_status{
+	my ($max_pas_id,$db_pas_ref,$ens_pas_ref) = @_;
+	my $max_status = "None";
+	if(exists $db_pas_ref->{$max_pas_id} && exists $ens_pas_ref->{$max_pas_id}){
+		$max_status = "ens_db";
+	}
+	elsif(exists $db_pas_ref->{$max_pas_id}){
+		$max_status = "db";
+	}
+	elsif(exists $ens_pas_ref->{$max_pas_id}){
+		$max_status = "ens";
+	}
+	return $max_status;
+}
+
+
+my $db_pas_ref = &get_pas($polya_db);
+print "Finished get polyA_DB\n";
+my $ens_pas_ref = &get_pas($ens_db);
+print "Finished get ensembl PAS\n";
+
+#open FILE,"head -n 140 stackK562_Chen.bed |";
+open FILE,"stackK562_Chen.bed";
+my @data = <FILE>;
+open OUT,">callPeakK562_Chen.bed";
+my $count = 0;
+for(my$i=0;$i<@data;){
+	my $line = $data[$i];
+	chomp $line;
+	my ($chr,$pos,$pos2,$readCount,$quality,$strand) = split /\t/,$line;
+	my $total_readCount = $readCount;
+	my $max_pos = $pos;
+	my $max_pas_id = "$chr:$max_pos:$strand";
+	my $max_status = &get_max_status($max_pas_id,$db_pas_ref,$ens_pas_ref);
+	($total_readCount,$max_pos,$max_status,$i) = &forward($i+1,\@data,$pos,$readCount,$max_status,$db_pas_ref,$ens_pas_ref);
+	my $max_pos2 = $max_pos+1;
+	$count++;
+	if($count %10000 == 0){
+		print "Processing $count PAS\n";
+	}
+	print OUT "$chr,$max_pos,$max_pos2,$total_readCount,$quality,$strand\t$max_status\n";
+}
